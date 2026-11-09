@@ -21,7 +21,8 @@ the old company software. **Flow: pick day → tap meal → done.**
 |---|---|
 | M0 Hosting spike | **Verified** on Websupport test hosting (`kbsandbox.arpo.cc`) — see [M0 findings](#m0-findings) |
 | M1 Domain core | Done — migrations, models, ordering/pricing/cutoff/lock services, seeders, 54 tests |
-| M2–M6 | Not started |
+| M2 Employee app | Done — login (osobné číslo + PIN, 400-day remember-me), one-screen ordering, Môj mesiac, PIN change, PWA |
+| M3–M6 | Not started |
 
 ---
 
@@ -45,8 +46,24 @@ php artisan db:seed --class=DemoDataSeeder       # optional demo data (~80 emplo
 php artisan serve
 ```
 
+Employee app: `/` (login at `/prihlasenie`). Staff panel: `/admin`.
+
 Demo logins (DemoDataSeeder only): staff `admin@jedalen.test`, `kuchyna@jedalen.test`, `mzdy@jedalen.test`
 with password `heslo1234`; employees `1001`–`1080` with PIN `1234`.
+
+### Front-end assets
+
+The server has no Node.js, so CSS/JS are compiled locally and **`public/build` is committed**:
+
+```bash
+npm install
+npm run build        # after any change in resources/views, resources/css or resources/js
+git add public/build
+```
+
+Livewire/Alpine JS is served by Livewire itself (no build step). The PWA files are static in
+`public/` (`manifest.webmanifest`, `sw.js`, `offline.html`, `icons/` — regenerate icons with
+`php tools/make-icons.php`). When changing `sw.js`, bump its `CACHE` name.
 
 ### Tests
 
@@ -246,6 +263,8 @@ Planned for M6 (nightly DB dump via the scheduler into `storage/app/backups`, 30
 
 | Path | What |
 |---|---|
+| `app/Livewire/OrderScreen.php` + `resources/views/livewire/order-screen.blade.php` | Employee one-screen ordering (week strip, tap = order). |
+| `app/Http/Controllers/Employee/*` | Employee login/logout, PIN change, Môj mesiac. |
 | `app/Domain/Ordering/OrderService.php` | **All order writes**: place / switch / cancel / admin price-type correction. Price typing, limits, row locking, audit. |
 | `app/Domain/Ordering/AvailabilityService.php` | Is a slot/day orderable? (cutoff, lock, closed day, horizon, menu). Batch evaluation for a week. |
 | `app/Domain/Ordering/PriceResolver.php` | Versioned prices (valid on the meal date). |

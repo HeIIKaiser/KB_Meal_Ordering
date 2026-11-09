@@ -20,6 +20,7 @@ class EmployeeFactory extends Factory
             'department' => fake()->randomElement(['Kuchyňa', 'Recepcia', 'Wellness', 'Údržba', 'Upratovanie', 'Lekári', 'Administratíva']),
             'pin_hash' => static::$pinHash ??= Hash::make('1234'),
             'is_active' => true,
+            'remember_token' => null,
         ];
     }
 

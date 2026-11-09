@@ -2,7 +2,7 @@
 
 Read `docs/BRIEF.md` (requirements) and `docs/DECISIONS.md` (answers to OPEN items, design decisions) before changing anything.
 
-- Runtime target is **Websupport shared hosting**: PHP + MySQL/MariaDB + cron only. No Node, queue workers, websockets or daemons on the server. Compiled front-end assets are committed.
+- Runtime target is **Websupport shared hosting**: PHP + MySQL/MariaDB + cron only. No Node, queue workers, websockets or daemons on the server. Compiled front-end assets are committed: run `npm run build` after changing views/CSS/JS and commit `public/build`.
 - UI text is **Slovak** with correct diacritics; code, comments, identifiers and commits are English.
 - Timestamps are stored in UTC; business dates/cutoffs use `App\Support\LocalTime` (Europe/Bratislava). Calendar-date columns use the `App\Casts\LocalDate` cast.
 - Money is integer cents; format with `App\Support\Money::format()` ("1,50 €").

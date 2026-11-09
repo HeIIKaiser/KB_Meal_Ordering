@@ -28,6 +28,16 @@ isn't spelled out in the brief. Update this file when Roman answers.
 9. **Settings table** has a numeric `id` + unique `key` (the activity log needs numeric subject ids).
 10. **Slovak collation** `utf8mb4_slovak_ci` is recommended (`DB_COLLATION`) so alphabetical lists sort Č, Š, Ž, Ch correctly.
 
+## Design decisions (M2)
+
+1. **Login errors are generic** ("Nesprávne osobné číslo alebo PIN.") — also for deactivated accounts, so the login form doesn't reveal which personal numbers exist. A deactivated employee who is still logged in is logged out on the next request with "Váš účet nie je aktívny."
+2. **Rate limit:** 5 failed attempts per osobné číslo + IP, then 60 s lockout (`config/jedalen.php`). Other employees on the same Wi-Fi (same IP) are not affected.
+3. **Remember-me** is always on: HttpOnly cookie, 400 days (browser maximum). A PIN change or admin PIN reset invalidates the remember token → other devices are logged out.
+4. **Tap logic:** tapping an ordered option asks to cancel it (if that option is ordered twice, the extra one is cancelled first). Tapping another option while something is ordered asks "Zmeniť objednávku?" — *switch* changes the donated order; *Pridať extra* is offered only while the extra limit isn't reached.
+5. **Desktop (≥ 1024 px)** shows the whole week at once; phones show one day with a week strip and swipe left/right.
+6. **Service worker** caches only static assets (`/build`, icons) and an offline page. Pages and Livewire requests always go to the network — no offline ordering, no personal data in caches.
+7. **Fonts:** system fonts only (no web-font download; fast on old phones).
+
 ## Decisions by Roman
 
 - **2026-11-09 — Staff 2FA is optional.** Users can enable TOTP in their Filament profile; it is not enforced on first login and there are no prompts. (Brief §5 said "email + password + 2FA" — relaxed because most staff can't handle authenticator apps.)
