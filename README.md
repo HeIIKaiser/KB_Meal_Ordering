@@ -123,8 +123,9 @@ php artisan serve
 ```
 
 Employee app: `/` (login at `/prihlasenie`). Staff panel: `/admin`.
-Demo logins (DemoDataSeeder only — **never seed demo data in production**): staff `admin@jedalen.test`,
-`kuchyna@jedalen.test`, `mzdy@jedalen.test` / `heslo1234`; employees `1001`–`1080` / PIN `1234`.
+There are no built-in logins. Create your staff account with `php artisan app:staff-user you@example.com --role=admin`;
+employees (demo ones too) get random PINs — print them in *Zamestnanci → Tlačiť prístupové lístky*.
+The demo seeder refuses to run in production.
 
 ### Front-end assets
 
@@ -358,3 +359,7 @@ company's Websupport hosting — same platform; repeat `tools/hosting-probe.php`
 
 The standalone probe for a new hosting is [`tools/hosting-probe.php`](tools/hosting-probe.php) (upload,
 open with `?token=…`, run once from cron, delete).
+
+## License
+
+[MIT](LICENSE) — free to use, change and share, including commercially.

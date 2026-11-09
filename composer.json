@@ -8,7 +8,7 @@
         "laravel",
         "filament"
     ],
-    "license": "proprietary",
+    "license": "MIT",
     "require": {
         "php": "^8.3",
         "chillerlan/php-qrcode": "^5.0",

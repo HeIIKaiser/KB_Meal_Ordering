@@ -97,3 +97,5 @@ isn't spelled out in the brief. Update this file when Roman answers.
   setting *Názov firmy* (Nastavenia → Objednávanie), falling back to `APP_COMPANY` in `.env`. Existing installations
   (with employees) get "KB SPA" preset by a migration, so updates need no manual change. The PWA manifest is now
   served by Laravel (`/manifest.webmanifest`) so the installed app's name follows the setting.
+- **2026-11-10 — Public, MIT** (Roman). Repository licensed MIT; demo logins removed (seeder + a migration that disables
+  them on existing installations).

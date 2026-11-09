@@ -31,7 +31,7 @@ same day, `max_extra_per_slot = 1`, price version chosen by **meal date**.
 
 ## M2 — Employee app (done)
 
-Try it: `php artisan db:seed --class=DemoDataSeeder`, open `/`, log in with `1001` / PIN `1234`.
+Try it: `php artisan db:seed --class=DemoDataSeeder`, open `/`, log in with an osobné číslo and its PIN from the access slips.
 
 - **Login** `/prihlasenie`: osobné číslo + PIN, big inputs with numeric keyboard; stays logged in for 400 days
   (HttpOnly cookie). 5 wrong attempts → 60 s lockout with a Slovak message.
@@ -52,7 +52,7 @@ Please try on a few real phones (old Android, iPhone): install to home screen, o
 
 ## M3 — Admin (done)
 
-Try it with demo data: `/admin`, `admin@jedalen.test` / `heslo1234` (or `kuchyna@…`, `mzdy@…` to see the role limits).
+Try it with demo data: `/admin` with an admin account from `php artisan app:staff-user` (create kitchen/payroll accounts to see the role limits).
 The Slovak manual for staff is in `docs/navod.md`.
 
 - **Zamestnanci:** list with search/filters, create/edit (deactivate instead of delete), **Reset PIN** and
@@ -74,7 +74,7 @@ The Slovak manual for staff is in `docs/navod.md`.
 
 ## M4 — Kitchen (done)
 
-Try it: log in as `kuchyna@jedalen.test` / `heslo1234` → **Nástenka** shows today's and tomorrow's counts →
+Try it: log in with a kitchen account → **Nástenka** shows today's and tomorrow's counts →
 click one, or **Objednávky → Denný prehľad (kuchyňa)**.
 
 - Day/slot picker, status (open until / after cutoff / locked by whom and when / closed), big totals per
@@ -90,7 +90,7 @@ Kitchen section added to `docs/navod.md`. Please try printing on the kitchen's p
 
 ## M5 — Exports (done)
 
-Try it: log in as `mzdy@jedalen.test` / `heslo1234` → **Objednávky → Exporty**.
+Try it: log in with a payroll account → **Objednávky → Exporty**.
 
 - **Mesačný prehľad** → `stravovanie_2026-11_mesacny.xlsx`
   - sheet *Mesiac*: per employee a block with day-of-week row, Darované / Extra counts per day (or split
@@ -193,3 +193,11 @@ the layout lives in one class (`MonthlyMatrixXlsx`) and can be matched exactly.
   Shown on access sheets, the login page, the installed app's name and in the 2FA app. Existing installations keep
   "KB SPA" automatically (migration), new ones start neutral. README: *Using it for your organisation*.
 - Deploy: `bash deploy/update.sh` (one migration). On a brand-new installation, set the name once in the admin or `.env`.
+
+### Follow-up: public repository (2026-11-10)
+
+- MIT licence (`LICENSE`, `composer.json`).
+- No well-known logins any more: the demo seeder creates no staff accounts, gives employees random PINs and refuses
+  to run in production. A migration disables the old demo logins on installations that ran it (demo staff
+  accounts deactivated with a random password, demo PIN 1234 replaced by a new printable PIN).
+- Deploy: `bash deploy/update.sh` (one migration).

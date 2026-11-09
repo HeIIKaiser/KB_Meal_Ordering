@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Domain\Ordering\PriceResolver;
 use App\Enums\OrderStatus;
-use App\Enums\Role;
 use App\Models\ClosedDay;
 use App\Models\Employee;
 use App\Models\MealSlot;
@@ -16,14 +15,13 @@ use App\Models\User;
 use App\Support\LocalTime;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Hash;
 
 /**
- * Realistic Slovak demo data: ~80 employees, staff accounts, menus for the
- * previous, current and next week, and orders. NEVER run in production.
+ * Realistic Slovak demo data: ~80 employees, menus for the previous, current and
+ * next week, and orders. Refuses to run in production.
  *
- * Demo logins:  employees 1001–1080, PIN 1234
- *               admin@jedalen.test / kuchyna@jedalen.test / mzdy@jedalen.test, password "heslo1234"
+ * No well-known logins: create your own staff account with `php artisan app:staff-user`
+ * and print employees' (random) PINs from Zamestnanci → Tlačiť prístupové lístky.
  */
 class DemoDataSeeder extends Seeder
 {
@@ -63,35 +61,20 @@ class DemoDataSeeder extends Seeder
 
     public function run(): void
     {
+        if (app()->isProduction()) {
+            throw new \RuntimeException('DemoDataSeeder must not run in production.');
+        }
+
         $this->call(ReferenceDataSeeder::class);
         mt_srand(20261109);
 
-        $this->staff();
         $employees = $this->employees();
         $this->menusAndOrders($employees);
-    }
-
-    private function staff(): void
-    {
-        foreach ([
-            ['Administrátor', 'admin@jedalen.test', [Role::Admin]],
-            ['Kuchyňa', 'kuchyna@jedalen.test', [Role::Kitchen]],
-            ['Mzdy', 'mzdy@jedalen.test', [Role::Payroll]],
-        ] as [$name, $email, $roles]) {
-            User::query()->updateOrCreate(['email' => $email], [
-                'name' => $name,
-                'password' => Hash::make('heslo1234'),
-                'roles' => array_map(fn (Role $r) => $r->value, $roles),
-                'is_active' => true,
-            ]);
-        }
     }
 
     /** @return Collection<int, Employee> */
     private function employees(): Collection
     {
-        $pin = Hash::make('1234');
-
         for ($i = 1; $i <= 80; $i++) {
             $female = $i % 2 === 0;
             $last = self::LAST[mt_rand(0, count(self::LAST) - 1)][$female ? 1 : 0];
@@ -104,8 +87,7 @@ class DemoDataSeeder extends Seeder
                 'department' => self::DEPARTMENTS[mt_rand(0, count(self::DEPARTMENTS) - 1)],
                 'is_active' => $i <= 78, // two former employees
             ]);
-            $employee->forceFill(['pin_hash' => $pin, 'pin_plain' => '1234', 'pin_set_by' => Employee::PIN_BY_SYSTEM]);
-            $employee->save();
+            $employee->save(); // new employees get a random PIN (Employee::creating)
         }
 
         return Employee::query()->active()->get();
