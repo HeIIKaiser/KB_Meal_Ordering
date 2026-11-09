@@ -5,6 +5,8 @@
         <x-filament::button color="gray" icon="heroicon-m-chevron-right" icon-position="after" wire:click="nextWeek">Nasledujúci</x-filament::button>
         <x-filament::button color="gray" icon="heroicon-m-document-duplicate" wire:click="copyPreviousWeek">Doplniť z minulého týždňa</x-filament::button>
         <x-filament::button tag="a" color="gray" icon="heroicon-m-arrow-up-tray" :href="\App\Filament\Pages\ImportMenus::getUrl()">Import zo súboru</x-filament::button>
+        <x-filament::button tag="a" color="gray" icon="heroicon-m-printer" target="_blank" :href="route('menu.week.print', ['tyzden' => $week, 'tlac' => 1])">Tlačiť týždeň</x-filament::button>
+        <x-filament::button tag="a" color="gray" icon="heroicon-m-document" target="_blank" :href="route('menu.week.pdf', ['tyzden' => $week])">PDF</x-filament::button>
         <span class="text-sm text-gray-500">P = polievka (podáva sa ku každému obedu, neobjednáva sa). Prázdny názov = jedlo sa odstráni. Alergény: čísla 1 – 14 oddelené čiarkou.</span>
     </div>
 

@@ -37,7 +37,7 @@ it('limits pages by role', function (Role $role, array $ok, array $forbidden) {
 
 describe('prices', function () {
     it('shows the current prices', function () {
-        $this->actingAs($this->admin)->get('/admin/prices')->assertSee('Aktuálne: Darované 1,50 € · Extra 6,00 €');
+        $this->actingAs($this->admin)->get('/admin/prices')->assertSee('Aktuálne: Zamestnanecká strava 1,50 € · Dokupovaná strava 6,00 €');
     });
 
     it('adds a future price version entered in euros', function () {

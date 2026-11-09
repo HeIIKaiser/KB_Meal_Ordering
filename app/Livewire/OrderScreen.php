@@ -113,7 +113,7 @@ class OrderScreen extends Component
                 'type' => 'cancel',
                 'order' => $onItem->id,
                 'title' => 'Zrušiť objednávku?',
-                'text' => $this->describe($item, $date, $slot).($onItem->priceType->isDonated() ? '' : ' (Extra, '.Money::format($onItem->unit_price_cents).')'),
+                'text' => $this->describe($item, $date, $slot).($onItem->priceType->isDonated() ? '' : ' (dokupovaná, '.Money::format($onItem->unit_price_cents).')'),
             ];
 
             return;
@@ -137,7 +137,7 @@ class OrderScreen extends Component
                 'title' => 'Zmeniť objednávku?',
                 'text' => 'Máte objednané '.$switchable->menuItem->label().': '.$switchable->menuItem->name.'.',
                 'switch_label' => 'Zmeniť na '.$item->label().': '.$item->name,
-                'extra_label' => $extraPrice !== null ? 'Pridať extra za '.Money::format($extraPrice) : null,
+                'extra_label' => $extraPrice !== null ? 'Dokúpiť ďalšie jedlo za '.Money::format($extraPrice) : null,
             ];
 
             return;
@@ -219,7 +219,21 @@ class OrderScreen extends Component
             ->whereBetween('date', [$monday->toDateString(), $sunday->toDateString()])
             ->get();
 
+        // Desktop: every day column shares the same row tracks (CSS subgrid), so Obed,
+        // soup, Menu 1, Menu 2 and Večera line up across the week. Rows per slot =
+        // header + soup (if any day has one) + the most options on any day.
+        $ordered = $orders->pluck('menu_item_id')->flip();
+        $slotRows = $slots->mapWithKeys(function (MealSlot $slot) use ($menus, $days, $ordered) {
+            $dayMenus = $days->map(fn ($d) => $menus[$d->toDateString().'|'.$slot->id] ?? null)->filter();
+            $visible = $dayMenus->map(fn (Menu $m) => $m->items->filter(fn ($i) => $i->is_active || isset($ordered[$i->id]))->count());
+            $soup = $dayMenus->contains(fn (Menu $m) => filled($m->soup_name));
+
+            return [$slot->id => ['soup' => $soup, 'rows' => 1 + ($soup ? 1 : 0) + max(1, (int) $visible->max())]];
+        });
+
         return view('livewire.order-screen', [
+            'slotRows' => $slotRows,
+            'weekRows' => 1 + $slotRows->sum('rows'),
             'days' => $days,
             'today' => LocalTime::today()->toDateString(),
             'mealSlots' => $slots,
@@ -239,13 +253,13 @@ class OrderScreen extends Component
         try {
             $order = app(OrderService::class)->place($this->employee(), $item, Actor::employee($this->employee()), $acceptExtra);
             $this->success(
-                'Objednané: '.$item->label().' – '.$item->name.' ('.Money::format($order->unit_price_cents).($order->price_type_id === PriceType::byCode(PriceType::DONATED)->id ? '' : ', extra').')'
+                'Objednané: '.$item->label().' – '.$item->name.' ('.Money::format($order->unit_price_cents).($order->price_type_id === PriceType::byCode(PriceType::DONATED)->id ? '' : ', dokupovaná strava').')'
             );
         } catch (ExtraConfirmationRequired $e) {
             $this->dialog = [
                 'type' => 'extra',
                 'item' => $item->id,
-                'title' => 'Objednať extra jedlo?',
+                'title' => 'Dokúpiť ďalšie jedlo?',
                 'text' => $e->getMessage().' '.$this->describe($item, $item->menu->date, $item->menu->mealSlot),
                 'extra_label' => 'Áno, objednať za '.Money::format($e->quote->unitPriceCents),
             ];

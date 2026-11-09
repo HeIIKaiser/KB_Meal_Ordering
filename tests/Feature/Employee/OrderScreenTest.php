@@ -64,7 +64,7 @@ it('offers switch or extra when another option in the slot is tapped', function 
     $c = screen()->call('choose', $this->lunch[0]->id)->call('choose', $this->lunch[1]->id)
         ->assertSet('dialog.type', 'change')
         ->assertSee('Zmeniť objednávku?')
-        ->assertSee('Pridať extra za 6,00 €');
+        ->assertSee('Dokúpiť ďalšie jedlo za 6,00 €');
 
     $c->call('confirmSwitch');
     expect(Order::sole()->menu_item_id)->toBe($this->lunch[1]->id);
@@ -72,7 +72,7 @@ it('offers switch or extra when another option in the slot is tapped', function 
 
 it('adds an extra at 6,00 € from the change dialog', function () {
     screen()->call('choose', $this->lunch[0]->id)->call('choose', $this->lunch[1]->id)->call('confirmExtra')
-        ->assertSee('Extra · 6,00 €');
+        ->assertSee('Dokupované · 6,00 €');
 
     expect(Order::query()->where('price_type_id', PriceType::byCode('extra')->id)->sole()->unit_price_cents)->toBe(600);
 });

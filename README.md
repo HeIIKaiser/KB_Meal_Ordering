@@ -43,7 +43,7 @@ All milestones of the brief are done (M0–M6). Next step: the pilot — see [`d
 
 - **Employees** open the app on their phone (`/`), log in once with *osobné číslo* + PIN and stay logged
   in (400-day HttpOnly cookie). They tap a dish to order it; the first lunch and first dinner of a day are
-  **Darované** (1,50 €), anything more is **Extra** (6,00 €, confirmed before ordering). Ordering closes
+  **Zamestnanecká strava** (1,50 €), anything more is **Dokupovaná strava** (6,00 €, confirmed before ordering). Internally the codes are `donated` / `extra`. Ordering closes
   automatically at the cutoff (Obed 09:00, Večera 14:00, same day — configurable) or when the kitchen locks it.
 - **Kitchen** (`/admin`, role *kitchen*) enters the weekly menu (grid or Excel import, lunch = soup + 2 mains,
   dinner = 1), prints the daily list and can lock ordering early.

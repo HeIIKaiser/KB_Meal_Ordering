@@ -27,8 +27,8 @@ it('shows the month with count and total from snapshot prices', function () {
         ->assertSee('november 2026')
         ->assertSee('9,00 €')         // 1,50 + 6,00 + 1,50
         ->assertSee('3 jedlá')
-        ->assertSee('Darované: 2 ks (3,00 €)')
-        ->assertSee('Extra: 1 ks (6,00 €)')
+        ->assertSee('Zamestnanecká strava: 2 ks (3,00 €)')
+        ->assertSee('Dokupovaná strava: 1 ks (6,00 €)')
         ->assertSee('Cena stravy je odhadom a po porovnaní s dochádzkou sa môže zmeniť.');
 });
 

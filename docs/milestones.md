@@ -163,3 +163,15 @@ the layout lives in one class (`MonthlyMatrixXlsx`) and can be matched exactly.
   slip shows a note. PIN status column + "lístok ešte nevytlačený" filter. Printing is audited.
 - Deploy: `bash deploy/update.sh` (new columns). Existing employees from before this change show PIN status
   *neznámy*: use *Nové PINy + prístupové lístky* once for them.
+
+### Follow-up: prints, wording and desktop layout (2026-11-10)
+
+- **Weekly menu print**: *Jedálny lístok → Tlačiť týždeň / PDF* — A4 landscape, Monday–Sunday, soup, options, dinner,
+  allergens + legend, closed days; one page (tested).
+- **Access sheets**: one A4 per employee with large credentials, QR code and full instructions (live cutoffs and prices).
+  The 8-per-page cards are still available as *Malé lístky*.
+- **Kitchen daily print**: one row per employee with the full dish name and osobné číslo, zebra rows, header repeated
+  on every page (~33 people/page).
+- **Wording**: *Zamestnanecká strava* (1,50 €) and *Dokupovaná strava* (6,00 €) everywhere (migration renames existing data).
+- **Desktop week view**: rows aligned across all days (CSS subgrid).
+- Deploy: `bash deploy/update.sh` (one migration).

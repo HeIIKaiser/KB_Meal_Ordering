@@ -32,7 +32,7 @@ class DailyOverviewXlsx
         $header = (new Style)->setFontBold()->setBackgroundColor('E7E5E4');
 
         $writer->addRow(Row::fromValues([$o->title()], $title));
-        $writer->addRow(Row::fromValues(['Vytlačené', LocalTime::now()->format('j. n. Y H:i'), '', 'Spolu', $o->total(), 'z toho extra: '.$o->extraCount()]));
+        $writer->addRow(Row::fromValues(['Vytlačené', LocalTime::now()->format('j. n. Y H:i'), '', 'Spolu', $o->total(), 'z toho dokupovaná: '.$o->extraCount()]));
         if ($o->soup) {
             $writer->addRow(Row::fromValues(['Polievka', $o->soup]));
         }
@@ -46,7 +46,7 @@ class DailyOverviewXlsx
         }
 
         $writer->addRow(Row::fromValues([]));
-        $writer->addRow(Row::fromValues(['Súčty', '', '', '', 'Menu', 'Jedlo', 'Darované', 'Extra', 'Spolu'], $header));
+        $writer->addRow(Row::fromValues(['Súčty', '', '', '', 'Menu', 'Jedlo', 'Zamestnanecká', 'Dokupovaná', 'Spolu'], $header));
         foreach ($o->totals as $t) {
             $writer->addRow(Row::fromValues(['', '', '', '', $t['item']->number, $t['item']->name, $t['donated'], $t['extra'], $t['total']]));
         }

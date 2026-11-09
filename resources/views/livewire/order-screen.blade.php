@@ -57,16 +57,16 @@
     </div>
 
     {{-- Days: one visible on phones (swipe), the whole week on desktop --}}
-    <div class="grid gap-3 lg:grid-cols-7 lg:gap-2" x-on:touchstart.passive="ts($event)" x-on:touchend.passive="te($event)">
+    <div class="week-grid grid gap-3" style="--week-rows: {{ $weekRows }}" x-on:touchstart.passive="ts($event)" x-on:touchend.passive="te($event)">
         @foreach ($days as $day)
             @php $ymd = $day->toDateString(); @endphp
-            <section :class="{ 'hidden lg:block': sel !== '{{ $ymd }}' }" @class(['hidden lg:block' => $ymd !== $selected]) aria-label="{{ SlovakDate::long($day) }}">
-                <h2 @class(['mb-2 text-lg font-bold lg:text-base', 'text-emerald-800' => $ymd === $today])>
+            <section class="week-day" :class="{ 'hidden': sel !== '{{ $ymd }}' }" @class(['hidden' => $ymd !== $selected]) aria-label="{{ SlovakDate::long($day) }}">
+                <h2 @class(['mb-2 text-lg font-bold lg:mb-0 lg:self-end lg:text-base', 'text-emerald-800' => $ymd === $today])>
                     <span class="capitalize">{{ SlovakDate::day($day) }}</span> {{ SlovakDate::dm($day) }}
                     @if ($ymd === $today) <span class="text-sm font-semibold">(dnes)</span> @endif
                 </h2>
 
-                <div class="space-y-3 lg:space-y-2">
+                <div class="space-y-3 lg:contents">
                     @foreach ($mealSlots as $mealSlot)
                         @php
                             $a = $availability[$ymd][$mealSlot->id];
@@ -74,8 +74,8 @@
                             $menu = $menus[$ymd.'|'.$mealSlot->id] ?? null;
                             $items = $menu ? $menu->items->filter(fn ($i) => $i->is_active || isset($ordersByItem[$i->id])) : collect();
                         @endphp
-                        <div class="rounded-2xl bg-white p-3 shadow-sm lg:p-2">
-                            <div class="mb-2 flex items-baseline justify-between gap-2 lg:flex-col lg:items-start lg:gap-1">
+                        <div class="week-slot rounded-2xl bg-white p-3 shadow-sm lg:p-2" style="--slot-rows: {{ $slotRows[$mealSlot->id]['rows'] }}">
+                            <div class="mb-2 flex items-baseline justify-between gap-2 lg:mb-0 lg:flex-col lg:items-start lg:gap-1">
                                 <h3 class="text-xl font-bold lg:text-base">{{ $mealSlot->name }}</h3>
                                 <span @class([
                                     'whitespace-nowrap rounded-full px-2.5 py-0.5 text-sm font-semibold lg:text-xs',
@@ -85,15 +85,17 @@
                             </div>
 
                             @if ($menu?->soup_name && $items->isNotEmpty())
-                                <p class="mb-2 rounded-lg bg-amber-50 px-3 py-2 text-base lg:text-sm" title="Polievka sa podáva ku každému obedu, neobjednáva sa">
+                                <p class="mb-2 rounded-lg bg-amber-50 px-3 py-2 text-base lg:mb-0 lg:text-sm" title="Polievka sa podáva ku každému obedu, neobjednáva sa">
                                     <span class="font-semibold">Polievka:</span> {{ $menu->soup_name }}
                                     @if ($menu->soup_allergens)<span class="text-sm text-stone-500"> · alergény {{ $menu->soup_allergens }}</span>@endif
                                 </p>
+                            @elseif ($slotRows[$mealSlot->id]['soup'])
+                                <div class="hidden lg:block" aria-hidden="true"></div>{{-- keeps the soup row aligned --}}
                             @endif
                             @if ($items->isEmpty())
                                 <p class="py-2 text-base text-stone-500 lg:text-sm">Menu zatiaľ nie je zverejnené.</p>
                             @else
-                                <ul class="space-y-2">
+                                <ul class="space-y-2 lg:contents">
                                     @foreach ($items as $item)
                                         @php $mine = $ordersByItem[$item->id] ?? collect(); @endphp
                                         <li>
@@ -102,7 +104,7 @@
                                                     wire:loading.attr="disabled"
                                                     @disabled(! $open)
                                                     @class([
-                                                        'flex w-full items-start gap-3 rounded-xl border-2 p-3 text-left transition lg:gap-2 lg:p-2',
+                                                        'flex w-full items-start gap-3 rounded-xl border-2 p-3 text-left transition lg:h-full lg:gap-2 lg:p-2',
                                                         'border-emerald-700 bg-emerald-50' => $mine->isNotEmpty(),
                                                         'border-stone-200 bg-white active:bg-stone-100' => $mine->isEmpty() && $open,
                                                         'border-stone-200 bg-stone-50 text-stone-500' => $mine->isEmpty() && ! $open,
@@ -123,11 +125,11 @@
                                                     @endif
                                                     @foreach ($mine as $order)
                                                         <span @class([
-                                                            'mt-1 inline-block rounded-md px-2 py-0.5 text-sm font-bold lg:text-xs',
+                                                            'mt-1 inline-block whitespace-nowrap rounded-md px-2 py-0.5 text-sm font-bold lg:text-xs',
                                                             'bg-emerald-700 text-white' => $order->priceType->isDonated(),
                                                             'bg-amber-500 text-black' => ! $order->priceType->isDonated(),
                                                         ])>
-                                                            {{ $order->priceType->isDonated() ? 'Objednané' : 'Extra' }} · {{ Money::format($order->unit_price_cents) }}
+                                                            {{ $order->priceType->isDonated() ? 'Objednané' : 'Dokupované' }} · {{ Money::format($order->unit_price_cents) }}
                                                         </span>
                                                     @endforeach
                                                 </span>

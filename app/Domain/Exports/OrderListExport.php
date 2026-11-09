@@ -132,7 +132,9 @@ class OrderListExport
                 'stredisko' => (string) $o->department,
                 'menu_cislo' => (int) $o->number,
                 'menu_nazov' => $o->dish,
-                'typ' => $o->type_code === 'donated' ? 'darovane' : $o->type_code,
+                'typ' => match ($o->type_code) {
+                    'donated' => 'zamestnanecka', 'extra' => 'dokupovana', default => $o->type_code
+                },
                 'cena_cents' => (int) $o->unit_price_cents,
                 'stav' => $o->status === OrderStatus::Active->value ? 'aktivna' : 'zrusena',
                 'vytvorene' => LocalTime::toLocal(CarbonImmutable::parse($o->created_at, 'UTC')),

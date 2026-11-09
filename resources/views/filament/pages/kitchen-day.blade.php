@@ -43,7 +43,7 @@
                         @elseif ($a->state === SlotState::Closed)
                             <x-filament::badge color="gray" class="inline-flex">Uzavreté</x-filament::badge> {{ $a->closedDay?->note }}
                         @else
-                            <x-filament::badge color="gray" class="inline-flex">{{ $a->state === SlotState::PastCutoff ? 'Po uzávierke' : ucfirst($a->state->label()) }}</x-filament::badge>
+                            <x-filament::badge color="gray" class="inline-flex">{{ $a->state === SlotState::PastCutoff ? 'Po uzávierke' : \Illuminate\Support\Str::ucfirst($a->state->label()) }}</x-filament::badge>
                         @endif
                     </p>
                 </div>
@@ -68,14 +68,14 @@
             <div class="rounded-xl bg-primary-600 p-4 text-white shadow-sm">
                 <div class="text-sm font-semibold opacity-90">Spolu</div>
                 <div class="text-4xl font-bold">{{ $o->total() }}</div>
-                @if ($o->extraCount())<div class="text-sm opacity-90">z toho extra {{ $o->extraCount() }}</div>@endif
+                @if ($o->extraCount())<div class="text-sm opacity-90">z toho dokupovaná {{ $o->extraCount() }}</div>@endif
             </div>
             @foreach ($o->totals as $t)
                 <div class="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
                     <div class="text-sm font-semibold text-gray-500">Menu {{ $t['item']->number }}</div>
                     <div class="text-4xl font-bold">{{ $t['total'] }}</div>
                     <div class="truncate text-sm" title="{{ $t['item']->name }}">{{ $t['item']->name }}</div>
-                    @if ($t['extra'])<div class="text-xs font-semibold text-warning-600">z toho extra {{ $t['extra'] }}</div>@endif
+                    @if ($t['extra'])<div class="text-xs font-semibold text-warning-600">z toho dokupovaná {{ $t['extra'] }}</div>@endif
                     @unless ($t['item']->is_active)<div class="text-xs text-danger-600">stiahnuté z ponuky</div>@endunless
                 </div>
             @endforeach
@@ -106,7 +106,7 @@
                                     <td class="py-1.5 pe-4 text-gray-500">{{ $r['department'] }}</td>
                                     <td class="py-1.5 pe-4">
                                         <strong>Menu {{ $r['number'] }}:</strong> {{ $r['dish'] }}
-                                        @if ($r['extra']) <x-filament::badge color="warning" class="ms-1 inline-flex">Extra</x-filament::badge> @endif
+                                        @if ($r['extra']) <x-filament::badge color="warning" class="ms-1 inline-flex">Dokupovaná</x-filament::badge> @endif
                                     </td>
                                     <td class="py-1.5 text-gray-600">{{ $r['note'] }}</td>
                                 </tr>

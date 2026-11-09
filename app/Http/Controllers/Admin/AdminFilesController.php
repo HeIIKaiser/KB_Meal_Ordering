@@ -6,10 +6,16 @@ use App\Domain\Backup\DatabaseBackup;
 use App\Domain\Employees\EmployeeImport;
 use App\Domain\Employees\PinIssuer;
 use App\Domain\Menus\MenuImport;
+use App\Domain\Ordering\PriceResolver;
 use App\Enums\Role;
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
+use App\Models\MealSlot;
+use App\Models\PriceType;
 use App\Models\User;
+use App\Support\LocalTime;
+use App\Support\Money;
+use App\Support\Settings;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 use Illuminate\Http\Request;
@@ -40,9 +46,44 @@ class AdminFilesController extends Controller
             'addQuietzone' => true,
         ])))->render($url);
 
+        $small = $request->query('format') === 'male';
+
         return response()
-            ->view('admin.slips', ['slips' => $slips, 'url' => $url, 'qr' => $qr])
+            ->view($small ? 'admin.slips-small' : 'admin.slips', [
+                'slips' => $slips,
+                'url' => $url,
+                'qr' => $qr,
+                'ids' => $ids->implode(','),
+                'info' => $small ? null : $this->orderingInfo(),
+            ])
             ->header('Cache-Control', 'no-store, private');
+    }
+
+    /**
+     * Live rules for the instructions on the A4 login sheet, so the sheet stays
+     * correct when cutoffs or prices change.
+     *
+     * @return array{cutoffs: list<string>, horizon: int, prices: list<string>}
+     */
+    private function orderingInfo(): array
+    {
+        $today = LocalTime::today();
+        $resolver = app(PriceResolver::class);
+
+        return [
+            'cutoffs' => MealSlot::query()->active()->ordered()->get()
+                ->map(fn ($s) => $s->name.' do '.substr($s->cutoff_time, 0, 5).' '.match ($s->cutoff_days_before) {
+                    0 => 'v ten istý deň',
+                    1 => 'deň vopred',
+                    default => $s->cutoff_days_before.' dni vopred',
+                })->all(),
+            'horizon' => app(Settings::class)->orderingHorizonDays(),
+            'prices' => PriceType::query()->orderBy('sort')->get()
+                ->map(fn ($t) => [$t, $resolver->current($t, $today)?->amount_cents])
+                ->filter(fn ($p) => $p[1] !== null)
+                ->map(fn ($p) => Money::format($p[1]).' – '.($p[0]->isDonated() ? 'prvý obed a prvá večera v daný deň ('.mb_strtolower($p[0]->name).')' : 'každé ďalšie jedlo v ten istý deň ('.mb_strtolower($p[0]->name).')'))
+                ->values()->all(),
+        ];
     }
 
     /** Download one backup file (admin only; audited). */

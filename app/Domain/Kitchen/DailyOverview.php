@@ -119,22 +119,4 @@ final class DailyOverview
     {
         return 'kuchyna_'.$this->date->toDateString().'_'.$this->slot->code;
     }
-
-    /**
-     * Rows split into two columns for compact printing: [[left, right|null], …],
-     * reading down the left column first.
-     *
-     * @return list<array{0: array<string, mixed>, 1: array<string, mixed>|null, 2: int, 3: int|null}> left row, right row, their 1-based numbers
-     */
-    public function twoColumns(): array
-    {
-        $rows = $this->rows->values();
-        $half = (int) ceil($rows->count() / 2);
-        $out = [];
-        for ($i = 0; $i < $half; $i++) {
-            $out[] = [$rows[$i], $rows[$i + $half] ?? null, $i + 1, isset($rows[$i + $half]) ? $i + $half + 1 : null];
-        }
-
-        return $out;
-    }
 }

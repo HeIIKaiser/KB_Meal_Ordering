@@ -29,15 +29,16 @@ na dnes a zajtra; kliknutím sa otvorí príslušný prehľad.
 - Hore vyberte **deň** (šípky alebo kalendár, *Dnes*) a **jedlo** (Obed / Večera).
 - Pod nadpisom je stav: *Objednávky otvorené* (počty sa ešte môžu meniť do uzávierky), *Po uzávierke*,
   *Uzamknuté* (kto a kedy) alebo *Uzavreté*.
-- Veľké čísla: **spolu** a počet pre každé menu (z toho extra). Stránka sa sama obnovuje každú minútu.
+- Veľké čísla: **spolu** a počet pre každé menu (z toho dokupovaná strava). Stránka sa sama obnovuje každú minútu.
 - Pri obede je uvedená aj **polievka** dňa (podáva sa každému, v zozname sa nepočíta).
 - **Zoznam** je zoradený podľa priezviska; políčko *Hľadať meno…* nájde človeka aj bez diakritiky
   (napr. „simko“). Extra jedlá majú značku **Extra**.
 
 ### Tlač, PDF, Excel
 
-- **Tlačiť** otvorí stránku na tlač a hneď ponúkne tlač (A4, dva stĺpce, štvorček na odškrtnutie výdaja,
-  v hlavičke dátum, jedlo a čas tlače, dole súčty za každé menu). Približne 50 – 60 ľudí sa zmestí na 1 stranu.
+- **Tlačiť** otvorí stránku na tlač a hneď ponúkne tlač (A4, **jeden riadok na zamestnanca** s celým názvom jedla,
+  striedavo biele a sivé riadky, štvorček na odškrtnutie výdaja, v hlavičke dátum, jedlo a čas tlače, dole súčty
+  za každé menu). Približne 33 ľudí na stranu; hlavička tabuľky sa opakuje na každej strane.
 - **PDF** – rovnaký zoznam ako súbor (napr. na poslanie e-mailom).
 - **Excel** – rovnaký zoznam s osobnými číslami a strediskami, dole súčty.
 
@@ -56,7 +57,9 @@ Ak tlačíte pred uzávierkou, v hlavičke je upozornenie „Objednávky ešte o
 
 - **Nový zamestnanec:** tlačidlo *Nový zamestnanec* → osobné číslo, priezvisko, meno, stredisko → Uložiť.
   **PIN sa vygeneruje automaticky** — v oznámení kliknite na **Vytlačiť lístok**.
-- **Prístupový lístok** (meno, osobné číslo, **súčasný PIN**, QR kód s adresou, postup „pridať na plochu“; 8 lístkov na A4):
+- **Prístupový list** — **jedna strana A4 na zamestnanca**: meno, osobné číslo a **súčasný PIN** veľkým písmom,
+  QR kód s adresou a podrobný návod (prvé prihlásenie, ikona na ploche, objednávanie, uzávierky a ceny podľa
+  aktuálnych nastavení, PIN). Ak treba šetriť papier, na stránke tlače je odkaz *Malé lístky (8 na A4)*:
   - jednému zamestnancovi: v riadku tlačidlo **Lístok** (alebo *Tlačiť lístok* pri úprave),
   - viacerým naraz: zaškrtnite ich → *Hromadné akcie* → **Tlačiť prístupové lístky**,
   - všetkým, ktorým ešte lístok nebol vytlačený (napr. po importe): tlačidlo **Nevytlačené lístky (N)** hore.
@@ -94,6 +97,12 @@ Ak tlačíte pred uzávierkou, v hlavičke je upozornenie „Objednávky ešte o
 - Ak meníte alebo odstraňujete jedlo, ktoré si už niekto objednal, aplikácia ukáže **zoznam dotknutých
   zamestnancov** a čaká na potvrdenie. Ich objednávky zostávajú platné — odporúčame ich informovať.
 
+### Tlač jedálneho lístka na celý týždeň
+
+V tabuľke týždňa tlačidlo **Tlačiť týždeň** (alebo **PDF**): A4 na šírku, pondelok – nedeľa, polievka, Menu 1,
+Menu 2, večera s alergénmi a vysvetlivkami alergénov dole. Uzavreté dni sú vyznačené. Vhodné na nástenku.
+Tlačte na šírku.
+
 ### Import jedálneho lístka z Excelu
 
 **Jedálny lístok → Import lístka**. Najjednoduchšie je stiahnuť **šablónu** a vyplniť ju:
@@ -116,19 +125,19 @@ Zamestnanci v ten deň uvidia „uzavreté“ s poznámkou a nemôžu objednať.
 
 ## Ceny (administrátor; mzdy iba čítajú)
 
-**Nastavenia → Ceny**. Hore je **aktuálna cena** darovaného a extra jedla.
+**Nastavenia → Ceny**. Hore je **aktuálna cena** zamestnaneckej a dokupovanej stravy.
 Zmena ceny = **Nová cena** s dátumom *Platí od* (deň jedla, najskôr zajtra). Staré objednávky si
 ponechajú cenu, za ktorú boli objednané. Cenu, ktorá už platí, nemožno meniť — zadajte novú.
 
 ## Uzávierky a nastavenia (administrátor)
 
 - **Nastavenia → Jedlá a uzávierky:** dokedy sa dá objednať obed/večeru (v ten istý deň alebo deň vopred, čas).
-- **Nastavenia → Objednávanie:** koľko dní dopredu sa dá objednať a voliteľne najviac koľko extra jedál (6 €)
-  môže mať zamestnanec na jedno jedlo a deň (okrem jedného darovaného). Prázdne = bez obmedzenia (predvolené).
+- **Nastavenia → Objednávanie:** koľko dní dopredu sa dá objednať a voliteľne najviac koľko dokupovaných jedál (6 €)
+  môže mať zamestnanec na jedno jedlo a deň (okrem zamestnaneckej stravy). Prázdne = bez obmedzenia (predvolené).
 
-**Ako sa určuje cena:** každý deň je prvý obed a prvá večera zamestnanca za 1,50 € (darované), každé ďalšie jedlo
-za 6,00 € (extra). Aplikácia nevie, či mal zamestnanec 8- alebo 12-hodinovú smenu (pri 8 h má nárok len na jedno
-darované jedlo), preto je pri mesačných súhrnoch upozornenie *„Cena stravy je odhadom a po porovnaní s dochádzkou
+**Ako sa určuje cena:** každý deň je prvý obed a prvá večera zamestnanca sú **zamestnanecká strava** za 1,50 €, každé ďalšie jedlo
+je **dokupovaná strava** za 6,00 €. Aplikácia nevie, či mal zamestnanec 8- alebo 12-hodinovú smenu (pri 8 h má nárok len na jednu
+zamestnaneckú stravu), preto je pri mesačných súhrnoch upozornenie *„Cena stravy je odhadom a po porovnaní s dochádzkou
 sa môže zmeniť.“* Úpravu podľa dochádzky robia mzdy.
 
 ## Objednávky
@@ -138,7 +147,7 @@ sa môže zmeniť.“* Úpravu podľa dochádzky robia mzdy.
 Administrátor navyše:
 
 - **Objednať za zamestnanca** (pre ľudí bez telefónu): zamestnanec, dátum, jedlo, menu. Typ ceny sa určí sám
-  (prvé jedlo darované, ďalšie extra) a zobrazí sa pred uložením.
+  (prvý obed a prvá večera dňa = zamestnanecká strava, ďalšie = dokupovaná) a zobrazí sa pred uložením.
 - Pri objednávke **Opraviť → Zmeniť jedlo / Zmeniť typ ceny / Zrušiť**.
   Po uzávierke alebo uzamknutí je **dôvod povinný**; pri zmene typu ceny vždy.
 
@@ -152,11 +161,11 @@ Vyberte **mesiac** (prvých 10 dní v mesiaci je predvolený minulý mesiac) →
 Súbor `stravovanie_RRRR-MM_mesacny.xlsx` má dva hárky:
 
 - **Mesiac** – pre každého zamestnanca blok: v hlavičke dni v týždni (víkendy sú podfarbené), pod tým
-  počet darovaných a extra jedál v každom dni (obed + večera v ten istý deň = 2), vpravo *Spolu* a *Suma €*.
+  počet jedál zamestnaneckej a dokupovanej stravy v každom dni (obed + večera v ten istý deň = 2), vpravo *Spolu* a *Suma €*.
   Pri zaškrtnutí **Rozdeliť na obed / večeru** sú riadky zvlášť pre obed a večeru.
   Tlačí sa na A4 na šírku, celý mesiac na šírku strany.
 - **Súhrn** – jeden riadok na zamestnanca: osobné číslo, priezvisko, meno, stredisko, počty a sumy
-  darovaných a extra jedál, celková suma. Tento hárok je určený na prenos do miezd.
+  zamestnaneckej a dokupovanej stravy, celková suma. Tento hárok je určený na prenos do miezd.
 
 Počítajú sa iba platné (nezrušené) objednávky, a to za cenu, za ktorú boli objednané.
 V prehľade sú všetci, kto v mesiaci jedli (aj ľudia, ktorí medzičasom odišli). **Aj aktívni zamestnanci bez
@@ -211,18 +220,18 @@ uzamknutia, nastavenia) vrátane dôvodu opravy. Detail záznamu ukáže hodnoty
 - **Ťuknite na jedlo = objednané.** Jedlo sa zafarbí a ukáže sa ✓ a cena.
 - Ťuknite znova na objednané jedlo → **Zrušiť objednávku?** → *Áno, zrušiť*.
 - Ťuknete na iné jedlo, keď už máte objednané → *Zmeniť na …* (vymení jedlo) alebo
-  *Pridať extra za 6,00 €* (druhé jedlo navyše).
+  *Dokúpiť ďalšie jedlo za 6,00 €* (jedlo navyše).
 - **Polievka** sa podáva ku každému obedu, neobjednáva sa.
 - Objednávať a rušiť sa dá do uzávierky (obed do 9:00, večera do 14:00 v ten istý deň — ak nie je určené
   inak; čas vidíte pri jedle: *otvorené do …*). Potom je jedlo *uzamknuté*; zmenu urobí už len administrátor.
 
 ## Cena
 
-- **1,50 €** — prvý obed a prvá večera v daný deň (darované).
-- **6,00 €** — každé ďalšie jedlo v ten istý deň a jedlo (extra). Pred objednaním extra jedla sa vždy ukáže cena.
+- **1,50 €** — prvý obed a prvá večera v daný deň (**zamestnanecká strava**).
+- **6,00 €** — každé ďalšie jedlo v ten istý deň (**dokupovaná strava**). Pred objednaním sa vždy ukáže cena.
 - V časti **Môj mesiac** vidíte všetky objednávky a sumu za mesiac.
   *Cena stravy je odhadom a po porovnaní s dochádzkou sa môže zmeniť* (napr. pri 8-hodinovej zmene patrí
-  jedno darované jedlo denne).
+  jedna zamestnanecká strava denne).
 
 ## Účet a PIN
 

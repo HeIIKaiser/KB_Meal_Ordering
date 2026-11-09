@@ -123,16 +123,16 @@ describe('monthly XLSX', function () {
         $i = collect($m)->search(fn ($r) => $r[0] === 'Novák Ján (osobné č. 0123)');
         expect($m[$i][1])->toBe('november 2026')
             ->and(array_slice($m[$i], 2, 3))->toBe(['Ne', 'Po', 'Ut'])     // 1. 11. 2026 is a Sunday
-            ->and($m[$i + 1][1])->toBe('Darované')
+            ->and($m[$i + 1][1])->toBe('Zamestnanecká strava')
             ->and(array_slice($m[$i + 1], 2, 3))->toBe([0, 2, 0])
             ->and(array_slice($m[$i + 1], -2))->toBe([3, 5])
-            ->and($m[$i + 2][1])->toBe('Extra')
+            ->and($m[$i + 2][1])->toBe('Dokupovaná strava')
             ->and(array_slice($m[$i + 2], -2))->toBe([1, 6])
             ->and($m[$i + 3][1])->toBe('Spolu')
             ->and(array_slice($m[$i + 3], -2))->toBe([4, 11]);
 
         $s = $sheets['Súhrn'];
-        expect($s[0])->toBe(['Osobné číslo', 'Priezvisko', 'Meno', 'Stredisko', 'Darované ks', 'Extra ks', 'Darované €', 'Extra €', 'Suma €'])
+        expect($s[0])->toBe(['Osobné číslo', 'Priezvisko', 'Meno', 'Stredisko', 'Zamestnanecká strava ks', 'Dokupovaná strava ks', 'Zamestnanecká strava €', 'Dokupovaná strava €', 'Suma €'])
             ->and(collect($s)->first(fn ($r) => $r[0] === '0123'))->toBe(['0123', 'Novák', 'Ján', 'Kuchyňa', 3, 1, 5, 6, 11])
             ->and(collect($s)->first(fn ($r) => $r[0] === 'Spolu'))->toBe(['Spolu', '', '', '', 5, 1, 8.5, 6, 14.5])
             ->and(collect($s)->last())->toBe(['Cena stravy je odhadom a po porovnaní s dochádzkou sa môže zmeniť.']);
@@ -142,7 +142,7 @@ describe('monthly XLSX', function () {
         $m = readXlsx(app(MonthlyMatrixXlsx::class)->write(MonthlyData::for('2026-11'), splitBySlot: true))['Mesiac'];
         $i = collect($m)->search(fn ($r) => str_starts_with((string) $r[0], 'Novák Ján'));
 
-        expect(collect(array_slice($m, $i + 1, 4))->pluck(1)->all())->toBe(['Darované – obed', 'Darované – večera', 'Extra – obed', 'Extra – večera'])
+        expect(collect(array_slice($m, $i + 1, 4))->pluck(1)->all())->toBe(['Zamestnanecká strava – obed', 'Zamestnanecká strava – večera', 'Dokupovaná strava – obed', 'Dokupovaná strava – večera'])
             ->and($m[$i + 1][3])->toBe(1)->and($m[$i + 2][3])->toBe(1)->and($m[$i + 3][3])->toBe(1)->and($m[$i + 4][3])->toBe(0);
     });
 });
@@ -190,7 +190,7 @@ describe('download routes', function () {
 
         $first = $lines[1];
         expect([$first[0], $first[1], $first[2], $first[3], $first[8], $first[9], $first[10], $first[13]])
-            ->toBe(['2026-11-02', 'obed', '0123', 'Novák', 'darovane', '1,50', 'aktivna', 'sám'])
+            ->toBe(['2026-11-02', 'obed', '0123', 'Novák', 'zamestnanecka', '1,50', 'aktivna', 'sám'])
             ->and($first[11])->toBe('2026-11-02 07:00:00'); // local time
 
         $cancelled = collect($lines)->first(fn ($l) => $l[10] === 'zrusena');

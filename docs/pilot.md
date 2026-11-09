@@ -18,9 +18,9 @@ Tick each line on the **production** hosting. Details are in the README (technic
 
 ## 2. Set-up in the panel (admin, kitchen)
 
-- [ ] *Nastavenia → Ceny*: Darované 1,50 €, Extra 6,00 € (preset; change only if needed).
+- [ ] *Nastavenia → Ceny*: Zamestnanecká strava 1,50 €, Dokupovaná strava 6,00 € (preset; change only if needed).
 - [ ] *Nastavenia → Jedlá a uzávierky*: cutoff times confirmed with the kitchen (default 09:00 / 14:00 same day).
-- [ ] *Nastavenia → Objednávanie*: ordering horizon (14 days), extra cap (empty = unlimited).
+- [ ] *Nastavenia → Objednávanie*: ordering horizon (14 days), cap on Dokupovaná strava (empty = unlimited).
 - [ ] *Jedálny lístok → Uzavreté dni*: public holidays and closures for the pilot period.
 - [ ] Staff accounts for kitchen and payroll (*Ľudia → Správcovia*), roles checked.
 - [ ] Employees imported (*Zamestnanci → Import*, from the HR system's export with osobné číslo) and checked against HR.
@@ -30,10 +30,10 @@ Tick each line on the **production** hosting. Details are in the README (technic
 
 - [ ] Access slips printed for the pilot group (*Zamestnanci* → select → *Tlačiť prístupové lístky*, or *Nevytlačené lístky* after the import) and handed out personally.
 - [ ] Each pilot user: scanned the QR code, logged in, **added the icon to the home screen**, ordered one meal.
-- [ ] Test on real devices: an old Android phone, an iPhone, a desktop PC (ordering, cancel, change, extra 6 €, Môj mesiac).
+- [ ] Test on real devices: an old Android phone, an iPhone, a desktop PC (ordering, cancel, change, Dokupovaná strava 6 €, Môj mesiac).
 - [ ] Kitchen: daily overview → **print on the kitchen printer** (margins, readability, checkbox column); lock/unlock tried once.
 - [ ] Late order after the cutoff entered by an admin (*Objednať za zamestnanca* with reason).
-- [ ] Payroll: monthly export downloaded and matched against attendance for the pilot group (darované vs. 8/12 h shifts).
+- [ ] Payroll: monthly export downloaded and matched against attendance for the pilot group (zamestnanecká strava vs. 8/12 h shifts).
 - [ ] Collect feedback (what was unclear, what took too long) → adjust before rollout.
 
 ## 4. Rollout to everyone

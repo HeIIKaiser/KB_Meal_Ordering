@@ -40,6 +40,11 @@ Route::prefix('/admin/kuchyna')->middleware('staff:kitchen,admin,payroll')->name
     Route::get('/xlsx', [KitchenExportController::class, 'xlsx'])->name('xlsx');
 });
 
+Route::prefix('/admin/jedalny-listok')->middleware('staff:kitchen,admin,payroll')->name('menu.week.')->group(function () {
+    Route::get('/tlac', [KitchenExportController::class, 'weekPrint'])->name('print');
+    Route::get('/pdf', [KitchenExportController::class, 'weekPdf'])->name('pdf');
+});
+
 Route::prefix('/admin/exporty')->middleware('staff:payroll,admin')->name('exports.')->group(function () {
     Route::get('/mesiac', [ExportController::class, 'monthly'])->name('monthly');
     Route::get('/zoznam', [ExportController::class, 'list'])->name('list');

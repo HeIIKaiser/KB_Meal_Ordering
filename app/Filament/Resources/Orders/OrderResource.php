@@ -148,7 +148,7 @@ class OrderResource extends Resource
             ->icon(Heroicon::OutlinedPlus)
             ->authorize(fn () => auth()->user()?->can('create', Order::class))
             ->modalHeading('Objednať za zamestnanca')
-            ->modalDescription('Pre ľudí bez telefónu. Typ ceny sa určí automaticky (prvé jedlo darované, ďalšie extra).')
+            ->modalDescription('Pre ľudí bez telefónu. Typ ceny sa určí automaticky (prvý obed a prvá večera dňa = zamestnanecká strava, ďalšie = dokupovaná).')
             ->schema([
                 Select::make('employee_id')
                     ->label('Zamestnanec')

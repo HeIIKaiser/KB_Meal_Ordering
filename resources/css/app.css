@@ -16,3 +16,27 @@ button, a {
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
 }
+
+/*
+ * Desktop week view: all 7 day columns share the same row tracks (subgrid), so
+ * Obed / soup / Menu 1 / Menu 2 / Večera line up across the week. Rows come from
+ * the component: --week-rows (whole week) and --slot-rows (one meal card).
+ * Unlayered on purpose: it must beat the `hidden` utility on desktop, where all days show.
+ */
+@media (min-width: 1024px) {
+    .week-grid {
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        grid-template-rows: repeat(var(--week-rows), auto);
+        gap: 0.5rem;
+    }
+    .week-day {
+        display: grid;
+        grid-template-rows: subgrid;
+        grid-row: span var(--week-rows);
+    }
+    .week-slot {
+        display: grid;
+        grid-template-rows: subgrid;
+        grid-row: span var(--slot-rows);
+    }
+}

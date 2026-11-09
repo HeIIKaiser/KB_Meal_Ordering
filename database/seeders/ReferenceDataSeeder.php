@@ -27,10 +27,10 @@ class ReferenceDataSeeder extends Seeder
         ]);
 
         $donated = PriceType::query()->firstOrCreate(['code' => PriceType::DONATED], [
-            'name' => 'Darované', 'sort' => 10, 'per_slot_daily_limit' => 1,
+            'name' => 'Zamestnanecká strava', 'sort' => 10, 'per_slot_daily_limit' => 1,
         ]);
         $extra = PriceType::query()->firstOrCreate(['code' => PriceType::EXTRA], [
-            'name' => 'Extra', 'sort' => 20, 'per_slot_daily_limit' => null, // null = setting max_extra_per_slot
+            'name' => 'Dokupovaná strava', 'sort' => 20, 'per_slot_daily_limit' => null, // null = setting max_extra_per_slot
         ]);
 
         if (! $donated->prices()->exists()) {

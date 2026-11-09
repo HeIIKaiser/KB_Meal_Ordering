@@ -52,14 +52,6 @@ it('computes totals per option and an alphabetical list of active orders', funct
         ->and($o->rows->pluck('extra')->all())->toBe([false, false, false, true, false]);
 });
 
-it('splits the list into two print columns reading down', function () {
-    $cols = DailyOverview::for('2026-11-10', lunch())->twoColumns();
-
-    expect($cols)->toHaveCount(3)
-        ->and($cols[0][0]['name'])->toBe('Adamov Ján')->and($cols[0][1]['name'])->toBe('Novák Ján')
-        ->and($cols[2][1])->toBeNull()->and($cols[2][2])->toBe(3);
-});
-
 it('loads the overview with a constant number of queries', function () {
     DB::enableQueryLog();
     DailyOverview::for('2026-11-10', lunch());
@@ -137,7 +129,7 @@ describe('print, PDF, XLSX', function () {
             ->assertSee('Obed – utorok 10. 11. 2026')
             ->assertSee('Vytlačené 10. 11. 2026 07:30')
             ->assertSee('Spolu: 5')
-            ->assertSee('EXTRA')
+            ->assertSee('DOKUPOVANÁ')
             ->assertSee('class="box"', false)
             ->assertSee('window.print()', false)
             ->assertSee('Objednávky ešte otvorené do 09:00!');
