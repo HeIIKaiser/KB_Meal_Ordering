@@ -175,3 +175,8 @@ the layout lives in one class (`MonthlyMatrixXlsx`) and can be matched exactly.
 - **Wording**: *Zamestnanecká strava* (1,50 €) and *Dokupovaná strava* (6,00 €) everywhere (migration renames existing data).
 - **Desktop week view**: rows aligned across all days (CSS subgrid).
 - Deploy: `bash deploy/update.sh` (one migration).
+
+### Follow-up: web address on the access sheet (2026-11-10)
+
+- Every A4 access sheet now shows the full `https://…` address (from `APP_URL`) in a large green box for PC users,
+  next to the QR code for phones; step 1 explains both ways. Still one page per person (checked in Chromium print).

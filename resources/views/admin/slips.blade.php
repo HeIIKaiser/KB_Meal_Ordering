@@ -16,7 +16,7 @@
         .warn { flex-basis: 100%; font-size: 14px; }
         .empty { padding: 40px; text-align: center; font-size: 18px; }
 
-        .page { width: 210mm; height: 297mm; margin: 12px auto; background: #fff; padding: 12mm 15mm 10mm; overflow: hidden;
+        .page { width: 210mm; height: 297mm; margin: 12px auto; background: #fff; padding: 10mm 15mm 8mm; overflow: hidden;
                 display: flex; flex-direction: column; break-after: page; page-break-after: always; box-shadow: 0 1px 4px rgba(0,0,0,.2); }
         .page:last-child { break-after: auto; page-break-after: auto; }
 
@@ -24,28 +24,32 @@
         .brand .app { font-size: 22pt; font-weight: 800; color: #047857; }
         .brand .sub { font-size: 10.5pt; color: #444; text-align: right; }
 
-        .who { margin-top: 4mm; }
-        .who .name { font-size: 24pt; font-weight: 800; line-height: 1.1; }
+        .who { margin-top: 3mm; }
+        .who .name { font-size: 22pt; font-weight: 800; line-height: 1.1; }
         .who .dept { font-size: 12pt; color: #555; margin-top: 1mm; }
 
-        .creds { display: flex; gap: 8mm; margin-top: 4mm; align-items: stretch; }
-        .box { flex: 1; border: 2px solid #111; border-radius: 4mm; padding: 3mm 5mm; }
-        .box .lbl { font-size: 11pt; text-transform: uppercase; letter-spacing: .08em; color: #444; font-weight: 700; }
-        .box .val { font-family: ui-monospace, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 27pt; font-weight: 800; letter-spacing: .12em; margin-top: 1mm; }
+        .creds { display: flex; gap: 8mm; margin-top: 3mm; align-items: stretch; }
+        .box { flex: 1; border: 2px solid #111; border-radius: 4mm; padding: 2mm 5mm; }
+        .box .lbl { font-size: 10pt; text-transform: uppercase; letter-spacing: .08em; color: #444; font-weight: 700; }
+        .box .val { font-family: ui-monospace, Menlo, Consolas, 'DejaVu Sans Mono', monospace; font-size: 25pt; font-weight: 800; letter-spacing: .12em; line-height: 1.15; }
         .box .nopin { font-size: 11pt; margin-top: 2mm; }
-        .qr { width: 46mm; text-align: center; font-size: 9pt; color: #333; }
-        .qr .url { overflow-wrap: anywhere; }
-        .qr img { width: 46mm; height: 46mm; display: block; }
+        .qr { width: 36mm; text-align: center; font-size: 8.5pt; color: #333; }
+        .qr img { width: 36mm; height: 36mm; display: block; }
 
-        .secret { margin-top: 3mm; font-size: 10.5pt; color: #7c2d12; font-weight: 600; }
+        /* Web address for people using a PC — big, highlighted, full https:// form */
+        .web { margin-top: 3mm; border: 2.5px solid #047857; background: #ecfdf5; border-radius: 4mm; padding: 2mm 5mm; }
+        .web .lbl { font-size: 11pt; font-weight: 700; color: #065f46; }
+        .web .addr { font-size: 23pt; font-weight: 800; color: #000; letter-spacing: .01em; line-height: 1.2; overflow-wrap: anywhere; }
 
-        .cols { display: flex; gap: 8mm; margin-top: 4mm; flex: 1; }
+        .secret { margin-top: 2mm; font-size: 10.5pt; color: #7c2d12; font-weight: 600; }
+
+        .cols { display: flex; gap: 8mm; margin-top: 3mm; flex: 1; }
         .col { flex: 1; }
         h2 { font-size: 12pt; margin: 0 0 1.5mm; color: #047857; display: flex; gap: 2mm; align-items: center; }
         h2 .n { display: inline-flex; width: 7mm; height: 7mm; border-radius: 50%; background: #047857; color: #fff; align-items: center; justify-content: center; font-size: 11pt; }
-        section { margin-bottom: 3.5mm; }
-        ol, ul { margin: 0; padding-left: 5mm; font-size: 10pt; line-height: 1.38; }
-        li { margin-bottom: 0.6mm; }
+        section { margin-bottom: 2.5mm; }
+        ol, ul { margin: 0; padding-left: 5mm; font-size: 9.6pt; line-height: 1.32; }
+        li { margin-bottom: 0.4mm; }
         .os { font-weight: 700; }
         em { font-style: normal; font-weight: 700; }
 
@@ -100,8 +104,12 @@
                 </div>
                 <div class="qr">
                     <img src="{{ $qr }}" alt="QR kód s adresou aplikácie">
-                    <div style="margin-top: 1.5mm">Naskenujte fotoaparátom telefónu<br><strong class="url">{{ $url }}</strong></div>
+                    <div style="margin-top: 1.5mm">Na telefóne: naskenujte fotoaparátom</div>
                 </div>
+            </div>
+            <div class="web">
+                <div class="lbl">Na počítači otvorte prehliadač a napíšte túto adresu:</div>
+                <div class="addr">{{ $displayUrl }}</div>
             </div>
             <div class="secret">PIN nikomu neukazujte. Kto ho pozná, môže objednávať na vaše meno.</div>
 
@@ -110,9 +118,10 @@
                     <section>
                         <h2><span class="n">1</span> Prvé prihlásenie</h2>
                         <ol>
-                            <li>Naskenujte <em>QR kód</em> fotoaparátom telefónu (alebo do prehliadača napíšte adresu pod ním).</li>
+                            <li><span class="os">Telefón:</span> naskenujte <em>QR kód</em> fotoaparátom.</li>
+                            <li><span class="os">Počítač:</span> otvorte prehliadač (Chrome, Edge…), do riadka s adresou úplne hore napíšte adresu zo zeleného rámčeka a stlačte <em>Enter</em>.</li>
                             <li>Zadajte <em>osobné číslo</em> a <em>PIN</em> z tohto listu a ťuknite na <em>Prihlásiť sa</em>.</li>
-                            <li>Na tomto telefóne už zostanete prihlásený — PIN nebudete zadávať pri každom objednaní.</li>
+                            <li>Na tomto zariadení už zostanete prihlásený — PIN nebudete zadávať pri každom objednaní. Na počítači si stránku uložte medzi obľúbené (hviezdička ☆ v riadku s adresou).</li>
                         </ol>
                     </section>
                     <section>

@@ -52,6 +52,8 @@ class AdminFilesController extends Controller
             ->view($small ? 'admin.slips-small' : 'admin.slips', [
                 'slips' => $slips,
                 'url' => $url,
+                // shown in big letters for PC users: full address incl. https://, no trailing slash
+                'displayUrl' => rtrim($url, '/'),
                 'qr' => $qr,
                 'ids' => $ids->implode(','),
                 'info' => $small ? null : $this->orderingInfo(),

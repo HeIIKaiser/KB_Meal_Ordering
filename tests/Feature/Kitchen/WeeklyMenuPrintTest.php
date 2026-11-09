@@ -72,10 +72,13 @@ it('prints one A4 login sheet per employee with live cutoffs and prices', functi
     $b->setPin('7788', Employee::PIN_BY_EMPLOYEE);
     $b->save();
     lunch()->update(['cutoff_time' => '08:30:00']);
+    config(['app.url' => 'https://obedy.example.sk/']);
 
     $html = $this->actingAs($admin)->get(route('admin.slips', ['zamestnanci' => $a->id.','.$b->id]))->assertOk()->getContent();
 
     expect(substr_count($html, 'class="page"'))->toBe(2)
+        // Big highlighted address for PC users: full https:// form, no trailing slash, on every sheet
+        ->and(substr_count($html, '<div class="addr">https://obedy.example.sk</div>'))->toBe(2)
         ->and($html)->toContain('Obed do 08:30 v ten istý deň')
         ->and($html)->toContain('1,50 € – prvý obed a prvá večera v daný deň (zamestnanecká strava)')
         ->and($html)->toContain('6,00 € – každé ďalšie jedlo v ten istý deň (dokupovaná strava)')
