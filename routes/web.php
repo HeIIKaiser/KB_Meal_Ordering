@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminFilesController;
+use App\Http\Controllers\Admin\KitchenExportController;
 use App\Http\Controllers\Employee\LoginController;
 use App\Http\Controllers\Employee\MonthController;
 use App\Http\Controllers\Employee\PinController;
@@ -29,3 +30,9 @@ Route::middleware(['auth:employee', 'employee.active'])->group(function () {
 */
 Route::get('/admin/listky', [AdminFilesController::class, 'slips'])->name('admin.slips');
 Route::get('/admin/sablona/{type}', [AdminFilesController::class, 'template'])->name('admin.template');
+
+Route::prefix('/admin/kuchyna')->name('kitchen.')->group(function () {
+    Route::get('/tlac', [KitchenExportController::class, 'print'])->name('print');
+    Route::get('/pdf', [KitchenExportController::class, 'pdf'])->name('pdf');
+    Route::get('/xlsx', [KitchenExportController::class, 'xlsx'])->name('xlsx');
+});

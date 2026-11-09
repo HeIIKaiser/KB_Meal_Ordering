@@ -48,6 +48,15 @@ isn't spelled out in the brief. Update this file when Roman answers.
 6. **Price versions** can only be added for tomorrow or later; a version already in effect is read-only.
 7. **Staff can't lock themselves out:** an admin can't remove their own admin role or deactivate themselves.
 
+## Design decisions (M4)
+
+1. **One data source** (`App\Domain\Kitchen\DailyOverview`) feeds the screen, print page, PDF and XLSX, so their numbers can't differ. Two queries regardless of the number of orders.
+2. **One row per order:** an employee with a donated and an extra meal appears twice (the extra one marked **EXTRA**), so every served plate has its own checkbox.
+3. **Print layout:** A4 portrait, two columns read top-to-bottom, header repeated on every page, totals per option at the bottom; ~55 people fit on one page. Long names/dishes are shortened on paper (full text on screen and in Excel).
+4. **PDF** is generated with dompdf (pure PHP, works on shared hosting; DejaVu Sans for Slovak diacritics). Browser print is the primary path; PDF is for sending/archiving.
+5. **Lock button** is shown only before the cutoff (afterwards the slot is closed anyway); **Unlock** is shown whenever a manual lock exists. Payroll can view and print but not lock.
+6. The kitchen screen and dashboard **poll every 60 s** (cheap on shared hosting) while the selected day is today or later.
+
 ## Decisions by Roman
 
 - **2026-11-09 — Staff 2FA is optional.** Users can enable TOTP in their Filament profile; it is not enforced on first login and there are no prompts. (Brief §5 said "email + password + 2FA" — relaxed because most staff can't handle authenticator apps.)

@@ -71,3 +71,19 @@ The Slovak manual for staff is in `docs/navod.md`.
 - 142 tests green (SQLite + MariaDB). Checked in Chromium: menu grid, import preview, orders, print-to-PDF of slips.
 
 **Still needed from Roman:** a sample of the kitchen's real weekly menu file (for its own import adapter).
+
+## M4 — Kitchen (done)
+
+Try it: log in as `kuchyna@jedalen.test` / `heslo1234` → **Nástenka** shows today's and tomorrow's counts →
+click one, or **Objednávky → Denný prehľad (kuchyňa)**.
+
+- Day/slot picker, status (open until / after cutoff / locked by whom and when / closed), big totals per
+  menu option incl. extras, alphabetical list (name, osobné číslo, stredisko, Menu n: dish, Extra mark, note),
+  instant name filter without diacritics, auto-refresh every minute.
+- **Tlačiť:** print page opens the print dialog — A4, two columns, checkbox per plate, header with date, slot and
+  print time, totals at the bottom; 52 demo orders fit on one page (checked in Chromium print and dompdf).
+- **PDF** (dompdf) and **Excel** (`kuchyna_2026-11-10_obed.xlsx`, with osobné číslo) with the same content.
+- **Uzamknúť / Odomknúť** right on the page (kitchen, admin), audited.
+- 158 tests green (SQLite + MariaDB), incl. a constant-query check for the list.
+
+Kitchen section added to `docs/navod.md`. Please try printing on the kitchen's printer.

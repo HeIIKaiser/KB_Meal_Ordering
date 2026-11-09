@@ -3,14 +3,14 @@
 Správa je na adrese **https://<adresa-aplikácie>/admin**. Prihlasujete sa e-mailom a heslom.
 Zamestnanci objednávajú na hlavnej adrese (bez `/admin`) osobným číslom a PINom.
 
-> Návod sa dopĺňa s každou verziou. Časti pre kuchyňu (denný prehľad, tlač, uzamknutie) pribudnú v ďalšej verzii.
+> Návod sa dopĺňa s každou verziou.
 
 ## Kto čo môže
 
 | Rola | Môže |
 |---|---|
-| **Kuchyňa** | jedálny lístok (týždeň, import), prezerať objednávky a zatvorené dni |
-| **Mzdy** | iba prezerať objednávky a ceny (exporty pribudnú) |
+| **Kuchyňa** | denný prehľad, tlač, uzamknutie/odomknutie, jedálny lístok (týždeň, import), prezerať objednávky a zatvorené dni |
+| **Mzdy** | iba prezerať objednávky, denný prehľad a ceny (exporty pribudnú) |
 | **Administrátor** | všetko: zamestnanci, PINy, ceny, uzávierky, nastavenia, opravy objednávok, používatelia správy, história zmien |
 
 Jeden človek môže mať viac rolí.
@@ -20,6 +20,34 @@ Jeden človek môže mať viac rolí.
 Kto chce, zapne si ho vpravo hore → ikona účtu → **Profil** → overovacia aplikácia (napr. Google Authenticator).
 Uložte si záložné kódy. Ak niekto stratí telefón, administrátor mu 2FA vypne v časti
 **Používatelia správy → Vypnúť 2FA**.
+
+## Denný prehľad – kuchyňa
+
+**Objednávky → Denný prehľad (kuchyňa)** — otvára sa na dnešok a obed. Na úvodnej **Nástenke** sú počty
+na dnes a zajtra; kliknutím sa otvorí príslušný prehľad.
+
+- Hore vyberte **deň** (šípky alebo kalendár, *Dnes*) a **jedlo** (Obed / Večera).
+- Pod nadpisom je stav: *Objednávky otvorené* (počty sa ešte môžu meniť do uzávierky), *Po uzávierke*,
+  *Uzamknuté* (kto a kedy) alebo *Zatvorené*.
+- Veľké čísla: **spolu** a počet pre každé menu (z toho extra). Stránka sa sama obnovuje každú minútu.
+- **Zoznam** je zoradený podľa priezviska; políčko *Hľadať meno…* nájde človeka aj bez diakritiky
+  (napr. „simko“). Extra jedlá majú značku **Extra**.
+
+### Tlač, PDF, Excel
+
+- **Tlačiť** otvorí stránku na tlač a hneď ponúkne tlač (A4, dva stĺpce, štvorček na odškrtnutie výdaja,
+  v hlavičke dátum, jedlo a čas tlače, dole súčty za každé menu). Približne 50 – 60 ľudí sa zmestí na 1 stranu.
+- **PDF** – rovnaký zoznam ako súbor (napr. na poslanie e-mailom).
+- **Excel** – rovnaký zoznam s osobnými číslami a strediskami, dole súčty.
+
+Ak tlačíte pred uzávierkou, v hlavičke je upozornenie „Objednávky ešte otvorené do …“.
+
+### Uzamknúť / Odomknúť
+
+- **Uzamknúť** — zamestnanci od tej chvíle nemôžu na tento deň a jedlo objednávať ani rušiť
+  (napr. keď kuchyňa začne variť skôr). Zaznamená sa, kto a kedy uzamkol.
+- **Odomknúť** zruší ručné uzamknutie. Po automatickej uzávierke sa tým objednávanie neotvorí —
+  neskoré zmeny robí administrátor v časti *Všetky objednávky* (s dôvodom).
 
 ## Zamestnanci (administrátor)
 
