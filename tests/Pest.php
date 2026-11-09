@@ -21,7 +21,7 @@ pest()->extend(TestCase::class)
 pest()->extend(TestCase::class)
     ->use(DatabaseMigrations::class)
     ->beforeEach(fn () => (new ReferenceDataSeeder)->run())
-    ->in('Concurrency');
+    ->in('Concurrency', 'Database');
 
 /*
 |--------------------------------------------------------------------------

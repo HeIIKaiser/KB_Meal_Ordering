@@ -123,3 +123,31 @@ the layout lives in one class (`MonthlyMatrixXlsx`) and can be matched exactly.
   with allergens in brackets after the dish; the downloadable template uses this format (round-trip tested).
 - Demo data follows the real shape. 185 tests green (SQLite + MariaDB).
 - Deploy: `git pull` → `php artisan migrate --force` (new columns) → `php artisan optimize`.
+
+## M6 — Hardening & handover (done)
+
+- **Security review** → `docs/security.md`. Changes made:
+  - security headers + CSP;
+  - HSTS in production;
+  - per-osobné-číslo brute-force lockout;
+  - `staff:` route middleware plus a test that every route requires login;
+  - private-storage route disabled;
+  - local avatars instead of ui-avatars.com (it leaked staff names);
+  - Slovak error pages;
+  - encrypted-session check in `app:hosting-check`;
+  - optional `TRUSTED_PROXIES`.
+
+  `composer audit` / `npm audit` are clean. Checked in Chromium: no CSP violations on any main screen.
+- **Backups:**
+  - `php artisan app:backup`, nightly at 02:30 with 30-day rotation, also run by `deploy/update.sh`;
+  - *Nastavenia → Zálohy* to list, download and create backups now (admin, audited);
+  - `php artisan app:backup-restore` (makes a safety backup first);
+  - restore also works with the plain `mysql` client (tested on the full demo DB: identical row counts);
+  - `app:hosting-check` warns when the newest backup is older than 26 h.
+- **Handover:**
+  - README rewritten (overview, code map, deployment, updating with `deploy/update.sh`, cron, backups incl. offsite pull and restore, operations, troubleshooting);
+  - `docs/pilot.md` go-live checklist;
+  - Slovak manual extended with backups and a guide for employees.
+- 211 tests green (SQLite + MariaDB).
+
+**Remaining from the brief:** OPEN §13.7 (go-live date) — drives the pilot plan in `docs/pilot.md`.

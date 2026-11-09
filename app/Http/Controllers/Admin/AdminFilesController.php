@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Backup\DatabaseBackup;
 use App\Domain\Employees\EmployeeImport;
 use App\Domain\Menus\MenuImport;
 use App\Enums\Role;
@@ -11,6 +12,7 @@ use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Response;
 
 /** Plain (non-Filament) staff pages: printable access slips and import templates. */
@@ -19,8 +21,6 @@ class AdminFilesController extends Controller
     /** A4 sheet of access slips. The plain PINs come from the session once (pull). */
     public function slips(Request $request): Response
     {
-        $this->authorizeRoles(Role::Admin);
-
         $slips = $request->session()->pull('access_slips', []);
         $url = rtrim(config('app.url'), '/').'/';
 
@@ -34,6 +34,15 @@ class AdminFilesController extends Controller
         return response()
             ->view('admin.slips', ['slips' => $slips, 'url' => $url, 'qr' => $qr])
             ->header('Cache-Control', 'no-store, private');
+    }
+
+    /** Download one backup file (admin only; audited). */
+    public function backup(string $file, DatabaseBackup $backup): BinaryFileResponse
+    {
+        $path = $backup->find($file) ?? abort(404);
+        activity('backups')->causedBy(Auth::guard('web')->user())->event('downloaded')->log('Záloha stiahnutá: '.$file);
+
+        return response()->download($path, $file, ['Content-Type' => 'application/gzip', 'Cache-Control' => 'no-store, private']);
     }
 
     public function template(string $type): Response

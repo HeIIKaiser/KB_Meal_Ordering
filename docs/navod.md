@@ -169,7 +169,59 @@ Každé stiahnutie exportu sa zapíše do *Histórie zmien*.
 **Ľudia → Používatelia správy**: meno, e-mail, role, heslo (min. 12 znakov). Nikoho nemažte — vypnite *Aktívny*.
 Sami sebe nemôžete odobrať rolu administrátora.
 
+## Zálohy (administrátor)
+
+**Nastavenia → Zálohy.** Databáza sa zálohuje automaticky **každú noc o 02:30** a zálohy sa uchovávajú
+30 dní. Tlačidlo **Zálohovať teraz** vytvorí zálohu hneď (napr. pred väčšou zmenou), **Stiahnuť** ju uloží
+do počítača. Zálohy obsahujú osobné údaje — ukladajte ich iba na bezpečné miesto.
+
+Ak je na stránke **červené upozornenie**, nočná záloha neprebehla (pravdepodobne nebeží plánovač na serveri) —
+dajte vedieť správcovi servera. Obnovu zo zálohy robí správca servera (README → Backups).
+
 ## História zmien (administrátor)
 
 **Nastavenia → História zmien**: kto, kedy a čo zmenil (objednávky, ceny, jedálny lístok, zamestnanci,
 uzamknutia, nastavenia) vrátane dôvodu opravy. Detail záznamu ukáže hodnoty pred a po zmene.
+
+---
+
+# Návod pre zamestnancov
+
+*(Môžete vytlačiť a vyvesiť alebo poslať zamestnancom.)*
+
+## Prvé prihlásenie
+
+1. Od vedúceho dostanete **lístok** s osobným číslom, PINom a QR kódom.
+2. Naskenujte **QR kód** fotoaparátom telefónu (alebo zadajte adresu z lístka).
+3. Zadajte **osobné číslo** a **PIN** → *Prihlásiť sa*. Na tomto telefóne už zostanete prihlásený.
+4. Pridajte si ikonu na plochu:
+   - **Android (Chrome):** ponuka ⋮ → *Pridať na plochu* / *Inštalovať aplikáciu*,
+   - **iPhone (Safari):** tlačidlo Zdieľať □↑ → *Pridať na plochu*.
+5. Odteraz otvárajte aplikáciu ikonou **Jedáleň**.
+
+## Objednávanie
+
+- Hore vyberte **deň** (alebo potiahnite prstom doľava/doprava). Bodka pod dňom = máte objednané.
+- **Ťuknite na jedlo = objednané.** Jedlo sa zafarbí a ukáže sa ✓ a cena.
+- Ťuknite znova na objednané jedlo → **Zrušiť objednávku?** → *Áno, zrušiť*.
+- Ťuknete na iné jedlo, keď už máte objednané → *Zmeniť na …* (vymení jedlo) alebo
+  *Pridať extra za 6,00 €* (druhé jedlo navyše).
+- **Polievka** sa podáva ku každému obedu, neobjednáva sa.
+- Objednávať a rušiť sa dá do uzávierky (obed do 9:00, večera do 14:00 v ten istý deň — ak nie je určené
+  inak; čas vidíte pri jedle: *otvorené do …*). Potom je jedlo *uzamknuté*; zmenu urobí už len administrátor.
+
+## Cena
+
+- **1,50 €** — prvý obed a prvá večera v daný deň (darované).
+- **6,00 €** — každé ďalšie jedlo v ten istý deň a jedlo (extra). Pred objednaním extra jedla sa vždy ukáže cena.
+- V časti **Môj mesiac** vidíte všetky objednávky a sumu za mesiac.
+  *Cena stravy je odhadom a po porovnaní s dochádzkou sa môže zmeniť* (napr. pri 8-hodinovej zmene patrí
+  jedno darované jedlo denne).
+
+## Účet a PIN
+
+- **Účet → Zmena PIN**: zadajte súčasný PIN a dvakrát nový (4 – 6 číslic). Na ostatných zariadeniach budete odhlásený.
+- **Zabudnutý PIN:** povedzte vedúcemu/administrátorovi — dostanete nový lístok.
+- Na **spoločnom telefóne alebo počítači** sa po objednaní odhláste (*Účet → Odhlásiť sa*).
+- Po viacerých nesprávnych PINoch sa prihlásenie na chvíľu zablokuje (1 až 15 minút).
+

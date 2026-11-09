@@ -4,15 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Domain\Kitchen\DailyOverview;
 use App\Domain\Kitchen\DailyOverviewXlsx;
-use App\Enums\Role;
 use App\Http\Controllers\Controller;
 use App\Models\MealSlot;
-use App\Models\User;
 use App\Support\LocalTime;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -66,12 +63,6 @@ class KitchenExportController extends Controller
 
     private function overview(Request $request): DailyOverview
     {
-        $user = Auth::guard('web')->user();
-        if (! $user instanceof User) {
-            abort(redirect('/admin/login'));
-        }
-        abort_unless($user->is_active && $user->hasRole(Role::Kitchen, Role::Admin, Role::Payroll), 403);
-
         $data = $request->validate([
             'datum' => ['required', 'date_format:Y-m-d'],
             'jedlo' => ['required', 'string', 'max:32'],

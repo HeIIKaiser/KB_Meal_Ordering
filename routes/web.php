@@ -27,18 +27,20 @@ Route::middleware(['auth:employee', 'employee.active'])->group(function () {
 });
 
 /*
-| Staff helpers outside the Filament layout (auth + role checked in the controller).
+| Staff helpers outside the Filament layout. Every route here MUST carry a
+| staff:<roles> middleware (enforced by tests/Feature/Security/RoutesTest.php).
 */
-Route::get('/admin/listky', [AdminFilesController::class, 'slips'])->name('admin.slips');
-Route::get('/admin/sablona/{type}', [AdminFilesController::class, 'template'])->name('admin.template');
+Route::get('/admin/listky', [AdminFilesController::class, 'slips'])->middleware('staff:admin')->name('admin.slips');
+Route::get('/admin/zalohy/stiahnut/{file}', [AdminFilesController::class, 'backup'])->middleware('staff:admin')->name('admin.backup');
+Route::get('/admin/sablona/{type}', [AdminFilesController::class, 'template'])->middleware('staff:admin,kitchen')->name('admin.template');
 
-Route::prefix('/admin/kuchyna')->name('kitchen.')->group(function () {
+Route::prefix('/admin/kuchyna')->middleware('staff:kitchen,admin,payroll')->name('kitchen.')->group(function () {
     Route::get('/tlac', [KitchenExportController::class, 'print'])->name('print');
     Route::get('/pdf', [KitchenExportController::class, 'pdf'])->name('pdf');
     Route::get('/xlsx', [KitchenExportController::class, 'xlsx'])->name('xlsx');
 });
 
-Route::prefix('/admin/exporty')->name('exports.')->group(function () {
+Route::prefix('/admin/exporty')->middleware('staff:payroll,admin')->name('exports.')->group(function () {
     Route::get('/mesiac', [ExportController::class, 'monthly'])->name('monthly');
     Route::get('/zoznam', [ExportController::class, 'list'])->name('list');
 });

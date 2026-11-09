@@ -55,6 +55,7 @@ class ActivityResource extends Resource
         'users' => 'Používatelia',
         'settings' => 'Nastavenia',
         'exports' => 'Exporty',
+        'backups' => 'Zálohy',
     ];
 
     public static function canViewAny(): bool

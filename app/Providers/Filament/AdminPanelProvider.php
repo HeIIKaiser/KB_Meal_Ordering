@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Enums\NavGroup;
+use App\Filament\Support\InitialsAvatarProvider;
 use Filament\Auth\MultiFactor\App\AppAuthentication;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -44,6 +45,7 @@ class AdminPanelProvider extends PanelProvider
                 'primary' => Color::Emerald,
             ])
             ->viteTheme('resources/css/filament/admin/theme.css')
+            ->defaultAvatarProvider(InitialsAvatarProvider::class)
             ->navigationGroups(array_map(fn (NavGroup $g) => $g->value, NavGroup::cases()))
             ->sidebarCollapsibleOnDesktop()
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')

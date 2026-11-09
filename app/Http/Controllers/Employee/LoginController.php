@@ -35,13 +35,17 @@ class LoginController extends Controller
 
         $number = trim($data['osobne_cislo']);
         $key = 'employee-login:'.Str::lower($number).'|'.$request->ip();
+        $numberKey = 'employee-login-number:'.Str::lower($number);
 
-        if (RateLimiter::tooManyAttempts($key, config('jedalen.login_max_attempts'))) {
-            $seconds = RateLimiter::availableIn($key);
+        foreach ([[$key, 'login_max_attempts'], [$numberKey, 'login_max_attempts_per_number']] as [$k, $limit]) {
+            if (RateLimiter::tooManyAttempts($k, config("jedalen.$limit"))) {
+                $seconds = RateLimiter::availableIn($k);
+                $wait = $seconds > 90 ? ceil($seconds / 60).' min' : "$seconds s";
 
-            throw ValidationException::withMessages([
-                'osobne_cislo' => "Príliš veľa neúspešných pokusov. Skúste to znova o $seconds s.",
-            ]);
+                throw ValidationException::withMessages([
+                    'osobne_cislo' => "Príliš veľa neúspešných pokusov. Skúste to znova o $wait.",
+                ]);
+            }
         }
 
         $ok = Auth::guard('employee')->attempt([
@@ -52,6 +56,7 @@ class LoginController extends Controller
 
         if (! $ok) {
             RateLimiter::hit($key, config('jedalen.login_decay_seconds'));
+            RateLimiter::hit($numberKey, config('jedalen.login_decay_seconds_per_number'));
 
             throw ValidationException::withMessages([
                 'osobne_cislo' => 'Nesprávne osobné číslo alebo PIN.',
@@ -59,6 +64,7 @@ class LoginController extends Controller
         }
 
         RateLimiter::clear($key);
+        RateLimiter::clear($numberKey);
         $request->session()->regenerate();
 
         /** @var Employee $employee */

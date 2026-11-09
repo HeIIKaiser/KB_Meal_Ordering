@@ -5,9 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Domain\Exports\MonthlyData;
 use App\Domain\Exports\MonthlyMatrixXlsx;
 use App\Domain\Exports\OrderListExport;
-use App\Enums\Role;
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Support\LocalTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,8 +16,6 @@ class ExportController extends Controller
 {
     public function monthly(Request $request): BinaryFileResponse
     {
-        $this->authorizeExport();
-
         $data = $request->validate([
             'mesiac' => ['required', 'date_format:Y-m'],
             'po_jedlach' => ['nullable', 'boolean'],
@@ -36,8 +32,6 @@ class ExportController extends Controller
 
     public function list(Request $request): BinaryFileResponse
     {
-        $this->authorizeExport();
-
         $data = $request->validate([
             'od' => ['required', 'date_format:Y-m-d'],
             'do' => ['required', 'date_format:Y-m-d', 'after_or_equal:od'],
@@ -74,14 +68,5 @@ class ExportController extends Controller
     private function audit(string $what): void
     {
         activity('exports')->causedBy(Auth::guard('web')->user())->event('export')->log($what);
-    }
-
-    private function authorizeExport(): void
-    {
-        $user = Auth::guard('web')->user();
-        if (! $user instanceof User) {
-            abort(redirect('/admin/login'));
-        }
-        abort_unless($user->is_active && $user->hasRole(Role::Payroll, Role::Admin), 403);
     }
 }

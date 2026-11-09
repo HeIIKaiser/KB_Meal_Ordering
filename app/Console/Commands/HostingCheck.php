@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Domain\Backup\DatabaseBackup;
 use App\Support\LocalTime;
 use App\Support\SchedulerHeartbeat;
 use Illuminate\Console\Command;
@@ -32,6 +33,7 @@ class HostingCheck extends Command
         $this->row('APP_URL is https', str_starts_with((string) config('app.url'), 'https://') || ! app()->isProduction(), (string) config('app.url'));
         $this->row('APP_DEBUG off in production', ! (app()->isProduction() && config('app.debug')), 'env='.app()->environment());
         $this->row('Secure session cookie in production', ! app()->isProduction() || config('session.secure') === true);
+        $this->row('Encrypted sessions in production', ! app()->isProduction() || config('session.encrypt') === true);
         $this->row('app.timezone is UTC', config('app.timezone') === 'UTC', config('app.timezone'));
         $this->row('Local time', true, LocalTime::now()->format('Y-m-d H:i:s T'));
 
@@ -59,6 +61,14 @@ class HostingCheck extends Command
             $last !== null && $last->gt(now()->subMinutes(3)),
             $last ? 'last: '.LocalTime::toLocal($last)->format('Y-m-d H:i:s').' – '.SchedulerHeartbeat::details() : 'never – cron not set up yet?',
         );
+
+        $latest = app(DatabaseBackup::class)->latest();
+        $this->row(
+            'Database backup < 26 h old',
+            $latest !== null && $latest['mtime'] > now()->subHours(26)->getTimestamp(),
+            $latest ? $latest['name'] : 'none yet – run php artisan app:backup',
+        );
+        $this->row('Backup directory writable', is_writable(app(DatabaseBackup::class)->directory()));
 
         $this->newLine();
         $this->failed ? $this->error('Some checks FAILED.') : $this->info('All checks passed.');

@@ -12,7 +12,7 @@ isn't spelled out in the brief. Update this file when Roman answers.
 | 3 | `max_extra_per_slot` | **Answered 2026-11-09** — essentially unlimited, 6 € each | setting empty = unlimited (default); a cap can still be set in *Nastavenia → Objednávanie* |
 | 4 | Number of employees | Assumed ≈ 80 (demo seeder) | — |
 | 5 | Kitchen's real menu file sample | **Answered 2026-11-09** — lunch = soup for everyone + 2 main courses, dinner = 1 main course; the kitchen will use an Excel with 4 entries per day | weekly import format `datum, polievka, obed_1, obed_2, vecera` (one row per day), template in the admin |
-| 6 | Monthly export layout matching the existing workbook | **Still open** — M5 implements the brief's layout; all layout code is in `App\Domain\Exports\MonthlyMatrixXlsx` so it can be matched to Roman's workbook once he sends a sample | brief layout + summary sheet |
+| 6 | Monthly export layout matching the existing workbook | **Answered 2026-11-09** — the brief's layout is fine, Roman works with the data | brief layout + *Súhrn* sheet (`MonthlyMatrixXlsx`) |
 | 7 | Go-live date | Needed for pilot planning | — |
 
 ## Design decisions (M1)
@@ -66,6 +66,16 @@ isn't spelled out in the brief. Update this file when Roman answers.
 5. **Flat list** includes cancelled orders (column `stav`: aktivna / zrusena) so it can be reconciled; `typ` is `darovane` / `extra`; times are local (Europe/Bratislava). CSV = UTF-8 with BOM, `;` separator, decimal comma (opens correctly in Slovak Excel). Max. range 1 year.
 6. **Access:** exports are for payroll and admin (kitchen has its own daily export). Every export download is written to the audit log (it contains personal data of all employees).
 7. Downloads are plain GET routes that stream a temp file — not through Livewire — to stay within shared-hosting memory limits (demo month: 0.2 s, ~40 MB peak).
+
+## Design decisions (M6)
+
+1. **Backups in pure PHP** (`DatabaseBackup`), not `mysqldump`: works on any shared hosting without `exec`. One statement per line, so the file also restores with the `mysql` CLI or phpMyAdmin (tested with the real `mysql` client). Written as `.part` and renamed, ends with `-- END OF BACKUP`; restore refuses incomplete files. Sessions/cache are backed up without rows.
+2. **Scheduled tasks run in-process** (`Schedule::call`), so cron needs no `proc_open`. The backup runs at 02:30 Europe/Bratislava with 30-day rotation (7 newest always kept), and also before every `deploy/update.sh`.
+3. **Second login limit per osobné číslo** (10 failures / 15 min from any IP) against distributed PIN guessing, on top of the per-IP limit.
+4. **Plain staff routes are guarded at the route** (`staff:<roles>` middleware), and a test fails if any route is unauthenticated.
+5. **CSP** restricts everything to our own origin; `unsafe-inline`/`unsafe-eval` stay because Livewire/Alpine need them. HSTS only in production. Filament's third-party avatar service is replaced by local initials, so no staff names leave the server.
+6. **Laravel's private-storage serving route is disabled** (`filesystems.disks.local.serve = false`): backups and uploads have no URL.
+7. **Trusted proxies off by default** (`TRUSTED_PROXIES`), so `X-Forwarded-For` can't be spoofed to dodge rate limits.
 
 ## Decisions by Roman
 
