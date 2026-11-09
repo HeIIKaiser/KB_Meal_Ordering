@@ -1,0 +1,28 @@
+# ---------------------------------------------------------------------------
+# FALLBACK ONLY — use when the subdomain's document root CANNOT be pointed to
+# the app's public/ directory. Copy this file to the subdomain root as
+# ".htaccess" (next to app/, bootstrap/, public/, …). See README → Deployment.
+# ---------------------------------------------------------------------------
+
+Options -Indexes
+
+# Never serve dotfiles (.env, .git, …) or project files directly.
+<FilesMatch "^\.|composer\.(json|lock)$|artisan$|package\.json$|phpunit\.xml$|\.md$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # HTTPS only
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+    # Block direct access to application directories
+    RewriteRule ^(app|bootstrap|config|database|deploy|resources|routes|storage|tests|tools|vendor)(/|$) - [F,L]
+
+    # Everything else is served from public/
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
