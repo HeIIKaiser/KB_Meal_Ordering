@@ -329,7 +329,7 @@ class OrderScreen extends Component
             SlotState::Open => 'otvorené do '.($a->cutoffAt->isSameDay($day)
                 ? $a->cutoffAt->format('H:i')
                 : SlovakDate::dayShort($a->cutoffAt).' '.SlovakDate::dm($a->cutoffAt).' '.$a->cutoffAt->format('H:i')),
-            SlotState::Closed => trim('zatvorené '.($a->closedDay?->note ? '– '.$a->closedDay->note : '')),
+            SlotState::Closed => trim('uzavreté '.($a->closedDay?->note ? '– '.$a->closedDay->note : '')),
             SlotState::NoMenu => 'menu zatiaľ nie je',
             default => $a->state->label(),
         };

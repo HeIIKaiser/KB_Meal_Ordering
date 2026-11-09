@@ -34,11 +34,11 @@ class UserResource extends Resource
 
     protected static ?int $navigationSort = 20;
 
-    protected static ?string $modelLabel = 'používateľ správy';
+    protected static ?string $modelLabel = 'správca';
 
-    protected static ?string $pluralModelLabel = 'používatelia správy';
+    protected static ?string $pluralModelLabel = 'správcovia';
 
-    protected static ?string $navigationLabel = 'Používatelia správy';
+    protected static ?string $navigationLabel = 'Správcovia';
 
     public static function form(Schema $schema): Schema
     {
@@ -99,7 +99,7 @@ class UserResource extends Resource
                     ->color('warning')
                     ->visible(fn (User $r) => filled($r->app_authentication_secret))
                     ->requiresConfirmation()
-                    ->modalDescription('Použite, ak používateľ stratil telefón s overovacou aplikáciou. Po prihlásení si 2FA môže znova zapnúť v profile.')
+                    ->modalDescription('Použite, ak správca stratil telefón s overovacou aplikáciou. Po prihlásení si 2FA môže znova zapnúť v profile.')
                     ->authorize(fn () => auth()->user()?->isAdmin())
                     ->action(function (User $record) {
                         $record->forceFill(['app_authentication_secret' => null, 'app_authentication_recovery_codes' => null])->save();

@@ -33,11 +33,11 @@ class ClosedDayResource extends Resource
 
     protected static ?int $navigationSort = 30;
 
-    protected static ?string $modelLabel = 'zatvorený deň';
+    protected static ?string $modelLabel = 'uzavretý deň';
 
-    protected static ?string $pluralModelLabel = 'zatvorené dni';
+    protected static ?string $pluralModelLabel = 'uzavreté dni';
 
-    protected static ?string $navigationLabel = 'Zatvorené dni';
+    protected static ?string $navigationLabel = 'Uzavreté dni';
 
     public static function form(Schema $schema): Schema
     {
@@ -47,7 +47,7 @@ class ClosedDayResource extends Resource
                 ->label('Jedlo')
                 ->options(fn () => MealSlot::query()->ordered()->pluck('name', 'id'))
                 ->placeholder('celý deň')
-                ->helperText('Prázdne = zatvorené celý deň.'),
+                ->helperText('Prázdne = uzavreté celý deň.'),
             TextInput::make('note')->label('Poznámka pre zamestnancov')->placeholder('Sviatok')->maxLength(255),
         ]);
     }

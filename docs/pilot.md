@@ -21,14 +21,14 @@ Tick each line on the **production** hosting. Details are in the README (technic
 - [ ] *Nastavenia → Ceny*: Darované 1,50 €, Extra 6,00 € (preset; change only if needed).
 - [ ] *Nastavenia → Jedlá a uzávierky*: cutoff times confirmed with the kitchen (default 09:00 / 14:00 same day).
 - [ ] *Nastavenia → Objednávanie*: ordering horizon (14 days), extra cap (empty = unlimited).
-- [ ] *Jedálny lístok → Zatvorené dni*: public holidays and closures for the pilot period.
-- [ ] Staff accounts for kitchen and payroll (*Ľudia → Používatelia správy*), roles checked.
+- [ ] *Jedálny lístok → Uzavreté dni*: public holidays and closures for the pilot period.
+- [ ] Staff accounts for kitchen and payroll (*Ľudia → Správcovia*), roles checked.
 - [ ] Employees imported (*Zamestnanci → Import*, from the HR system's export with osobné číslo) and checked against HR.
 - [ ] Menu for the first 2 weeks entered or imported (weekly Excel: `datum | polievka | obed_1 | obed_2 | vecera`).
 
 ## 3. Pilot group (1–2 weeks, ~10–15 people: kitchen + a few departments)
 
-- [ ] Access slips printed for the pilot group (*Zamestnanci* → select → *Nové PINy + prístupové lístky*) and handed out personally.
+- [ ] Access slips printed for the pilot group (*Zamestnanci* → select → *Tlačiť prístupové lístky*, or *Nevytlačené lístky* after the import) and handed out personally.
 - [ ] Each pilot user: scanned the QR code, logged in, **added the icon to the home screen**, ordered one meal.
 - [ ] Test on real devices: an old Android phone, an iPhone, a desktop PC (ordering, cancel, change, extra 6 €, Môj mesiac).
 - [ ] Kitchen: daily overview → **print on the kitchen printer** (margins, readability, checkbox column); lock/unlock tried once.

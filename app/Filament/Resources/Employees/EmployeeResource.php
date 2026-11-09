@@ -65,7 +65,7 @@ class EmployeeResource extends Resource
                 ->helperText('Neaktívny zamestnanec sa nemôže prihlásiť. Jeho objednávky zostávajú v histórii.')
                 ->default(true),
             Select::make('user_id')
-                ->label('Prepojený účet správy')
+                ->label('Prepojený účet správcu')
                 ->helperText('Len ak má zamestnanec aj prístup do správy (kuchyňa, mzdy, admin).')
                 ->options(fn () => User::query()->orderBy('name')->pluck('name', 'id'))
                 ->searchable()

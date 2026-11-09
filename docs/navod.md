@@ -9,9 +9,9 @@ Zamestnanci objednávajú na hlavnej adrese (bez `/admin`) osobným číslom a P
 
 | Rola | Môže |
 |---|---|
-| **Kuchyňa** | denný prehľad, tlač, uzamknutie/odomknutie, jedálny lístok (týždeň, import), prezerať objednávky a zatvorené dni |
+| **Kuchyňa** | denný prehľad, tlač, uzamknutie/odomknutie, jedálny lístok (týždeň, import), prezerať objednávky a uzavreté dni |
 | **Mzdy** | prezerať objednávky, denný prehľad a ceny; exporty pre mzdy |
-| **Administrátor** | všetko: zamestnanci, PINy, ceny, uzávierky, nastavenia, opravy objednávok, používatelia správy, história zmien |
+| **Administrátor** | všetko: zamestnanci, PINy, ceny, uzávierky, nastavenia, opravy objednávok, správcovia, história zmien |
 
 Jeden človek môže mať viac rolí.
 
@@ -19,7 +19,7 @@ Jeden človek môže mať viac rolí.
 
 Kto chce, zapne si ho vpravo hore → ikona účtu → **Profil** → overovacia aplikácia (napr. Google Authenticator).
 Uložte si záložné kódy. Ak niekto stratí telefón, administrátor mu 2FA vypne v časti
-**Používatelia správy → Vypnúť 2FA**.
+**Správcovia → Vypnúť 2FA**.
 
 ## Denný prehľad – kuchyňa
 
@@ -28,7 +28,7 @@ na dnes a zajtra; kliknutím sa otvorí príslušný prehľad.
 
 - Hore vyberte **deň** (šípky alebo kalendár, *Dnes*) a **jedlo** (Obed / Večera).
 - Pod nadpisom je stav: *Objednávky otvorené* (počty sa ešte môžu meniť do uzávierky), *Po uzávierke*,
-  *Uzamknuté* (kto a kedy) alebo *Zatvorené*.
+  *Uzamknuté* (kto a kedy) alebo *Uzavreté*.
 - Veľké čísla: **spolu** a počet pre každé menu (z toho extra). Stránka sa sama obnovuje každú minútu.
 - Pri obede je uvedená aj **polievka** dňa (podáva sa každému, v zozname sa nepočíta).
 - **Zoznam** je zoradený podľa priezviska; políčko *Hľadať meno…* nájde človeka aj bez diakritiky
@@ -109,10 +109,10 @@ Ak tlačíte pred uzávierkou, v hlavičke je upozornenie „Objednávky ešte o
   s číslom riadku) → **Uložiť jedálny lístok**. Potom sa otvorí týždeň v tabuľke na kontrolu.
 - Súbor môže byť XLSX alebo CSV. Funguje aj starší formát (jeden riadok na jedlo: `datum, jedlo, cislo_menu, nazov, alergeny`).
 
-## Zatvorené dni (administrátor)
+## Uzavreté dni (administrátor)
 
-**Jedálny lístok → Zatvorené dni → Nový**: dátum, jedlo (prázdne = celý deň), poznámka (napr. *Sviatok*).
-Zamestnanci v ten deň uvidia „zatvorené“ s poznámkou a nemôžu objednať.
+**Jedálny lístok → Uzavreté dni → Nový**: dátum, jedlo (prázdne = celý deň), poznámka (napr. *Sviatok*).
+Zamestnanci v ten deň uvidia „uzavreté“ s poznámkou a nemôžu objednať.
 
 ## Ceny (administrátor; mzdy iba čítajú)
 
@@ -170,9 +170,9 @@ vhodné na kontingenčnú tabuľku alebo napojenie na iný systém.
 
 Každé stiahnutie exportu sa zapíše do *Histórie zmien*.
 
-## Používatelia správy (administrátor)
+## Správcovia (administrátor)
 
-**Ľudia → Používatelia správy**: meno, e-mail, role, heslo (min. 12 znakov). Nikoho nemažte — vypnite *Aktívny*.
+**Ľudia → Správcovia**: meno, e-mail, role, heslo (min. 12 znakov). Nikoho nemažte — vypnite *Aktívny*.
 Sami sebe nemôžete odobrať rolu administrátora.
 
 ## Zálohy (administrátor)

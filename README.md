@@ -293,9 +293,9 @@ or via phpMyAdmin → Import (the `.sql.gz` file directly). Restoring into an em
 
 | Task | How |
 |---|---|
-| Add a staff user | Panel: *Ľudia → Používatelia správy → Nový*. First admin / emergency: `php artisan app:staff-user person@example.sk --role=admin` |
+| Add a staff user | Panel: *Ľudia → Správcovia → Nový*. First admin / emergency: `php artisan app:staff-user person@example.sk --role=admin` |
 | Staff forgot password | Admin edits the user and sets a new password. Locked-out admin: `php artisan app:staff-user <email>` (answer *yes* to set a new password) |
-| Staff lost 2FA phone | Admin: *Používatelia správy → Vypnúť 2FA* (2FA is optional, enabled per user in *Profil*) |
+| Staff lost 2FA phone | Admin: *Správcovia → Vypnúť 2FA* (2FA is optional, enabled per user in *Profil*) |
 | Employee logins | Every new employee (form, import, CLI) gets a random PIN automatically. Slips with the **current** PIN: *Zamestnanci* → *Lístok* (one), select → *Tlačiť prístupové lístky* (batch), *Nevytlačené lístky (N)* (all not printed yet, e.g. after an import). Printing doesn't change the PIN |
 | Employee forgot PIN | Panel: *Zamestnanci → Reset PIN* (new PIN + slip, logs out other devices). CLI: `php artisan app:reset-pin <osobne_cislo>` |
 | Employee locked after wrong PINs | Waits 60 s (5 tries per phone) or 15 min (10 tries per osobné číslo from anywhere). Immediately: `php artisan cache:clear` |

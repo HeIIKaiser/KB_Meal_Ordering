@@ -41,7 +41,7 @@
                             <x-filament::badge color="success" class="inline-flex">Objednávky otvorené</x-filament::badge>
                             uzávierka {{ $a->cutoffAt->isSameDay($o->date) ? '' : SlovakDate::dayShort($a->cutoffAt).' '.SlovakDate::dm($a->cutoffAt) }} o {{ $a->cutoffAt->format('H:i') }} – počty sa ešte môžu meniť
                         @elseif ($a->state === SlotState::Closed)
-                            <x-filament::badge color="gray" class="inline-flex">Zatvorené</x-filament::badge> {{ $a->closedDay?->note }}
+                            <x-filament::badge color="gray" class="inline-flex">Uzavreté</x-filament::badge> {{ $a->closedDay?->note }}
                         @else
                             <x-filament::badge color="gray" class="inline-flex">{{ $a->state === SlotState::PastCutoff ? 'Po uzávierke' : ucfirst($a->state->label()) }}</x-filament::badge>
                         @endif

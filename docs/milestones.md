@@ -37,7 +37,7 @@ Try it: `php artisan db:seed --class=DemoDataSeeder`, open `/`, log in with `100
   (HttpOnly cookie). 5 wrong attempts → 60 s lockout with a Slovak message.
 - **Objednávky** `/`: week strip (Po–Ne, today highlighted, dot = something ordered), ‹ › for weeks,
   swipe left/right between days on phones. One card per slot with its status (*otvorené do 09:00*,
-  *uzamknuté*, *zatvorené – poznámka*, *menu zatiaľ nie je*). **Tap = order** (Darované 1,50 €);
+  *uzamknuté*, *uzavreté – poznámka*, *menu zatiaľ nie je*). **Tap = order** (Darované 1,50 €);
   tap again → "Zrušiť objednávku?"; tap another option → "Zmeniť objednávku?" with
   *Zmeniť na Menu 2* / *Pridať extra za 6,00 €* / *Späť*. Every action shows a Slovak message.
   Desktop shows the whole week.
@@ -61,13 +61,13 @@ The Slovak manual for staff is in `docs/navod.md`.
 - **Import zamestnancov** (XLSX/CSV, template download): preview of new/changed/unchanged rows with the exact
   changes, per-row errors, optional deactivation of people missing in the file.
 - **Ceny:** current prices on top, new version with *Platí od*; versions in effect are read-only.
-- **Jedlá a uzávierky** (cutoff per slot), **Objednávanie** settings (horizon, max extra), **Zatvorené dni**.
+- **Jedlá a uzávierky** (cutoff per slot), **Objednávanie** settings (horizon, max extra), **Uzavreté dni**.
 - **Jedálny lístok:** weekly grid (days × Obed/Večera × options, allergens), copy from the previous week,
   warning with the list of affected employees when an ordered dish is renamed/removed.
 - **Import lístka** (template `datum, jedlo, cislo_menu, nazov, alergeny`), preview + per-row errors.
 - **Objednávky:** filterable list for all staff; admin: *Objednať za zamestnanca* (price shown before saving),
   *Opraviť → Zmeniť jedlo / Zmeniť typ ceny / Zrušiť*, reason mandatory after cutoff.
-- **Používatelia správy:** roles, password, switch off a lost 2FA. **História zmien:** audit log with reasons.
+- **Správcovia:** roles, password, switch off a lost 2FA. **História zmien:** audit log with reasons.
 - 142 tests green (SQLite + MariaDB). Checked in Chromium: menu grid, import preview, orders, print-to-PDF of slips.
 
 **Still needed from Roman:** a sample of the kitchen's real weekly menu file (for its own import adapter).

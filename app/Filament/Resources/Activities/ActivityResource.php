@@ -52,7 +52,7 @@ class ActivityResource extends Resource
         'menus' => 'Jedálny lístok',
         'prices' => 'Ceny',
         'employees' => 'Zamestnanci',
-        'users' => 'Používatelia',
+        'users' => 'Správcovia',
         'settings' => 'Nastavenia',
         'exports' => 'Exporty',
         'backups' => 'Zálohy',

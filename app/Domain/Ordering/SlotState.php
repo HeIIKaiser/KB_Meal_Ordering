@@ -26,7 +26,7 @@ enum SlotState: string
         return match ($this) {
             self::Open => 'otvorené',
             self::NoMenu => 'bez menu',
-            self::Closed => 'zatvorené',
+            self::Closed => 'uzavreté',
             self::Locked, self::PastCutoff => 'uzamknuté',
             self::BeyondHorizon => 'zatiaľ nie je možné objednať',
             self::SlotInactive => 'nedostupné',
