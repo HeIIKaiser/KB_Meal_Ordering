@@ -49,3 +49,25 @@ Try it: `php artisan db:seed --class=DemoDataSeeder`, open `/`, log in with `100
 - Checked in Chromium at 360 px and 1400 px; 85 tests green (SQLite + MariaDB).
 
 Please try on a few real phones (old Android, iPhone): install to home screen, order, cancel, switch, extra.
+
+## M3 — Admin (done)
+
+Try it with demo data: `/admin`, `admin@jedalen.test` / `heslo1234` (or `kuchyna@…`, `mzdy@…` to see the role limits).
+The Slovak manual for staff is in `docs/navod.md`.
+
+- **Zamestnanci:** list with search/filters, create/edit (deactivate instead of delete), **Reset PIN** and
+  bulk **Nové PINy + prístupové lístky** → printable A4 page, 8 slips per page with name, osobné číslo, PIN,
+  QR code and "add to home screen" steps. PINs are shown only once.
+- **Import zamestnancov** (XLSX/CSV, template download): preview of new/changed/unchanged rows with the exact
+  changes, per-row errors, optional deactivation of people missing in the file.
+- **Ceny:** current prices on top, new version with *Platí od*; versions in effect are read-only.
+- **Jedlá a uzávierky** (cutoff per slot), **Objednávanie** settings (horizon, max extra), **Zatvorené dni**.
+- **Jedálny lístok:** weekly grid (days × Obed/Večera × options, allergens), copy from the previous week,
+  warning with the list of affected employees when an ordered dish is renamed/removed.
+- **Import lístka** (template `datum, jedlo, cislo_menu, nazov, alergeny`), preview + per-row errors.
+- **Objednávky:** filterable list for all staff; admin: *Objednať za zamestnanca* (price shown before saving),
+  *Opraviť → Zmeniť jedlo / Zmeniť typ ceny / Zrušiť*, reason mandatory after cutoff.
+- **Používatelia správy:** roles, password, switch off a lost 2FA. **História zmien:** audit log with reasons.
+- 142 tests green (SQLite + MariaDB). Checked in Chromium: menu grid, import preview, orders, print-to-PDF of slips.
+
+**Still needed from Roman:** a sample of the kitchen's real weekly menu file (for its own import adapter).

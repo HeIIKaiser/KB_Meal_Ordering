@@ -11,7 +11,7 @@ isn't spelled out in the brief. Update this file when Roman answers.
 | 2 | Cutoff times Obed / Večera | **Waiting** — using brief defaults | Obed same day 09:00, Večera same day 14:00 (editable per slot) |
 | 3 | `max_extra_per_slot` | **Waiting** — using brief default | `1` (setting) |
 | 4 | Number of employees | Assumed ≈ 80 (demo seeder) | — |
-| 5 | Kitchen's real menu file sample | Needed for M3 | — |
+| 5 | Kitchen's real menu file sample | **Still needed** — M3 ships the generic template importer; the adapter for the kitchen's own file comes when the sample arrives | template `datum, jedlo, cislo_menu, nazov, alergeny` |
 | 6 | Monthly export layout matching the existing workbook | Needed for M5 | — |
 | 7 | Go-live date | Needed for pilot planning | — |
 
@@ -37,6 +37,16 @@ isn't spelled out in the brief. Update this file when Roman answers.
 5. **Desktop (≥ 1024 px)** shows the whole week at once; phones show one day with a week strip and swipe left/right.
 6. **Service worker** caches only static assets (`/build`, icons) and an offline page. Pages and Livewire requests always go to the network — no offline ordering, no personal data in caches.
 7. **Fonts:** system fonts only (no web-font download; fast on old phones).
+
+## Design decisions (M3)
+
+1. **Permissions:** employees, users, slots, settings, audit log, order corrections = admin only. Kitchen: menus (grid + import), reads orders and closed days. Payroll: reads orders and prices. Enforced by policies / `canAccess()` and again inside `OrderService` / `SlotLockService`.
+2. **Nothing is deleted:** employees, staff users, slots and orders are deactivated/cancelled; menu options are deactivated. Only future price versions and closed days can be deleted.
+3. **PINs** are 6 random digits (no trivial patterns like 123456), generated on reset, shown once on the printable slip (handed over via the encrypted session and removed on first view). Reset logs the employee out on all devices.
+4. **Menu changes with orders:** renaming or removing an ordered option lists the affected employees and needs confirmation; their orders stay valid (the kitchen still sees them). Allergen-only changes don't warn.
+5. **Imports** preview first and skip rows with errors (each listed with its line number). Menu import upserts by date + slot + number and never removes options; employee import upserts by osobné číslo and only deactivates missing people when explicitly ticked. CSV may use `;`, `,` or tab and UTF-8 or Windows-1250 (Slovak Excel).
+6. **Price versions** can only be added for tomorrow or later; a version already in effect is read-only.
+7. **Staff can't lock themselves out:** an admin can't remove their own admin role or deactivate themselves.
 
 ## Decisions by Roman
 

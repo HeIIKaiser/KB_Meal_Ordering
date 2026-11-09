@@ -6,6 +6,7 @@ the old company software. **Flow: pick day → tap meal → done.**
 - Full requirements: [`docs/BRIEF.md`](docs/BRIEF.md)
 - Decisions + open questions for Roman: [`docs/DECISIONS.md`](docs/DECISIONS.md)
 - Milestone demo notes: [`docs/milestones.md`](docs/milestones.md)
+- Slovak manual for staff: [`docs/navod.md`](docs/navod.md)
 
 | | |
 |---|---|
@@ -22,7 +23,8 @@ the old company software. **Flow: pick day → tap meal → done.**
 | M0 Hosting spike | **Verified** on Websupport test hosting (`kbsandbox.arpo.cc`) — see [M0 findings](#m0-findings) |
 | M1 Domain core | Done — migrations, models, ordering/pricing/cutoff/lock services, seeders, 54 tests |
 | M2 Employee app | Done — login (osobné číslo + PIN, 400-day remember-me), one-screen ordering, Môj mesiac, PIN change, PWA |
-| M3–M6 | Not started |
+| M3 Admin | Done — employees (+ import, PIN reset, access slips), prices, slots/cutoffs, settings, closed days, menus (weekly grid + import), orders + corrections, staff users, audit log |
+| M4–M6 | Not started |
 
 ---
 
@@ -61,7 +63,8 @@ npm run build        # after any change in resources/views, resources/css or res
 git add public/build
 ```
 
-Livewire/Alpine JS is served by Livewire itself (no build step). The PWA files are static in
+This includes the Filament panel theme (`resources/css/filament/admin/theme.css`, needed for the custom
+admin pages). Livewire/Alpine JS is served by Livewire itself (no build step). The PWA files are static in
 `public/` (`manifest.webmanifest`, `sw.js`, `offline.html`, `icons/` — regenerate icons with
 `php tools/make-icons.php`). When changing `sw.js`, bump its `CACHE` name.
 
@@ -238,20 +241,24 @@ Nothing blocks. Note: Laravel 13 / Filament 5 run on PHP 8.5 there; development 
 
 ### Add a staff user (kitchen / payroll / admin)
 
+In the panel: **Ľudia → Používatelia správy → Nový**. The very first admin is created on the command line:
+
 ```bash
-php artisan app:staff-user person@example.sk --role=kitchen        # roles: admin, kitchen, payroll (repeatable)
+php artisan app:staff-user person@example.sk --role=admin        # roles: admin, kitchen, payroll (repeatable)
 ```
 
 2FA is optional: a user can enable it under *Profil* in `/admin` (authenticator app + recovery codes).
-(In M3 user management also moves into the panel.)
+An admin can switch off a lost 2FA (**Používatelia správy → Vypnúť 2FA**).
 
 ### Reset an employee's PIN
+
+In the panel: **Zamestnanci → Reset PIN** (or select several → *Nové PINy + prístupové lístky*). A printable
+A4 page with slips (name, osobné číslo, PIN, QR code to the app) opens; PINs are shown only this once.
+Emergency fallback on the command line:
 
 ```bash
 php artisan app:reset-pin <osobne_cislo>          # prints a new random 6-digit PIN, logs out all devices
 ```
-
-(In M3 this is a button in the admin panel, with a printable access slip.)
 
 ### Backups
 

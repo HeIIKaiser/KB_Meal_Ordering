@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminFilesController;
 use App\Http\Controllers\Employee\LoginController;
 use App\Http\Controllers\Employee\MonthController;
 use App\Http\Controllers\Employee\PinController;
@@ -22,3 +23,9 @@ Route::middleware(['auth:employee', 'employee.active'])->group(function () {
     Route::put('/ucet/pin', [PinController::class, 'update'])->name('pin.update');
     Route::post('/odhlasenie', [LoginController::class, 'destroy'])->name('logout');
 });
+
+/*
+| Staff helpers outside the Filament layout (auth + role checked in the controller).
+*/
+Route::get('/admin/listky', [AdminFilesController::class, 'slips'])->name('admin.slips');
+Route::get('/admin/sablona/{type}', [AdminFilesController::class, 'template'])->name('admin.template');
