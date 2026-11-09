@@ -205,7 +205,9 @@ describe('weekly import (one row per day)', function () {
         ['Pizza 4 syry', 'Pizza 4 syry', null],
         ['Rezeň 2 ks', 'Rezeň 2 ks', null],
         ['Palacinky (s džemom)', 'Palacinky (s džemom)', null],
-        ['Rizoto (15)', 'Rizoto (15)', null],
+        ['Rizoto (15)', 'Rizoto', '15'],          // clearly meant as allergens → reported as an error
+        ['Rezeň (1,3,7,15)', 'Rezeň', '1,3,7,15'],
+        ['Steak 300', 'Steak 300', null],         // bare number that isn't an allergen list stays in the name
     ]);
 
     it('reads soup, lunch 1, lunch 2 and dinner per day', function () {
@@ -214,7 +216,8 @@ describe('weekly import (one row per day)', function () {
             ."17.11.2026;;Bryndzové halušky 1,3,7;;\n"
             ."32.11.2026;X;Y;Z;W\n"
             ."16.11.2026;Duplicita;;;\n"
-            ."18.11.2026;;Zlé alergény (1,3);Iné;;mlieko\n";
+            ."18.11.2026;;Zlé alergény (1,3);Iné;;mlieko\n"
+            ."19.11.2026;;Rezeň (1,3,7,15);;\n";
 
         $r = app(MenuImport::class)->preview(tmpCsv($csv), 'tyzden.csv');
 
@@ -227,8 +230,9 @@ describe('weekly import (one row per day)', function () {
                 ['2026-11-17', 'item', lunch()->id, 1, 'Bryndzové halušky', '1,3,7'],
                 ['2026-11-18', 'item', lunch()->id, 1, 'Zlé alergény', '1,3'],
             ])
-            ->and(collect($r['errors'])->pluck('line')->all())->toBe([4, 5, 6])
-            ->and($r['errors'][2]['messages'][0])->toContain('obed_2');
+            ->and(collect($r['errors'])->pluck('line')->all())->toBe([4, 5, 6, 7])
+            ->and($r['errors'][2]['messages'][0])->toContain('obed_2')
+            ->and($r['errors'][3]['messages'][0])->toContain('obed_1');
 
         app(MenuWriter::class)->apply($r['plan']);
         $menu = Menu::query()->where('date', '2026-11-16')->where('meal_slot_id', lunch()->id)->sole();

@@ -72,6 +72,8 @@ class MenuImport
     /**
      * Split "Hovädzí guláš, knedľa (1,3,7)" into name + allergens. Accepts "(1,3,7)", "[1,3,7]",
      * "/1,3,7/", "A: 1,3,7" or a bare trailing "1,3,7" (all numbers must be 1–14).
+     * An invalid bracketed/"A:" list is returned raw (→ import error); an invalid bare
+     * trailing number stays part of the name ("Steak 300").
      *
      * @return array{0: string, 1: ?string}
      */
@@ -79,11 +81,18 @@ class MenuImport
     {
         $text = trim($text);
 
-        if (preg_match('/^(.*?)[\s,;-]*(?:[\(\[\/]\s*(?:a(?:lerg[ée]ny)?\s*[:.]?\s*)?([\d\s,.;]+?)\s*[\)\]\/]|(?:a(?:lerg[ée]ny)?\s*[:.]\s*|\s)(\d{1,2}(?:\s*[,.;]\s*\d{1,2})*))\s*$/iu', $text, $m)) {
-            $list = $m[2] !== '' ? $m[2] : ($m[3] ?? '');
+        if (preg_match('/^(.*?)[\s,;-]*(?:[\(\[\/]\s*(?:a(?:lerg[ée]ny)?\s*[:.]?\s*)?([\d\s,.;]+?)\s*[\)\]\/]|(a(?:lerg[ée]ny)?\s*[:.]\s*)(\d{1,2}(?:\s*[,.;]\s*\d{1,2})*)|\s(\d{1,2}(?:\s*[,.;]\s*\d{1,2})*))\s*$/iu', $text, $m)) {
             $name = trim($m[1], " \t,;-");
+            $explicit = ($m[2] ?? '') !== '' || ($m[3] ?? '') !== '';   // "(…)", "[…]", "/…/" or "A: …"
+            $list = ($m[2] ?? '') !== '' ? $m[2] : (($m[4] ?? '') !== '' ? $m[4] : ($m[5] ?? ''));
+
             if ($name !== '' && Allergens::isValid($list) && Allergens::parse($list) !== []) {
                 return [$name, Allergens::normalize($list)];
+            }
+            // A bracketed / "A:" list is clearly meant as allergens → return it raw so the
+            // import reports the mistake (e.g. "(1,3,15)") instead of keeping it in the name.
+            if ($name !== '' && $explicit) {
+                return [$name, trim($list)];
             }
         }
 
