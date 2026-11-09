@@ -12,10 +12,17 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 /**
- * Generic menu import (template columns: datum, jedlo, cislo_menu, nazov, alergeny).
+ * Menu import from XLSX/CSV. Two layouts, detected by the header row:
  *
- * OPEN (brief §13.5): the kitchen's real weekly file format — add a separate
- * adapter that produces the same rows once Roman sends a sample.
+ * 1. Weekly (kitchen) — ONE ROW PER DAY (Roman, 2026-11-09):
+ *      datum | polievka | obed_1 | obed_2 | vecera   (+ optional "<column>_alergeny" columns)
+ *    Column names: "polievka" = soup of the slot with has_soup; "<slot code>_<n>" = option n;
+ *    "<slot code>" alone = option 1. Allergens may also be written at the end of a dish,
+ *    e.g. "Hovädzí guláš, knedľa (1,3,7)", "… A: 1,3,7" or "… 1,3,7". Empty cells change nothing.
+ *
+ * 2. Long — one row per option: datum | jedlo | cislo_menu | nazov | alergeny.
+ *
+ * Both produce the same rows for MenuWriter (plan → preview → apply).
  */
 class MenuImport
 {
@@ -24,18 +31,161 @@ class MenuImport
     public function __construct(private SheetReader $reader, private MenuWriter $writer) {}
 
     /**
-     * Parse + validate + plan. Rows with errors are reported and skipped on apply.
-     *
-     * @return array{rows: list<array<string, mixed>>, errors: list<array{line: int, messages: list<string>}>, plan: Collection}
+     * @return array{rows: list<array<string, mixed>>, errors: list<array{line: int, messages: list<string>}>, plan: Collection, format: string}
      */
     public function preview(string $path, ?string $originalName = null): array
     {
-        $slots = MealSlot::query()->get();
+        $sheet = $this->reader->read($path, $originalName);
+        $headers = collect($sheet)->flatMap(fn ($r) => array_keys($r['values']))->unique();
+        $slots = MealSlot::query()->ordered()->get();
+
+        $long = $headers->contains('jedlo') && $headers->contains('nazov');
+        [$valid, $errors] = $long ? $this->parseLong($sheet, $slots) : $this->parseWeekly($sheet, $slots, $headers);
+
+        return [
+            'rows' => $valid,
+            'errors' => $errors,
+            'plan' => $this->writer->plan($valid),
+            'format' => $long ? 'long' : 'weekly',
+        ];
+    }
+
+    /** Template: the weekly layout, next Monday–Friday (CSV, UTF-8 with BOM for Excel). */
+    public static function templateCsv(): string
+    {
+        $monday = LocalTime::today()->startOfWeek()->addWeek();
+        $lines = ['datum;polievka;obed_1;obed_2;vecera'];
+        $days = [
+            ['Fazuľová polievka (1,9)', 'Hovädzí guláš, knedľa (1,3,7)', 'Zeleninové rizoto so syrom (7,9)', 'Palacinky s džemom (1,3,7)'],
+            ['Paradajková polievka (1,9)', 'Kuracie prsia na prírodno, ryža (7)', 'Bryndzové halušky (1,3,7)', 'Zapekané cestoviny so šunkou (1,3,7)'],
+            ['Hrachová polievka (1,9)', 'Segedínsky guláš, knedľa (1,3,7)', 'Rybie prsty, zemiaková kaša (1,3,4,7)', 'Ryžový nákyp s ovocím (3,7)'],
+            ['Brokolicová polievka (1,7,9)', 'Plnená paprika, zemiaky (1,3,7)', 'Vyprážaný syr, hranolky (1,3,7)', 'Pizza toast so syrom (1,7)'],
+            ['Kapustnica (1,9)', 'Pečené kuracie stehno, ryža (9)', 'Šošovicový prívarok, vajce (1,3)', 'Krupicová kaša s kakaom (1,7)'],
+        ];
+        foreach ($days as $i => $d) {
+            $lines[] = $monday->addDays($i)->format('j.n.Y').';'.implode(';', array_map(fn ($c) => '"'.$c.'"', $d));
+        }
+
+        return "\xEF\xBB\xBF".implode("\r\n", $lines)."\r\n";
+    }
+
+    /**
+     * Split "Hovädzí guláš, knedľa (1,3,7)" into name + allergens. Accepts "(1,3,7)", "[1,3,7]",
+     * "/1,3,7/", "A: 1,3,7" or a bare trailing "1,3,7" (all numbers must be 1–14).
+     *
+     * @return array{0: string, 1: ?string}
+     */
+    public static function splitAllergens(string $text): array
+    {
+        $text = trim($text);
+
+        if (preg_match('/^(.*?)[\s,;-]*(?:[\(\[\/]\s*(?:a(?:lerg[ée]ny)?\s*[:.]?\s*)?([\d\s,.;]+?)\s*[\)\]\/]|(?:a(?:lerg[ée]ny)?\s*[:.]\s*|\s)(\d{1,2}(?:\s*[,.;]\s*\d{1,2})*))\s*$/iu', $text, $m)) {
+            $list = $m[2] !== '' ? $m[2] : ($m[3] ?? '');
+            $name = trim($m[1], " \t,;-");
+            if ($name !== '' && Allergens::isValid($list) && Allergens::parse($list) !== []) {
+                return [$name, Allergens::normalize($list)];
+            }
+        }
+
+        return [$text, null];
+    }
+
+    /** @return array{0: list<array<string, mixed>>, 1: list<array<string, mixed>>} */
+    private function parseWeekly(array $sheet, Collection $slots, Collection $headers): array
+    {
+        $soupSlot = $slots->first(fn (MealSlot $s) => $s->has_soup);
+
+        // header → [slot, number|'soup']
+        $columns = [];
+        foreach ($headers as $h) {
+            if ($h === 'polievka' && $soupSlot) {
+                $columns[$h] = [$soupSlot, 'soup'];
+
+                continue;
+            }
+            foreach ($slots as $slot) {
+                $code = Str::ascii(mb_strtolower($slot->code));
+                if ($h === $code) {
+                    $columns[$h] = [$slot, 1];
+                } elseif (preg_match('/^'.preg_quote($code, '/').'_(\d{1,2})$/', $h, $m) && (int) $m[1] >= 1) {
+                    $columns[$h] = [$slot, (int) $m[1]];
+                }
+            }
+        }
+
+        if (! $headers->contains('datum') || $columns === []) {
+            throw new \RuntimeException('Nerozpoznané stĺpce. Prvý riadok musí obsahovať napr. datum, polievka, obed_1, obed_2, vecera (alebo datum, jedlo, cislo_menu, nazov, alergeny). Stiahnite si šablónu.');
+        }
+
+        $valid = [];
+        $errors = [];
+        $seenDates = [];
+
+        foreach ($sheet as ['line' => $line, 'values' => $v]) {
+            $messages = [];
+            $date = $this->parseDate($v['datum'] ?? null);
+
+            if (! $date) {
+                $errors[] = ['line' => $line, 'messages' => ['Neplatný dátum „'.$this->show($v['datum'] ?? '').'“ (použite napr. 16.11.2026).']];
+
+                continue;
+            }
+            if (isset($seenDates[$date->toDateString()])) {
+                $errors[] = ['line' => $line, 'messages' => ['Dátum '.$date->format('j.n.Y').' je v súbore dvakrát (aj riadok '.$seenDates[$date->toDateString()].').']];
+
+                continue;
+            }
+            $seenDates[$date->toDateString()] = $line;
+
+            $rows = [];
+            foreach ($columns as $col => [$slot, $number]) {
+                $cell = trim((string) ($v[$col] ?? ''));
+                if ($cell === '') {
+                    continue; // empty cell = no change
+                }
+
+                $explicit = trim((string) ($v[$col.'_alergeny'] ?? ''));
+                [$name, $allergens] = $explicit !== '' ? [$cell, $explicit] : self::splitAllergens($cell);
+
+                if (! Allergens::isValid($allergens)) {
+                    $messages[] = "Stĺpec $col: alergény musia byť čísla 1 – 14.";
+
+                    continue;
+                }
+                if (mb_strlen($name) > 255) {
+                    $messages[] = "Stĺpec $col: názov je dlhší ako 255 znakov.";
+
+                    continue;
+                }
+
+                $rows[] = [
+                    'line' => $line,
+                    'kind' => $number === 'soup' ? 'soup' : 'item',
+                    'date' => $date->toDateString(),
+                    'meal_slot_id' => $slot->id,
+                    'number' => $number === 'soup' ? 0 : $number,
+                    'name' => $name,
+                    'allergens' => $allergens,
+                ];
+            }
+
+            if ($messages !== []) {
+                $errors[] = ['line' => $line, 'messages' => $messages];
+            }
+            array_push($valid, ...$rows);
+        }
+
+        return [$valid, $errors];
+    }
+
+    /** @return array{0: list<array<string, mixed>>, 1: list<array<string, mixed>>} */
+    private function parseLong(array $sheet, Collection $slots): array
+    {
         $valid = [];
         $errors = [];
         $seen = [];
 
-        foreach ($this->reader->read($path, $originalName) as ['line' => $line, 'values' => $v]) {
+        foreach ($sheet as ['line' => $line, 'values' => $v]) {
             $messages = [];
 
             $date = $this->parseDate($v['datum'] ?? null);
@@ -90,24 +240,7 @@ class MenuImport
             ];
         }
 
-        return ['rows' => $valid, 'errors' => $errors, 'plan' => $this->writer->plan($valid)];
-    }
-
-    /** Template file content (CSV, UTF-8 with BOM so Excel shows diacritics). */
-    public static function templateCsv(): string
-    {
-        $monday = LocalTime::today()->startOfWeek()->addWeek();
-
-        $lines = [implode(';', self::COLUMNS)];
-        foreach ([
-            [0, 'obed', 1, 'Hovädzí guláš, knedľa', '1,3,7'],
-            [0, 'obed', 2, 'Zeleninové rizoto', '7,9'],
-            [0, 'vecera', 1, 'Palacinky s džemom', '1,3,7'],
-        ] as [$d, $slot, $n, $name, $al]) {
-            $lines[] = implode(';', [$monday->addDays($d)->format('j.n.Y'), $slot, $n, $name, '"'.$al.'"']);
-        }
-
-        return "\xEF\xBB\xBF".implode("\r\n", $lines)."\r\n";
+        return [$valid, $errors];
     }
 
     private function parseDate(mixed $value): ?CarbonImmutable

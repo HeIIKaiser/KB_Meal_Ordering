@@ -114,3 +114,12 @@ the layout lives in one class (`MonthlyMatrixXlsx`) and can be matched exactly.
 - Disclaimer „Cena stravy je odhadom a po porovnaní s dochádzkou sa môže zmeniť.“ on the employee's *Môj mesiac*,
   in the monthly export (both sheets) and on the export page.
 - Concurrency test now covers both unlimited extras and a cap. 170 tests green (SQLite + MariaDB).
+
+### Follow-up: soup of the day and the kitchen's weekly Excel (2026-11-09)
+
+- Lunch = soup (shown to everyone, not ordered) + Menu 1 + Menu 2; dinner = 1 dish. Soup is on the employee card,
+  kitchen screen/print/PDF/Excel and in the weekly grid (row **P**); slots get a *Má polievku dňa* switch.
+- Menu import accepts the kitchen's **one-row-per-day** Excel `datum | polievka | obed_1 | obed_2 | vecera`
+  with allergens in brackets after the dish; the downloadable template uses this format (round-trip tested).
+- Demo data follows the real shape. 185 tests green (SQLite + MariaDB).
+- Deploy: `git pull` → `php artisan migrate --force` (new columns) → `php artisan optimize`.

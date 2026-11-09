@@ -33,6 +33,9 @@ class DailyOverviewXlsx
 
         $writer->addRow(Row::fromValues([$o->title()], $title));
         $writer->addRow(Row::fromValues(['Vytlačené', LocalTime::now()->format('j. n. Y H:i'), '', 'Spolu', $o->total(), 'z toho extra: '.$o->extraCount()]));
+        if ($o->soup) {
+            $writer->addRow(Row::fromValues(['Polievka', $o->soup]));
+        }
         $writer->addRow(Row::fromValues([]));
 
         $writer->addRow(Row::fromValues(['Priezvisko', 'Meno', 'Osobné číslo', 'Stredisko', 'Menu', 'Jedlo', 'Typ', 'Poznámka'], $header));

@@ -60,6 +60,7 @@ class MealSlotResource extends Resource
                 ->default(0),
             TimePicker::make('cutoff_time')->label('o (čas)')->seconds(false)->required()->default('09:00'),
             TextInput::make('sort')->label('Poradie')->numeric()->integer()->minValue(0)->default(10)->required(),
+            Toggle::make('has_soup')->label('Má polievku dňa')->helperText('Polievka sa zobrazí pri menu; neobjednáva sa ani neplatí zvlášť.')->default(false),
             Toggle::make('is_active')->label('Aktívne')->default(true),
         ]);
     }
@@ -75,6 +76,7 @@ class MealSlotResource extends Resource
                 TextColumn::make('cutoff')
                     ->label('Uzávierka')
                     ->state(fn (MealSlot $r) => [0 => 'v ten istý deň', 1 => 'deň vopred', 2 => '2 dni vopred'][$r->cutoff_days_before].' o '.substr($r->cutoff_time, 0, 5)),
+                IconColumn::make('has_soup')->label('Polievka')->boolean(),
                 IconColumn::make('is_active')->label('Aktívne')->boolean(),
             ])
             ->recordActions([EditAction::make()]);

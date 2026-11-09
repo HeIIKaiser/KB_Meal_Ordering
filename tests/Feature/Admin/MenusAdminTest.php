@@ -8,6 +8,7 @@ use App\Enums\OrderStatus;
 use App\Enums\Role;
 use App\Filament\Pages\ImportMenus;
 use App\Filament\Pages\MenuWeek;
+use App\Models\Menu;
 use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\User;
@@ -119,10 +120,14 @@ describe('menu writer', function () {
 describe('weekly grid page', function () {
     beforeEach(fn () => $this->actingAs($this->kitchen));
 
-    it('opens next week by default with empty rows', function () {
+    it('opens next week by default with empty rows (lunch: soup + 2 mains, dinner: 1)', function () {
         Livewire::test(MenuWeek::class)
             ->assertSet('week', '2026-11-16')
             ->assertCount('grid', 14)
+            ->assertCount('grid.2026-11-16|'.lunch()->id, 2)
+            ->assertCount('grid.2026-11-16|'.dinner()->id, 1)
+            ->assertCount('soups', 7) // lunch only
+            ->assertSeeHtml('wire:model="soups.2026-11-16|'.lunch()->id.'.name"')
             ->assertSet('grid.2026-11-16|'.lunch()->id.'.0.name', '')
             ->assertSee('Večera')
             ->assertSeeHtml('wire:model="grid.2026-11-16|'.lunch()->id.'.0.name"');
@@ -135,13 +140,17 @@ describe('weekly grid page', function () {
             ->set("grid.$key.0.name", 'Kurací rezeň')
             ->set("grid.$key.0.allergens", '1, 3,7')
             ->call('addRow', $key)
-            ->set("grid.$key.3.name", 'Štvrté menu')
+            ->set("grid.$key.2.name", 'Tretie menu')
+            ->set("soups.$key.name", 'Kapustnica')
+            ->set("soups.$key.allergens", '1, 9')
             ->call('save')
             ->assertSet('impact', null)
             ->assertSet("grid.$key.0.allergens", '1,3,7')
-            ->assertSet("grid.$key.3.name", 'Štvrté menu');
+            ->assertSet("grid.$key.2.name", 'Tretie menu')
+            ->assertSet("soups.$key.allergens", '1,9');
 
-        expect(MenuItem::query()->pluck('name', 'number')->all())->toBe([1 => 'Kurací rezeň', 4 => 'Štvrté menu']);
+        expect(MenuItem::query()->pluck('name', 'number')->all())->toBe([1 => 'Kurací rezeň', 3 => 'Tretie menu'])
+            ->and(Menu::sole()->soupLabel())->toBe('Kapustnica (1,9)');
     });
 
     it('validates allergens', function () {
@@ -181,6 +190,77 @@ describe('weekly grid page', function () {
             ->call('copyPreviousWeek')
             ->assertSet("grid.$key.0.name", MenuItem::query()->where('number', 1)->value('name'))
             ->assertSet("grid.$other.0.name", 'Vlastné');
+    });
+});
+
+describe('weekly import (one row per day)', function () {
+    it('splits allergens written after the dish', function (string $text, string $name, ?string $allergens) {
+        expect(MenuImport::splitAllergens($text))->toBe([$name, $allergens]);
+    })->with([
+        ['Hovädzí guláš, knedľa (1,3,7)', 'Hovädzí guláš, knedľa', '1,3,7'],
+        ['Rybie prsty [1, 3, 4, 7]', 'Rybie prsty', '1,3,4,7'],
+        ['Kapustnica A: 1,9', 'Kapustnica', '1,9'],
+        ['Kuracie stehno 1,3,7', 'Kuracie stehno', '1,3,7'],
+        ['Halušky /1,3,7/', 'Halušky', '1,3,7'],
+        ['Pizza 4 syry', 'Pizza 4 syry', null],
+        ['Rezeň 2 ks', 'Rezeň 2 ks', null],
+        ['Palacinky (s džemom)', 'Palacinky (s džemom)', null],
+        ['Rizoto (15)', 'Rizoto (15)', null],
+    ]);
+
+    it('reads soup, lunch 1, lunch 2 and dinner per day', function () {
+        $csv = "Dátum;Polievka;Obed 1;Obed 2;Večera;Obed 2 alergény\n"
+            ."16.11.2026;Fazuľová (1,9);Guláš, knedľa (1,3,7);Rizoto;Palacinky (1,3,7);7,9\n"
+            ."17.11.2026;;Bryndzové halušky 1,3,7;;\n"
+            ."32.11.2026;X;Y;Z;W\n"
+            ."16.11.2026;Duplicita;;;\n"
+            ."18.11.2026;;Zlé alergény (1,3);Iné;;mlieko\n";
+
+        $r = app(MenuImport::class)->preview(tmpCsv($csv), 'tyzden.csv');
+
+        expect($r['format'])->toBe('weekly')
+            ->and(collect($r['rows'])->map(fn ($x) => [$x['date'], $x['kind'] ?? 'item', $x['meal_slot_id'], $x['number'], $x['name'], $x['allergens']])->all())->toBe([
+                ['2026-11-16', 'soup', lunch()->id, 0, 'Fazuľová', '1,9'],
+                ['2026-11-16', 'item', lunch()->id, 1, 'Guláš, knedľa', '1,3,7'],
+                ['2026-11-16', 'item', lunch()->id, 2, 'Rizoto', '7,9'],
+                ['2026-11-16', 'item', dinner()->id, 1, 'Palacinky', '1,3,7'],
+                ['2026-11-17', 'item', lunch()->id, 1, 'Bryndzové halušky', '1,3,7'],
+                ['2026-11-18', 'item', lunch()->id, 1, 'Zlé alergény', '1,3'],
+            ])
+            ->and(collect($r['errors'])->pluck('line')->all())->toBe([4, 5, 6])
+            ->and($r['errors'][2]['messages'][0])->toContain('obed_2');
+
+        app(MenuWriter::class)->apply($r['plan']);
+        $menu = Menu::query()->where('date', '2026-11-16')->where('meal_slot_id', lunch()->id)->sole();
+        expect($menu->soup_name)->toBe('Fazuľová')->and($menu->items()->count())->toBe(2);
+    });
+
+    it('leaves existing dishes alone for empty cells and reports soup changes', function () {
+        $csv1 = "datum;polievka;obed_1;obed_2;vecera\n16.11.2026;Kapustnica;A;B;C\n";
+        $w = app(MenuWriter::class);
+        $w->apply(app(MenuImport::class)->preview(tmpCsv($csv1), 'a.csv')['plan']);
+
+        $r = app(MenuImport::class)->preview(tmpCsv("datum;polievka;obed_1;obed_2;vecera\n16.11.2026;Hrachová;;;C\n"), 'b.csv');
+        expect($r['plan']->map(fn ($x) => [$x['kind'], $x['action']])->all())->toBe([['item', MenuWriter::UNCHANGED], ['soup', MenuWriter::UPDATE]]);
+
+        $w->apply($r['plan']);
+        expect(MenuItem::query()->orderBy('id')->pluck('name')->all())->toBe(['A', 'B', 'C']);
+    });
+
+    it('rejects files with unknown columns', function () {
+        app(MenuImport::class)->preview(tmpCsv("den;jedla\n1;x\n"), 'x.csv');
+    })->throws(RuntimeException::class, 'Nerozpoznané stĺpce');
+
+    it('ships a template in the weekly format that imports without errors', function () {
+        $this->actingAs($this->kitchen);
+        $csv = $this->get('/admin/sablona/menu')->assertOk()->getContent();
+
+        expect($csv)->toContain('datum;polievka;obed_1;obed_2;vecera');
+        $r = app(MenuImport::class)->preview(tmpCsv($csv), 'sablona.csv');
+        expect($r['errors'])->toBe([])
+            ->and(collect($r['rows']))->toHaveCount(20) // 5 days × 4
+            ->and(collect($r['rows'])->where('kind', 'soup'))->toHaveCount(5)
+            ->and(collect($r['rows'])->every(fn ($x) => $x['allergens'] !== null))->toBeTrue();
     });
 });
 

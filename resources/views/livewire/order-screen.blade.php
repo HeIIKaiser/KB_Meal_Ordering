@@ -84,6 +84,12 @@
                                 ])>{{ OrderScreen::statusLabel($a, $day) }}</span>
                             </div>
 
+                            @if ($menu?->soup_name && $items->isNotEmpty())
+                                <p class="mb-2 rounded-lg bg-amber-50 px-3 py-2 text-base lg:text-sm" title="Polievka sa podáva ku každému obedu, neobjednáva sa">
+                                    <span class="font-semibold">Polievka:</span> {{ $menu->soup_name }}
+                                    @if ($menu->soup_allergens)<span class="text-sm text-stone-500"> · alergény {{ $menu->soup_allergens }}</span>@endif
+                                </p>
+                            @endif
                             @if ($items->isEmpty())
                                 <p class="py-2 text-base text-stone-500 lg:text-sm">Menu zatiaľ nie je zverejnené.</p>
                             @else

@@ -30,6 +30,9 @@
                         {{ $o->slot->name }} – <span class="capitalize">{{ SlovakDate::day($o->date) }}</span> {{ $o->date->format('j. n. Y') }}
                         @if ($isToday) <span class="text-base font-semibold text-primary-600">(dnes)</span> @endif
                     </h2>
+                    @if ($o->soup)
+                        <p class="mt-1 text-sm">Polievka: <strong>{{ $o->soup }}</strong></p>
+                    @endif
                     <p class="mt-1 text-sm">
                         @if ($o->lock)
                             <x-filament::badge color="danger" class="inline-flex">Uzamknuté</x-filament::badge>

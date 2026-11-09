@@ -5,7 +5,7 @@
         <x-filament::button color="gray" icon="heroicon-m-chevron-right" icon-position="after" wire:click="nextWeek">Nasledujúci</x-filament::button>
         <x-filament::button color="gray" icon="heroicon-m-document-duplicate" wire:click="copyPreviousWeek">Doplniť z minulého týždňa</x-filament::button>
         <x-filament::button tag="a" color="gray" icon="heroicon-m-arrow-up-tray" :href="\App\Filament\Pages\ImportMenus::getUrl()">Import zo súboru</x-filament::button>
-        <span class="text-sm text-gray-500">Prázdny názov = možnosť sa odstráni. Alergény: čísla 1 – 14 oddelené čiarkou.</span>
+        <span class="text-sm text-gray-500">P = polievka (podáva sa ku každému obedu, neobjednáva sa). Prázdny názov = jedlo sa odstráni. Alergény: čísla 1 – 14 oddelené čiarkou.</span>
     </div>
 
     <form wire:submit="save" class="space-y-3">
@@ -29,6 +29,17 @@
                                 @php $key = $day->toDateString().'|'.$slot->id; @endphp
                                 <td class="px-3 py-2 align-top" wire:key="cell-{{ $key }}">
                                     <div class="space-y-1.5">
+                                        @if (isset($soups[$key]))
+                                            <div class="flex items-start gap-1.5">
+                                                <span class="mt-2 w-5 shrink-0 text-right text-xs font-semibold text-warning-600" title="Polievka">P</span>
+                                                <input type="text" wire:model="soups.{{ $key }}.name" placeholder="Polievka"
+                                                       aria-label="{{ SlovakDate::dayShort($day) }} {{ $slot->name }} polievka"
+                                                       @class(['flex-1 rounded-md border px-2 py-1.5 text-sm italic dark:bg-gray-800', 'border-danger-500' => $errors->has("soups.$key.name"), 'border-warning-300 dark:border-warning-700' => ! $errors->has("soups.$key.name")])>
+                                                <input type="text" wire:model="soups.{{ $key }}.allergens" placeholder="alerg." aria-label="alergény polievky"
+                                                       title="{{ $errors->first("soups.$key.allergens") }}"
+                                                       @class(['w-20 rounded-md border px-2 py-1.5 text-sm dark:bg-gray-800', 'border-danger-500' => $errors->has("soups.$key.allergens"), 'border-warning-300 dark:border-warning-700' => ! $errors->has("soups.$key.allergens")])>
+                                            </div>
+                                        @endif
                                         @foreach ($grid[$key] ?? [] as $i => $row)
                                             <div class="flex items-start gap-1.5" wire:key="row-{{ $key }}-{{ $row['number'] }}">
                                                 <span class="mt-2 w-5 shrink-0 text-right text-xs font-semibold text-gray-500">{{ $row['number'] }}</span>

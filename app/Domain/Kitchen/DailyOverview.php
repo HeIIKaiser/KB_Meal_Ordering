@@ -34,6 +34,7 @@ final class DailyOverview
         public readonly ?SlotLock $lock,
         public readonly Collection $totals,
         public readonly Collection $rows,
+        public readonly ?string $soup = null,
     ) {}
 
     public static function for(DateTimeInterface|string $date, MealSlot $slot): self
@@ -93,6 +94,7 @@ final class DailyOverview
             SlotLock::query()->with('lockedBy')->where('date', $date->toDateString())->where('meal_slot_id', $slot->id)->first(),
             $totals,
             $rows,
+            $menu?->soupLabel(),
         );
     }
 

@@ -5,6 +5,7 @@ use App\Domain\Ordering\OrderService;
 use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\PriceType;
+use App\Support\Settings;
 use Illuminate\Support\Facades\DB;
 
 /*
@@ -14,7 +15,7 @@ use Illuminate\Support\Facades\DB;
  *   DB_CONNECTION=mysql DB_DATABASE=jedalen_test ... ./vendor/bin/pest tests/Concurrency
  */
 it('serialises simultaneous orders of one employee (row locking)', function (?int $maxExtra, int $expectedOk) {
-    app(\App\Support\Settings::class)->set(\App\Support\Settings::MAX_EXTRA_PER_SLOT, $maxExtra);
+    app(Settings::class)->set(Settings::MAX_EXTRA_PER_SLOT, $maxExtra);
 
     if (! in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true) || ! function_exists('pcntl_fork')) {
         $this->markTestSkipped('Needs MySQL/MariaDB and the pcntl extension.');

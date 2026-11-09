@@ -30,6 +30,7 @@ na dnes a zajtra; kliknutím sa otvorí príslušný prehľad.
 - Pod nadpisom je stav: *Objednávky otvorené* (počty sa ešte môžu meniť do uzávierky), *Po uzávierke*,
   *Uzamknuté* (kto a kedy) alebo *Zatvorené*.
 - Veľké čísla: **spolu** a počet pre každé menu (z toho extra). Stránka sa sama obnovuje každú minútu.
+- Pri obede je uvedená aj **polievka** dňa (podáva sa každému, v zozname sa nepočíta).
 - **Zoznam** je zoradený podľa priezviska; políčko *Hľadať meno…* nájde človeka aj bez diakritiky
   (napr. „simko“). Extra jedlá majú značku **Extra**.
 
@@ -77,6 +78,8 @@ Ak tlačíte pred uzávierkou, v hlavičke je upozornenie „Objednávky ešte o
 
 **Jedálny lístok → Jedálny lístok** — tabuľka na celý týždeň (predvolene budúci).
 
+- Pri obede je prvý riadok **P = polievka** (podáva sa ku každému obedu, zamestnanci ju vidia, ale neobjednávajú),
+  pod ňou **Menu 1** a **Menu 2**. Pri večeri je jedno jedlo.
 - Do políčok píšte názov jedla, vedľa alergény (čísla 1 – 14 oddelené čiarkou, napr. `1,3,7`).
 - **+ ďalšie menu** pridá riadok (Menu 4, 5, …).
 - **Doplniť z minulého týždňa** skopíruje jedlá do prázdnych políčok (nič neprepíše).
@@ -85,11 +88,20 @@ Ak tlačíte pred uzávierkou, v hlavičke je upozornenie „Objednávky ešte o
 - Ak meníte alebo odstraňujete jedlo, ktoré si už niekto objednal, aplikácia ukáže **zoznam dotknutých
   zamestnancov** a čaká na potvrdenie. Ich objednávky zostávajú platné — odporúčame ich informovať.
 
-### Import jedálneho lístka
+### Import jedálneho lístka z Excelu
 
-**Jedálny lístok → Import lístka**: súbor XLSX/CSV so stĺpcami `datum` (16.11.2026), `jedlo` (obed / vecera),
-`cislo_menu`, `nazov`, `alergeny`. Postup ako pri zamestnancoch: načítať → skontrolovať → uložiť.
-Riadky s chybou sa preskočia a sú vypísané s číslom riadku.
+**Jedálny lístok → Import lístka**. Najjednoduchšie je stiahnuť **šablónu** a vyplniť ju:
+**jeden riadok = jeden deň**, stĺpce
+
+| datum | polievka | obed_1 | obed_2 | vecera |
+|---|---|---|---|---|
+| 16.11.2026 | Fazuľová polievka (1,9) | Hovädzí guláš, knedľa (1,3,7) | Zeleninové rizoto (7,9) | Palacinky s džemom (1,3,7) |
+
+- Alergény píšte do zátvorky za jedlo (alebo do samostatného stĺpca, napr. `obed_1_alergeny`).
+- Prázdna bunka nič nemení — napr. ak chcete doplniť len večeru.
+- Postup: vybrať súbor → **Načítať a skontrolovať** → skontrolovať zoznam (nové / zmena / bez zmeny, chybné riadky
+  s číslom riadku) → **Uložiť jedálny lístok**. Potom sa otvorí týždeň v tabuľke na kontrolu.
+- Súbor môže byť XLSX alebo CSV. Funguje aj starší formát (jeden riadok na jedlo: `datum, jedlo, cislo_menu, nazov, alergeny`).
 
 ## Zatvorené dni (administrátor)
 

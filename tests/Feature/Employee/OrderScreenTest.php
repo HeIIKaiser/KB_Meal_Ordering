@@ -148,3 +148,11 @@ it('navigates between weeks via the URL parameter', function () {
 it('cannot open dialogs by tampering with the locked dialog property', function () {
     screen()->set('dialog', ['type' => 'cancel', 'order' => 1]);
 })->throws(CannotUpdateLockedPropertyException::class);
+
+it('shows the soup of the day on the lunch card (not orderable)', function () {
+    $this->lunch->first()->load('menu')->menu->update(['soup_name' => 'Fazuľová polievka', 'soup_allergens' => '1,9']);
+
+    screen()->assertSee('Polievka:')->assertSee('Fazuľová polievka')->assertSee('alergény 1,9')
+        ->assertDontSeeHtml('wire:click="choose(0)"');
+    expect(Order::count())->toBe(0);
+});

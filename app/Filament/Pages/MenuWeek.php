@@ -39,13 +39,19 @@ class MenuWeek extends Page
 
     protected static ?string $slug = 'menu';
 
-    public const MIN_ROWS = 3;
+    /** Empty rows offered per slot when nothing is entered yet (Roman: lunch = 2 mains, dinner = 1). */
+    public const MIN_ROWS = ['obed' => 2, 'vecera' => 1];
+
+    public const MIN_ROWS_DEFAULT = 2;
 
     #[Url(as: 'tyzden')]
     public string $week = '';
 
     /** @var array<string, list<array{number: int, name: string, allergens: string}>> keyed "Y-m-d|slotId" */
     public array $grid = [];
+
+    /** @var array<string, array{name: string, allergens: string}> soup per "Y-m-d|slotId" (slots with has_soup only) */
+    public array $soups = [];
 
     /** @var array<string, list<string>>|null affected employees awaiting confirmation */
     public ?array $impact = null;
@@ -84,8 +90,16 @@ class MenuWeek extends Page
     /** Fill EMPTY cells from the previous week (doesn't overwrite anything). */
     public function copyPreviousWeek(): void
     {
-        $prev = $this->loadGrid($this->monday()->subWeek());
+        [$prev, $prevSoups] = $this->loadGrid($this->monday()->subWeek());
         $copied = 0;
+
+        foreach ($this->soups as $key => $soup) {
+            [$date, $slotId] = explode('|', $key);
+            $prevKey = LocalTime::date($date)->subWeek()->toDateString().'|'.$slotId;
+            if (trim($soup['name']) === '' && ($prevSoups[$prevKey]['name'] ?? '') !== '') {
+                $this->soups[$key] = $prevSoups[$prevKey];
+            }
+        }
 
         foreach ($this->grid as $key => $rows) {
             if (collect($rows)->contains(fn ($r) => trim($r['name']) !== '')) {
@@ -120,6 +134,17 @@ class MenuWeek extends Page
                 }
                 $rows[] = ['date' => $date, 'meal_slot_id' => (int) $slotId, 'number' => (int) $o['number'], 'name' => $name, 'allergens' => $o['allergens'] ?? null];
             }
+        }
+
+        foreach ($this->soups as $key => $soup) {
+            [$date, $slotId] = explode('|', $key);
+            if (mb_strlen(trim((string) $soup['name'])) > 255) {
+                $errors["soups.$key.name"] = 'Názov je príliš dlhý.';
+            }
+            if (! Allergens::isValid($soup['allergens'] ?? '')) {
+                $errors["soups.$key.allergens"] = 'Alergény: čísla 1 – 14.';
+            }
+            $rows[] = ['kind' => 'soup', 'date' => $date, 'meal_slot_id' => (int) $slotId, 'number' => 0, 'name' => trim((string) $soup['name']), 'allergens' => $soup['allergens'] ?? null];
         }
 
         if ($errors) {
@@ -176,12 +201,12 @@ class MenuWeek extends Page
 
     private function load(): void
     {
-        $this->grid = $this->loadGrid($this->monday());
+        [$this->grid, $this->soups] = $this->loadGrid($this->monday());
         $this->impact = null;
         $this->resetErrorBag();
     }
 
-    /** @return array<string, list<array{number: int, name: string, allergens: string}>> */
+    /** @return array{0: array<string, list<array{number: int, name: string, allergens: string}>>, 1: array<string, array{name: string, allergens: string}>} */
     private function loadGrid(CarbonImmutable $monday): array
     {
         $slots = MealSlot::query()->active()->ordered()->get();
@@ -192,12 +217,16 @@ class MenuWeek extends Page
             ->keyBy(fn (Menu $m) => $m->date->toDateString().'|'.$m->meal_slot_id);
 
         $grid = [];
+        $soups = [];
         for ($i = 0; $i < 7; $i++) {
             $date = $monday->addDays($i)->toDateString();
             foreach ($slots as $slot) {
                 $key = "$date|{$slot->id}";
+                if ($slot->has_soup) {
+                    $soups[$key] = ['name' => $menus[$key]->soup_name ?? '', 'allergens' => $menus[$key]->soup_allergens ?? ''];
+                }
                 $items = ($menus[$key] ?? null)?->items->keyBy('number') ?? collect();
-                $max = max(self::MIN_ROWS, (int) $items->keys()->max());
+                $max = max(self::MIN_ROWS[$slot->code] ?? self::MIN_ROWS_DEFAULT, (int) $items->keys()->max());
                 $grid[$key] = collect(range(1, $max))->map(fn ($n) => [
                     'number' => $n,
                     'name' => $items[$n]->name ?? '',
@@ -206,7 +235,7 @@ class MenuWeek extends Page
             }
         }
 
-        return $grid;
+        return [$grid, $soups];
     }
 
     private function monday(): CarbonImmutable

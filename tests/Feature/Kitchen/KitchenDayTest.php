@@ -190,3 +190,26 @@ it('shows today and tomorrow on the dashboard', function () {
         ->assertSee('Zajtra – Večera')
         ->assertSee('otvorené do 09:00');
 });
+
+it('shows the soup on the kitchen screen, print and Excel', function () {
+    $this->items->first()->load('menu')->menu->update(['soup_name' => 'Kapustnica', 'soup_allergens' => '1,9']);
+    $this->actingAs($this->kitchen);
+
+    expect(DailyOverview::for('2026-11-10', lunch())->soup)->toBe('Kapustnica (1,9)')
+        ->and(DailyOverview::for('2026-11-10', dinner())->soup)->toBeNull();
+
+    Livewire::test(KitchenDay::class)->assertSee('Kapustnica (1,9)');
+    $this->get('/admin/kuchyna/tlac?datum=2026-11-10&jedlo=obed')->assertSee('Polievka: Kapustnica (1,9)');
+
+    $r = $this->get('/admin/kuchyna/xlsx?datum=2026-11-10&jedlo=obed');
+    $reader = new Reader;
+    $reader->open($r->getFile()->getPathname());
+    $rows = [];
+    foreach ($reader->getSheetIterator() as $sheet) {
+        foreach ($sheet->getRowIterator() as $row) {
+            $rows[] = $row->toArray();
+        }
+    }
+    $reader->close();
+    expect($rows[2])->toBe(['Polievka', 'Kapustnica (1,9)']);
+});

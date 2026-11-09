@@ -50,6 +50,11 @@ class DemoDataSeeder extends Seeder
         ['Kuracie na paprike, cestovina', '1,3,7'], ['Morčacie soté so zeleninou, ryža', '6,9'], ['Vyprážaný syr, hranolky, tatárska omáčka', '1,3,7,10'],
     ];
 
+    private const SOUPS = [
+        ['Fazuľová polievka', '1,9'], ['Paradajková polievka', '1,9'], ['Hrachová polievka', '1,9'], ['Brokolicová polievka', '1,7,9'],
+        ['Kapustnica', '1,9'], ['Slepačí vývar s rezancami', '1,3,9'], ['Šošovicová polievka', '1,9'],
+    ];
+
     private const DINNER = [
         ['Zapekané cestoviny so šunkou', '1,3,7'], ['Palacinky s džemom', '1,3,7'], ['Krupicová kaša s kakaom', '1,7'],
         ['Zeleninový šalát s kuracím mäsom', '3,10'], ['Pizza toast so syrom', '1,7'], ['Ryžový nákyp s ovocím', '3,7'],
@@ -111,7 +116,8 @@ class DemoDataSeeder extends Seeder
         $prices = app(PriceResolver::class);
         $donated = PriceType::byCode(PriceType::DONATED);
         $extra = PriceType::byCode(PriceType::EXTRA);
-        $slots = [MealSlot::LUNCH => [self::LUNCH, 3, 0.75], MealSlot::DINNER => [self::DINNER, 2, 0.3]];
+        // Roman: lunch = soup for everyone + 2 main courses, dinner = 1 main course
+        $slots = [MealSlot::LUNCH => [self::LUNCH, 2, 0.75], MealSlot::DINNER => [self::DINNER, 1, 0.3]];
 
         $today = LocalTime::today();
         $from = $today->startOfWeek()->subWeek();
@@ -127,6 +133,10 @@ class DemoDataSeeder extends Seeder
             foreach ($slots as $code => [$dishes, $options, $share]) {
                 $slot = MealSlot::query()->where('code', $code)->firstOrFail();
                 $menu = Menu::query()->firstOrCreate(['date' => $day->toDateString(), 'meal_slot_id' => $slot->id]);
+                if ($slot->has_soup && ! $menu->soup_name) {
+                    [$soup, $soupAllergens] = self::SOUPS[$day->dayOfYear % count(self::SOUPS)];
+                    $menu->update(['soup_name' => $soup, 'soup_allergens' => $soupAllergens]);
+                }
 
                 if (! $menu->items()->exists()) {
                     foreach (range(1, $options) as $n) {

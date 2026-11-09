@@ -19,7 +19,7 @@ class ReferenceDataSeeder extends Seeder
         // OPEN (brief §13.2): cutoff times to be confirmed by Roman.
         MealSlot::query()->firstOrCreate(['code' => MealSlot::LUNCH], [
             'name' => 'Obed', 'name_accusative' => 'obed', 'sort' => 10,
-            'cutoff_days_before' => 0, 'cutoff_time' => '09:00:00', 'is_active' => true,
+            'cutoff_days_before' => 0, 'cutoff_time' => '09:00:00', 'has_soup' => true, 'is_active' => true,
         ]);
         MealSlot::query()->firstOrCreate(['code' => MealSlot::DINNER], [
             'name' => 'Večera', 'name_accusative' => 'večeru', 'sort' => 20,

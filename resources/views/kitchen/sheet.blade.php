@@ -46,6 +46,7 @@
             <td>
                 <div class="title">{{ $o->slot->name }} – {{ SlovakDate::day($o->date) }} {{ $o->date->format('j. n. Y') }}</div>
                 <div class="sum">Spolu: {{ $o->total() }} @if ($o->extraCount()) (z toho extra: {{ $o->extraCount() }}) @endif</div>
+                @if ($o->soup)<div>Polievka: {{ $o->soup }}</div>@endif
             </td>
             <td class="meta">
                 Vytlačené {{ $printedAt }}<br>

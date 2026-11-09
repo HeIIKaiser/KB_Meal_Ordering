@@ -32,13 +32,58 @@ class MenuWriter
     public const UNCHANGED = 'unchanged';
 
     /**
-     * @param  iterable<array{date: string, meal_slot_id: int, number: int, name: ?string, allergens?: ?string}>  $rows
-     *                                                                                                                   name null/'' = remove the option
-     * @return Collection<int, array<string, mixed>> one entry per row with 'action', 'item_id', 'affected' (list of "Priezvisko Meno")
+     * @param  iterable<array{date: string, meal_slot_id: int, number: int, name: ?string, allergens?: ?string, kind?: string}>  $rows
+     *                                                                                                                                  name null/'' = remove; kind 'soup' = the menu's soup (number ignored)
+     * @return Collection<int, array<string, mixed>> one entry per row with 'kind', 'action', 'item_id', 'affected' (list of "Priezvisko Meno")
      */
     public function plan(iterable $rows): Collection
     {
-        $rows = collect($rows)->map(fn ($r) => [
+        [$soups, $items] = collect($rows)->partition(fn ($r) => ($r['kind'] ?? 'item') === 'soup');
+
+        return $this->planItems($items)->concat($this->planSoups($soups))->values();
+    }
+
+    /** Soups live on the menu row; nobody orders them, so a change never affects orders. */
+    private function planSoups(Collection $soups): Collection
+    {
+        if ($soups->isEmpty()) {
+            return collect();
+        }
+
+        $soups = $soups->map(fn ($r) => [
+            'kind' => 'soup',
+            'date' => LocalTime::date($r['date'])->toDateString(),
+            'meal_slot_id' => (int) $r['meal_slot_id'],
+            'number' => 0,
+            'name' => filled($r['name'] ?? null) ? trim($r['name']) : null,
+            'allergens' => Allergens::normalize($r['allergens'] ?? null),
+        ]);
+
+        $menus = Menu::query()
+            ->whereIn('date', $soups->pluck('date')->unique()->all())
+            ->get()
+            ->keyBy(fn (Menu $m) => $m->date->toDateString().'|'.$m->meal_slot_id);
+
+        return $soups->map(function (array $row) use ($menus) {
+            $menu = $menus[$row['date'].'|'.$row['meal_slot_id']] ?? null;
+            $old = $menu?->soup_name;
+
+            $action = match (true) {
+                $old === null && $row['name'] === null => self::UNCHANGED,
+                $old === null => self::CREATE,
+                $row['name'] === null => self::REMOVE,
+                $old !== $row['name'] || $menu->soup_allergens !== $row['allergens'] => self::UPDATE,
+                default => self::UNCHANGED,
+            };
+
+            return [...$row, 'action' => $action, 'item_id' => null, 'old_name' => $old, 'affected' => []];
+        })->values();
+    }
+
+    private function planItems(Collection $rows): Collection
+    {
+        $rows = $rows->map(fn ($r) => [
+            'kind' => 'item',
             'date' => LocalTime::date($r['date'])->toDateString(),
             'meal_slot_id' => (int) $r['meal_slot_id'],
             'number' => (int) $r['number'],
@@ -95,7 +140,10 @@ class MenuWriter
                     continue;
                 }
 
-                if ($row['action'] === self::REMOVE) {
+                if (($row['kind'] ?? 'item') === 'soup') {
+                    $menu = Menu::query()->firstOrCreate(['date' => $row['date'], 'meal_slot_id' => $row['meal_slot_id']]);
+                    $menu->update(['soup_name' => $row['name'], 'soup_allergens' => $row['name'] === null ? null : $row['allergens']]);
+                } elseif ($row['action'] === self::REMOVE) {
                     MenuItem::query()->findOrFail($row['item_id'])->update(['is_active' => false]);
                 } else {
                     $menu = Menu::query()->firstOrCreate(['date' => $row['date'], 'meal_slot_id' => $row['meal_slot_id']]);

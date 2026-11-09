@@ -16,7 +16,7 @@ class MealSlot extends Model
     public const DINNER = 'vecera';
 
     protected $fillable = [
-        'code', 'name', 'name_accusative', 'sort', 'cutoff_days_before', 'cutoff_time', 'is_active',
+        'code', 'name', 'name_accusative', 'sort', 'cutoff_days_before', 'cutoff_time', 'has_soup', 'is_active',
     ];
 
     protected function casts(): array
@@ -24,6 +24,7 @@ class MealSlot extends Model
         return [
             'sort' => 'integer',
             'cutoff_days_before' => 'integer',
+            'has_soup' => 'boolean',
             'is_active' => 'boolean',
         ];
     }

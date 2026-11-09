@@ -14,7 +14,7 @@ class Menu extends Model
 {
     use HasFactory, LogsActivity;
 
-    protected $fillable = ['date', 'meal_slot_id'];
+    protected $fillable = ['date', 'meal_slot_id', 'soup_name', 'soup_allergens'];
 
     protected function casts(): array
     {
@@ -24,6 +24,12 @@ class Menu extends Model
     public function mealSlot(): BelongsTo
     {
         return $this->belongsTo(MealSlot::class);
+    }
+
+    /** "Fazuľová polievka (1,9)" or null */
+    public function soupLabel(): ?string
+    {
+        return $this->soup_name ? trim($this->soup_name.($this->soup_allergens ? ' ('.$this->soup_allergens.')' : '')) : null;
     }
 
     public function items(): HasMany

@@ -3,14 +3,16 @@
     use App\Support\LocalTime;
     use App\Support\SlovakDate;
     $slotNames = \App\Models\MealSlot::query()->pluck('name', 'id');
-    $labels = [MenuWriter::CREATE => 'nové', MenuWriter::UPDATE => 'zmena', MenuWriter::UNCHANGED => 'bez zmeny'];
+    $labels = [MenuWriter::CREATE => 'nové', MenuWriter::UPDATE => 'zmena', MenuWriter::UNCHANGED => 'bez zmeny', MenuWriter::REMOVE => 'odstránené'];
 @endphp
 <x-filament-panels::page>
     <x-filament::section>
         <x-slot name="heading">1. Súbor</x-slot>
         <x-slot name="description">
-            XLSX alebo CSV so stĺpcami <code>datum</code> (napr. 16.11.2026), <code>jedlo</code> (obed / vecera), <code>cislo_menu</code>, <code>nazov</code>, <code>alergeny</code> (napr. 1,3,7).
-            Existujúce položky s rovnakým dátumom, jedlom a číslom sa prepíšu; ostatné zostanú.
+            XLSX alebo CSV, <strong>jeden riadok na deň</strong> so stĺpcami <code>datum</code> (napr. 16.11.2026), <code>polievka</code>, <code>obed_1</code>, <code>obed_2</code>, <code>vecera</code>.
+            Alergény píšte za jedlo do zátvorky, napr. <em>Hovädzí guláš, knedľa (1,3,7)</em>, alebo do stĺpca <code>obed_1_alergeny</code> a pod.
+            Prázdna bunka nič nemení. Existujúce jedlá v rovnaký deň a s rovnakým číslom sa prepíšu.
+            (Funguje aj starší formát <code>datum, jedlo, cislo_menu, nazov, alergeny</code>.)
             <a href="{{ route('admin.template', 'menu') }}" class="font-semibold text-primary-600 underline">Stiahnuť šablónu</a>
         </x-slot>
 
@@ -63,12 +65,12 @@
                         <tr><th class="px-3 py-2">Dátum</th><th class="px-3 py-2">Jedlo</th><th class="px-3 py-2">Menu</th><th class="px-3 py-2">Názov</th><th class="px-3 py-2">Alergény</th><th class="px-3 py-2">Výsledok</th></tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-white/5">
-                        @foreach ($plan->sortBy(['date', 'meal_slot_id', 'number']) as $r)
+                        @foreach ($plan->sortBy([['date', 'asc'], ['meal_slot_id', 'asc'], ['number', 'asc']]) as $r)
                             @php $d = LocalTime::date($r['date']); @endphp
                             <tr>
                                 <td class="px-3 py-1.5">{{ SlovakDate::dayShort($d) }} {{ $d->format('j. n. Y') }}</td>
                                 <td class="px-3 py-1.5">{{ $slotNames[$r['meal_slot_id']] ?? '?' }}</td>
-                                <td class="px-3 py-1.5">{{ $r['number'] }}</td>
+                                <td class="px-3 py-1.5">{{ ($r['kind'] ?? 'item') === 'soup' ? 'polievka' : $r['number'] }}</td>
                                 <td class="px-3 py-1.5">
                                     {{ $r['name'] }}
                                     @if ($r['action'] === 'update' && $r['old_name'] !== $r['name'])
