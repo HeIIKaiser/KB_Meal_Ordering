@@ -180,3 +180,9 @@ the layout lives in one class (`MonthlyMatrixXlsx`) and can be matched exactly.
 
 - Every A4 access sheet now shows the full `https://…` address (from `APP_URL`) in a large green box for PC users,
   next to the QR code for phones; step 1 explains both ways. Still one page per person (checked in Chromium print).
+
+### Follow-up: one more of the same meal (2026-11-10)
+
+- Tapping an already ordered meal now offers **Dokúpiť ďalšie rovnaké jedlo za 6,00 €** next to *Zrušiť objednávku*
+  (phone and PC). With two or more of the same meal, cancelling removes the Dokupovaná one first. When an admin cap on
+  Dokupovaná strava is reached, only cancelling is offered.

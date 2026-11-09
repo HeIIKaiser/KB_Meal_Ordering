@@ -137,7 +137,7 @@
                         <ul>
                             <li>Hore vyberte <em>deň</em> (alebo potiahnite prstom doľava/doprava).</li>
                             <li><em>Ťuknite na jedlo = objednané.</em> Zobrazí sa ✓ a cena.</li>
-                            <li>Ťuknite znova na objednané jedlo → <em>Zrušiť</em>.</li>
+                            <li>Ťuknite znova na objednané jedlo → <em>Zrušiť</em> alebo <em>Dokúpiť ďalšie rovnaké</em>.</li>
                             <li>Ťuknite na iné jedlo → <em>Zmeniť</em> alebo <em>Dokúpiť ďalšie jedlo</em>.</li>
                             <li>Polievka sa podáva ku každému obedu, neobjednáva sa.</li>
                         </ul>

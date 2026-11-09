@@ -106,14 +106,24 @@ class OrderScreen extends Component
             return;
         }
 
-        // Tapping an option I already have → confirm cancellation (the extra one first).
+        // Tapping an option I already have → cancel it (the extra one first), or buy one more of the same.
         $onItem = $mine->where('menu_item_id', $item->id)->sortByDesc(fn (Order $o) => $o->priceType->sort)->first();
         if ($onItem) {
+            $extraPrice = $this->extraPrice($date, $slot);
+            $count = $mine->where('menu_item_id', $item->id)->count();
+
             $this->dialog = [
                 'type' => 'cancel',
                 'order' => $onItem->id,
-                'title' => 'Zrušiť objednávku?',
-                'text' => $this->describe($item, $date, $slot).($onItem->priceType->isDonated() ? '' : ' (dokupovaná, '.Money::format($onItem->unit_price_cents).')'),
+                'item' => $item->id,
+                'title' => $extraPrice !== null ? 'Zrušiť alebo dokúpiť?' : 'Zrušiť objednávku?',
+                'text' => ($count > 1 ? 'Máte objednané '.$count.'×: ' : 'Máte objednané: ').$this->describe($item, $date, $slot).'.',
+                'cancel_label' => match (true) {
+                    $count > 1 => 'Zrušiť jedno dokupované ('.Money::format($onItem->unit_price_cents).')',
+                    ! $onItem->priceType->isDonated() => 'Zrušiť objednávku ('.Money::format($onItem->unit_price_cents).')',
+                    default => 'Zrušiť objednávku',
+                },
+                'extra_label' => $extraPrice !== null ? 'Dokúpiť ďalšie rovnaké jedlo za '.Money::format($extraPrice) : null,
             ];
 
             return;
@@ -122,13 +132,7 @@ class OrderScreen extends Component
         // Another option already ordered in this slot → switch, or add an extra.
         if ($mine->isNotEmpty()) {
             $switchable = $mine->sortBy(fn (Order $o) => $o->priceType->sort)->first();
-            $extraPrice = null;
-            try {
-                $quote = app(OrderService::class)->quote($this->employee(), $date, $slot);
-                $extraPrice = $quote->isExtra() ? $quote->unitPriceCents : null;
-            } catch (OrderingException) {
-                // limit reached → only switching is possible
-            }
+            $extraPrice = $this->extraPrice($date, $slot);
 
             $this->dialog = [
                 'type' => 'change',
@@ -177,10 +181,10 @@ class OrderScreen extends Component
         });
     }
 
-    /** "Pridať extra" in the change dialog, or confirmation of the extra-price dialog. */
+    /** "Dokúpiť" in the cancel/change dialog, or confirmation of the extra-price dialog. */
     public function confirmExtra(): void
     {
-        if (! in_array($this->dialog['type'] ?? null, ['change', 'extra'], true)) {
+        if (! in_array($this->dialog['type'] ?? null, ['cancel', 'change', 'extra'], true) || empty($this->dialog['item'])) {
             return;
         }
 
@@ -268,6 +272,18 @@ class OrderScreen extends Component
         } catch (AuthorizationException) {
             $this->error('Na túto akciu nemáte oprávnenie.');
         }
+    }
+
+    /** Price of one more meal in this slot, or null when no extra can be added (limit reached). */
+    private function extraPrice(CarbonImmutable $date, MealSlot $slot): ?int
+    {
+        try {
+            $quote = app(OrderService::class)->quote($this->employee(), $date, $slot);
+        } catch (OrderingException) {
+            return null;
+        }
+
+        return $quote->isExtra() ? $quote->unitPriceCents : null;
     }
 
     private function attempt(callable $action): void

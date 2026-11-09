@@ -176,7 +176,10 @@
 
                 <div class="space-y-3">
                     @if ($dialog['type'] === 'cancel')
-                        <button type="button" wire:click="confirmCancel" wire:loading.attr="disabled" class="w-full rounded-xl bg-red-700 px-4 py-4 text-xl font-bold text-white active:bg-red-900">Áno, zrušiť</button>
+                        @if ($dialog['extra_label'])
+                            <button type="button" wire:click="confirmExtra" wire:loading.attr="disabled" class="w-full rounded-xl bg-amber-400 px-4 py-4 text-left text-lg font-bold text-black active:bg-amber-500">{{ $dialog['extra_label'] }}</button>
+                        @endif
+                        <button type="button" wire:click="confirmCancel" wire:loading.attr="disabled" class="w-full rounded-xl bg-red-700 px-4 py-4 text-left text-lg font-bold text-white active:bg-red-900">{{ $dialog['cancel_label'] }}</button>
                     @elseif ($dialog['type'] === 'change')
                         <button type="button" wire:click="confirmSwitch" wire:loading.attr="disabled" class="w-full rounded-xl bg-emerald-700 px-4 py-4 text-left text-lg font-bold text-white active:bg-emerald-900">{{ $dialog['switch_label'] }}</button>
                         @if ($dialog['extra_label'])

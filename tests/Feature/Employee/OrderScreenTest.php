@@ -52,12 +52,41 @@ it('orders with one tap as donated', function () {
 it('asks before cancelling when the ordered option is tapped again', function () {
     $c = screen()->call('choose', $this->lunch[0]->id)->call('choose', $this->lunch[0]->id)
         ->assertSet('dialog.type', 'cancel')
-        ->assertSee('Zrušiť objednávku?');
+        ->assertSee('Zrušiť alebo dokúpiť?');
 
     expect(Order::sole()->status)->toBe(OrderStatus::Active);
 
     $c->call('confirmCancel')->assertSet('dialog', null)->assertSet('flash.type', 'ok');
     expect(Order::sole()->status)->toBe(OrderStatus::Cancelled);
+});
+
+it('offers one more of the same meal when the ordered option is tapped again', function () {
+    $c = screen()->call('choose', $this->lunch[0]->id)->call('choose', $this->lunch[0]->id)
+        ->assertSet('dialog.type', 'cancel')
+        ->assertSee('Dokúpiť ďalšie rovnaké jedlo za 6,00 €')
+        ->assertSee('Zrušiť objednávku');
+
+    $c->call('confirmExtra')->assertSet('flash.type', 'ok');
+    $orders = Order::query()->with('priceType')->get();
+    expect($orders)->toHaveCount(2)
+        ->and($orders->pluck('menu_item_id')->unique()->all())->toBe([$this->lunch[0]->id])
+        ->and($orders->map(fn ($o) => $o->priceType->code)->sort()->values()->all())->toBe([PriceType::DONATED, PriceType::EXTRA]);
+
+    // Tapping again now offers to cancel one of the two — the extra one goes first.
+    $c->call('choose', $this->lunch[0]->id)
+        ->assertSee('Máte objednané 2×')
+        ->assertSee('Zrušiť jedno dokupované (6,00 €)')
+        ->call('confirmCancel');
+    expect(Order::query()->where('status', OrderStatus::Active)->with('priceType')->sole()->priceType->code)->toBe(PriceType::DONATED);
+});
+
+it('offers only cancelling the same meal once an extra limit is reached', function () {
+    app(Settings::class)->set(Settings::MAX_EXTRA_PER_SLOT, 0);
+
+    screen()->call('choose', $this->lunch[0]->id)->call('choose', $this->lunch[0]->id)
+        ->assertSet('dialog.type', 'cancel')
+        ->assertSet('dialog.extra_label', null)
+        ->assertDontSee('Dokúpiť');
 });
 
 it('offers switch or extra when another option in the slot is tapped', function () {
