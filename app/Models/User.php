@@ -18,7 +18,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 
 /**
  * Staff account (kitchen / payroll / admin) for the Filament panel at /admin.
- * Email + password + TOTP 2FA. One user can hold several roles.
+ * Email + password, optional TOTP 2FA (enabled in the profile). One user can hold several roles.
  */
 class User extends Authenticatable implements FilamentUser, HasAppAuthentication, HasAppAuthenticationRecovery
 {

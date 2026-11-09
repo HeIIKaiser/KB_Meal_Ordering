@@ -15,6 +15,10 @@ return [
 
     'name' => env('APP_NAME', 'Laravel'),
 
+    // Organisation shown in the app (access sheets, login page, PWA name, 2FA) until set in
+    // Nastavenia → Objednávanie. Per installation, so it survives updates.
+    'company' => env('APP_COMPANY'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Environment
@@ -78,7 +82,7 @@ return [
     |
     */
 
-    'locale' => env('APP_LOCALE', 'en'),
+    'locale' => env('APP_LOCALE', 'sk'),
 
     'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
 

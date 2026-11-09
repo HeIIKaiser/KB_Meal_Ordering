@@ -19,7 +19,7 @@ class ReferenceDataSeeder extends Seeder
         // OPEN (brief §13.2): cutoff times to be confirmed by Roman.
         MealSlot::query()->firstOrCreate(['code' => MealSlot::LUNCH], [
             'name' => 'Obed', 'name_accusative' => 'obed', 'sort' => 10,
-            'cutoff_days_before' => 0, 'cutoff_time' => '09:00:00', 'is_active' => true,
+            'cutoff_days_before' => 0, 'cutoff_time' => '09:00:00', 'has_soup' => true, 'is_active' => true,
         ]);
         MealSlot::query()->firstOrCreate(['code' => MealSlot::DINNER], [
             'name' => 'Večera', 'name_accusative' => 'večeru', 'sort' => 20,
@@ -27,10 +27,10 @@ class ReferenceDataSeeder extends Seeder
         ]);
 
         $donated = PriceType::query()->firstOrCreate(['code' => PriceType::DONATED], [
-            'name' => 'Darované', 'sort' => 10, 'per_slot_daily_limit' => 1,
+            'name' => 'Zamestnanecká strava', 'sort' => 10, 'per_slot_daily_limit' => 1,
         ]);
         $extra = PriceType::query()->firstOrCreate(['code' => PriceType::EXTRA], [
-            'name' => 'Extra', 'sort' => 20, 'per_slot_daily_limit' => null, // null = setting max_extra_per_slot
+            'name' => 'Dokupovaná strava', 'sort' => 20, 'per_slot_daily_limit' => null, // null = setting max_extra_per_slot
         ]);
 
         if (! $donated->prices()->exists()) {

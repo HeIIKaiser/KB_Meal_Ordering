@@ -2,7 +2,9 @@
 
 namespace App\Providers\Filament;
 
-use Filament\Auth\MultiFactor\App\AppAuthentication;
+use App\Enums\NavGroup;
+use App\Filament\Auth\BrandedAppAuthentication;
+use App\Filament\Support\InitialsAvatarProvider;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -21,7 +23,8 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 /**
  * Staff panel (kitchen / payroll / admin) at /admin.
- * Email + password + mandatory TOTP two-factor authentication.
+ * Email + password. TOTP two-factor authentication is OPTIONAL: each user can
+ * enable it in their profile (decision by Roman, see docs/DECISIONS.md).
  */
 class AdminPanelProvider extends PanelProvider
 {
@@ -35,12 +38,16 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->profile(isSimple: false)
             ->multiFactorAuthentication(
-                [AppAuthentication::make()->recoverable()->brandName('Jedáleň KB SPA')],
-                isRequired: true,
+                [BrandedAppAuthentication::make()->recoverable()],
+                isRequired: false,
             )
             ->colors([
                 'primary' => Color::Emerald,
             ])
+            ->viteTheme('resources/css/filament/admin/theme.css')
+            ->defaultAvatarProvider(InitialsAvatarProvider::class)
+            ->navigationGroups(array_map(fn (NavGroup $g) => $g->value, NavGroup::cases()))
+            ->sidebarCollapsibleOnDesktop()
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([

@@ -23,7 +23,8 @@ use Illuminate\Support\Facades\DB;
  * Rules (brief §3):
  *  - Price type is assigned automatically: the first type (by sort) whose per-slot
  *    daily limit is not yet used up. With the default setup: no active donated
- *    order in the slot/day → Darované, otherwise Extra (up to max_extra_per_slot).
+ *    order in the slot/day → Zamestnanecká strava (donated), otherwise Dokupovaná strava (extra) (unlimited unless the
+ *    setting max_extra_per_slot sets a cap).
  *  - Price is resolved for the meal date and snapshotted on the order.
  *  - Cancelling never re-types other orders.
  *  - Employees act only while the slot is orderable; staff (admin) may act any
@@ -173,7 +174,7 @@ class OrderService
 
             if ($type->isDonated() && $order->price_type_id !== $type->id
                 && $this->activeCounts($order->employee, $order->date, $order->mealSlot)->get($type->id, 0) >= $this->limitFor($type)) {
-                throw new OrderingException('Zamestnanec už má na tento deň darované jedlo ('.$order->mealSlot->accusative().').', 'limit_reached');
+                throw new OrderingException('Zamestnanec už má na tento deň zamestnaneckú stravu ('.$order->mealSlot->accusative().').', 'limit_reached');
             }
 
             $old = ['price_type' => $order->priceType->code, 'unit_price_cents' => $order->unit_price_cents];

@@ -19,7 +19,12 @@ class EmployeeFactory extends Factory
             'last_name' => fake()->lastName(),
             'department' => fake()->randomElement(['Kuchyňa', 'Recepcia', 'Wellness', 'Údržba', 'Upratovanie', 'Lekári', 'Administratíva']),
             'pin_hash' => static::$pinHash ??= Hash::make('1234'),
+            'pin_plain' => '1234',
+            'pin_set_by' => Employee::PIN_BY_SYSTEM,
+            'pin_changed_at' => null,
+            'slip_printed_at' => null,
             'is_active' => true,
+            'remember_token' => null,
         ];
     }
 

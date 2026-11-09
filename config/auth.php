@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Employee;
 use App\Models\User;
 
 return [
@@ -38,9 +39,18 @@ return [
     */
 
     'guards' => [
+        // Staff (Filament panel /admin)
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
+        ],
+
+        // Employees (osobné číslo + PIN). Remember-me is always on; the cookie
+        // lives 400 days (the maximum browsers accept), in minutes:
+        'employee' => [
+            'driver' => 'session',
+            'provider' => 'employees',
+            'remember' => 576000,
         ],
     ],
 
@@ -65,6 +75,11 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', User::class),
+        ],
+
+        'employees' => [
+            'driver' => 'eloquent',
+            'model' => Employee::class,
         ],
 
         // 'users' => [
