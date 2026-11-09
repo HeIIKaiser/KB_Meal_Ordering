@@ -21,6 +21,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
@@ -86,26 +87,48 @@ class EmployeeResource extends Resource
                     ->sortable(['last_name', 'first_name']),
                 TextColumn::make('department')->label('Stredisko')->searchable()->sortable()->toggleable(),
                 IconColumn::make('is_active')->label('Aktívny')->boolean(),
+                TextColumn::make('pin_status')
+                    ->label('PIN')
+                    ->state(fn (Employee $record) => $record->pinStatus())
+                    ->badge()
+                    ->color(fn (string $state) => match ($state) {
+                        'na lístku' => 'success',
+                        'zmenil zamestnanec' => 'gray',
+                        default => 'danger',
+                    })
+                    ->tooltip(fn (Employee $record) => $record->pinStatus() === 'na lístku' ? 'PIN sa dá vytlačiť na lístok' : 'PIN sa nedá vytlačiť – pri potrebe použite Reset PIN'),
+                TextColumn::make('slip_printed_at')->label('Lístok vytlačený')->since()->placeholder('ešte nie')->sortable()->toggleable(),
                 TextColumn::make('pin_changed_at')->label('PIN zmenený')->since()->placeholder('–')->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('last_login_at')->label('Posledné prihlásenie')->since()->placeholder('nikdy')->sortable()->toggleable(),
+                TextColumn::make('last_login_at')->label('Posledné prihlásenie')->since()->placeholder('nikdy')->sortable()->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 TernaryFilter::make('is_active')->label('Aktívny')->default(true),
+                Filter::make('not_printed')
+                    ->label('Lístok ešte nevytlačený')
+                    ->query(fn ($query) => $query->whereNull('slip_printed_at')),
                 SelectFilter::make('department')
                     ->label('Stredisko')
                     ->options(fn () => Employee::query()->whereNotNull('department')->distinct()->orderBy('department')->pluck('department', 'department')->all()),
             ])
             ->recordActions([
                 EditAction::make(),
+                static::printSlipAction(),
                 static::resetPinAction(),
             ])
             ->toolbarActions([
+                BulkAction::make('printSlips')
+                    ->label('Tlačiť prístupové lístky')
+                    ->icon(Heroicon::OutlinedPrinter)
+                    ->authorize(fn () => auth()->user()?->isAdmin())
+                    ->action(fn (Collection $records) => redirect(static::slipsUrl($records->modelKeys())))
+                    ->deselectRecordsAfterCompletion(),
                 BulkAction::make('slips')
                     ->label('Nové PINy + prístupové lístky')
-                    ->icon(Heroicon::OutlinedPrinter)
+                    ->icon(Heroicon::OutlinedKey)
+                    ->color('warning')
                     ->requiresConfirmation()
                     ->modalHeading('Vygenerovať nové PINy a vytlačiť lístky?')
-                    ->modalDescription('Vybraným zamestnancom sa vygeneruje nový PIN (starý prestane platiť a budú odhlásení na všetkých zariadeniach). PINy sa zobrazia iba raz — na lístkoch na tlač.')
+                    ->modalDescription('Vybraným zamestnancom sa vygeneruje nový PIN (starý prestane platiť a budú odhlásení na všetkých zariadeniach). Ak chcete len znova vytlačiť súčasné PINy, použite „Tlačiť prístupové lístky“.')
                     ->modalSubmitActionLabel('Vygenerovať a tlačiť')
                     ->authorize(fn () => auth()->user()?->isAdmin())
                     ->action(fn (Collection $records) => static::issueAndPrint($records))
@@ -121,19 +144,33 @@ class EmployeeResource extends Resource
             ->color('warning')
             ->requiresConfirmation()
             ->modalHeading(fn (Employee $record) => 'Nový PIN pre '.$record->fullName().'?')
-            ->modalDescription('Starý PIN prestane platiť a zamestnanec bude odhlásený na všetkých zariadeniach. Nový PIN sa zobrazí raz, na lístku na tlač.')
+            ->modalDescription('Starý PIN prestane platiť a zamestnanec bude odhlásený na všetkých zariadeniach. Potom sa otvorí lístok s novým PINom.')
             ->modalSubmitActionLabel('Vygenerovať a tlačiť lístok')
             ->authorize(fn () => auth()->user()?->isAdmin())
             ->action(fn (Employee $record) => static::issueAndPrint(collect([$record])));
     }
 
-    /** Generates PINs and redirects to the printable slips (PINs travel in the session once). */
+    /** Print the access slip with the CURRENT PIN (nothing changes). */
+    public static function printSlipAction(): Action
+    {
+        return Action::make('printSlip')
+            ->label('Lístok')
+            ->icon(Heroicon::OutlinedPrinter)
+            ->color('gray')
+            ->authorize(fn () => auth()->user()?->isAdmin())
+            ->url(fn (Employee $record) => static::slipsUrl([$record->id]), shouldOpenInNewTab: true);
+    }
+
+    /** Generates NEW PINs and redirects to the printable slips. */
     public static function issueAndPrint(iterable $employees)
     {
-        $slips = app(PinIssuer::class)->issue($employees, auth()->user());
-        session()->put('access_slips', $slips->all());
+        return redirect(static::slipsUrl(app(PinIssuer::class)->issue($employees, auth()->user())));
+    }
 
-        return redirect()->route('admin.slips');
+    /** @param  array<int>  $ids */
+    public static function slipsUrl(array $ids): string
+    {
+        return route('admin.slips', ['zamestnanci' => implode(',', $ids)]);
     }
 
     public static function getPages(): array

@@ -104,7 +104,7 @@ class DemoDataSeeder extends Seeder
                 'department' => self::DEPARTMENTS[mt_rand(0, count(self::DEPARTMENTS) - 1)],
                 'is_active' => $i <= 78, // two former employees
             ]);
-            $employee->pin_hash = $pin;
+            $employee->forceFill(['pin_hash' => $pin, 'pin_plain' => '1234', 'pin_set_by' => Employee::PIN_BY_SYSTEM]);
             $employee->save();
         }
 

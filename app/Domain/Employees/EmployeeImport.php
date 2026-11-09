@@ -102,15 +102,15 @@ class EmployeeImport
         return ['rows' => $rows, 'errors' => $errors, 'missing' => $missing];
     }
 
-    /** @return array{created: int, updated: int, deactivated: int} */
+    /** @return array{created: int, updated: int, deactivated: int, created_ids: list<int>} New employees get a PIN automatically. */
     public function apply(array $preview, bool $deactivateMissing = false): array
     {
-        $result = ['created' => 0, 'updated' => 0, 'deactivated' => 0];
+        $result = ['created' => 0, 'updated' => 0, 'deactivated' => 0, 'created_ids' => []];
 
         DB::transaction(function () use ($preview, $deactivateMissing, &$result) {
             foreach ($preview['rows'] as $row) {
                 if ($row['action'] === 'create') {
-                    Employee::query()->create(['osobne_cislo' => $row['osobne_cislo'], ...$row['data']]);
+                    $result['created_ids'][] = Employee::query()->create(['osobne_cislo' => $row['osobne_cislo'], ...$row['data']])->id;
                     $result['created']++;
                 } elseif ($row['action'] === 'update') {
                     Employee::query()->where('osobne_cislo', $row['osobne_cislo'])->firstOrFail()->update($row['data']);

@@ -70,7 +70,7 @@ it('cannot delete employees', function () {
     expect($this->admin->can('delete', employee()))->toBeFalse();
 });
 
-describe('PIN reset and access slips', function () {
+describe('logins and access slips', function () {
     it('generates non-trivial 6-digit PINs', function () {
         foreach (range(1, 200) as $i) {
             $pin = PinIssuer::generate();
@@ -78,48 +78,134 @@ describe('PIN reset and access slips', function () {
         }
     });
 
-    it('resets PINs in bulk and shows them exactly once on the slips page', function () {
+    it('gives every new employee a working, printable login automatically', function () {
+        $this->actingAs($this->admin);
+
+        Livewire::test(CreateEmployee::class)
+            ->fillForm(['osobne_cislo' => '6001', 'last_name' => 'Nová', 'first_name' => 'Ema', 'is_active' => true])
+            ->call('create')
+            ->assertNotified('Zamestnanec vytvorený – PIN bol vygenerovaný');
+
+        $e = Employee::query()->where('osobne_cislo', '6001')->sole();
+        expect($e->printablePin())->toMatch('/^\d{6}$/')
+            ->and($e->checkPin($e->printablePin()))->toBeTrue()
+            ->and($e->pin_set_by)->toBe(Employee::PIN_BY_SYSTEM)
+            ->and($e->pinStatus())->toBe('na lístku');
+
+        // the employee can log in with it
+        auth()->logout();
+        $this->post('/prihlasenie', ['osobne_cislo' => '6001', 'pin' => $e->printablePin()])->assertRedirect(route('home'));
+    });
+
+    it('stores the printable PIN encrypted, never in plain text', function () {
+        $e = employee(['osobne_cislo' => '6002']);
+        $e->setPin('482913');
+        $e->save();
+
+        $raw = DB::table('employees')->where('id', $e->id)->value('pin_plain');
+        expect($raw)->not->toContain('482913')
+            ->and(decrypt($raw, false))->toBe('482913')
+            ->and($e->fresh()->toArray())->not->toHaveKey('pin_plain');
+    });
+
+    it('prints the CURRENT PIN individually and in batch without changing it', function () {
         $this->actingAs($this->admin);
         $a = employee(['first_name' => 'Ján', 'last_name' => 'Novák', 'osobne_cislo' => '7001']);
-        $b = employee(['osobne_cislo' => '7002']);
-        $oldHash = $a->pin_hash;
+        $b = employee(['first_name' => 'Eva', 'last_name' => 'Adamová', 'osobne_cislo' => '7002']);
+        $hash = $a->pin_hash;
 
         Livewire::test(ListEmployees::class)
-            ->callTableBulkAction('slips', [$a, $b])
-            ->assertRedirect(route('admin.slips'));
+            ->callTableBulkAction('printSlips', [$a, $b])
+            ->assertRedirect(route('admin.slips', ['zamestnanci' => $b->id.','.$a->id])); // table order: Adamová, Novák
 
-        $slips = collect(session('access_slips'))->keyBy('employee_id');
-        expect($slips)->toHaveCount(2)
-            ->and($a->fresh()->pin_hash)->not->toBe($oldHash)
-            ->and($a->fresh()->checkPin($slips[$a->id]['pin']))->toBeTrue();
-        $slips = [$slips[$a->id]];
-
-        $this->get('/admin/listky')
+        $this->get(route('admin.slips', ['zamestnanci' => $a->id.','.$b->id]))
             ->assertOk()
-            ->assertSee('Ján Novák')
-            ->assertSee($slips[0]['pin'])
+            ->assertSeeInOrder(['Eva Adamová', 'Ján Novák'])  // alphabetical
+            ->assertSee('1234')
             ->assertSee('data:image/svg+xml;base64,', false)
             ->assertHeader('Cache-Control', 'no-store, private');
 
-        // second visit: PINs are gone
-        $this->get('/admin/listky')->assertOk()->assertDontSee($slips[0]['pin'])->assertSee('iba raz');
+        // printing again shows the same PIN; nothing changed, nobody logged out
+        $this->get(route('admin.slips', ['zamestnanci' => $a->id]))->assertSee('Ján Novák')->assertSee('1234');
+        expect($a->fresh()->pin_hash)->toBe($hash)
+            ->and($a->fresh()->slip_printed_at)->not->toBeNull()
+            ->and(DB::table('activity_log')->where('event', 'slips_printed')->count())->toBe(2);
 
-        expect(DB::table('activity_log')->where('event', 'pin_reset')->count())->toBe(2);
+        // single slip action links to the same page
+        Livewire::test(ListEmployees::class)->assertTableActionHasUrl('printSlip', route('admin.slips', ['zamestnanci' => $a->id]), $a);
     });
 
-    it('resets a single PIN from the edit page', function () {
+    it('does not print a PIN the employee chose themselves', function () {
         $this->actingAs($this->admin);
-        $e = employee();
+        $e = employee(['first_name' => 'Igor', 'last_name' => 'Tichý']);
+        $e->setPin('905172', Employee::PIN_BY_EMPLOYEE);
+        $e->save();
 
-        Livewire::test(EditEmployee::class, ['record' => $e->getRouteKey()])
-            ->callAction('resetPin')
-            ->assertRedirect(route('admin.slips'));
-        expect(session('access_slips'))->toHaveCount(1);
+        expect($e->fresh()->printablePin())->toBeNull()->and($e->fresh()->pinStatus())->toBe('zmenil zamestnanec');
+
+        $this->get(route('admin.slips', ['zamestnanci' => $e->id]))
+            ->assertOk()->assertDontSee('905172')->assertSee('PIN si zmenil(a) sám/sama');
     });
 
-    it('refuses the slips page to non-admins and guests', function () {
-        $this->get('/admin/listky')->assertRedirect('/admin/login');
-        $this->actingAs(User::factory()->kitchen()->create())->get('/admin/listky')->assertForbidden();
+    it('marks employees whose self-service PIN change cleared the printable PIN', function () {
+        $e = employee(['osobne_cislo' => '6003']);
+        $e->setPin('1234');
+        $e->save();
+        $this->actingAs($e->fresh(), 'employee')
+            ->put('/ucet/pin', ['current_pin' => '1234', 'pin' => '8642', 'pin_confirmation' => '8642'])
+            ->assertRedirect(route('account'));
+
+        expect($e->fresh()->pin_plain)->toBeNull()->and($e->fresh()->pin_set_by)->toBe(Employee::PIN_BY_EMPLOYEE);
+    });
+
+    it('resets PINs (new PIN, logs out other devices) and opens their slips', function () {
+        $this->actingAs($this->admin);
+        $a = employee(['osobne_cislo' => '7101']);
+        $b = employee(['osobne_cislo' => '7102']);
+        $old = $a->pin_hash;
+
+        Livewire::test(ListEmployees::class)
+            ->callTableBulkAction('slips', [$a, $b])
+            ->assertRedirectContains('/admin/listky?zamestnanci=');
+
+        $a->refresh();
+        expect($a->pin_hash)->not->toBe($old)
+            ->and($a->printablePin())->not->toBe('1234')
+            ->and($a->checkPin($a->printablePin()))->toBeTrue()
+            ->and($a->pin_set_by)->toBe(Employee::PIN_BY_ADMIN)
+            ->and(DB::table('activity_log')->where('event', 'pin_reset')->count())->toBe(2);
+
+        $this->get(route('admin.slips', ['zamestnanci' => $a->id]))->assertSee($a->printablePin());
+
+        Livewire::test(EditEmployee::class, ['record' => $b->getRouteKey()])
+            ->callAction('resetPin')
+            ->assertRedirect(route('admin.slips', ['zamestnanci' => $b->id]));
+    });
+
+    it('offers to print all slips not printed yet', function () {
+        $this->actingAs($this->admin);
+        $printed = employee(['slip_printed_at' => now()]);
+        $new1 = employee();
+        $new2 = employee();
+        employee(['is_active' => false]);
+
+        Livewire::test(ListEmployees::class)
+            ->assertActionVisible('printNew')
+            ->assertActionHasLabel('printNew', 'Nevytlačené lístky (2)')
+            ->assertActionHasUrl('printNew', route('admin.slips', ['zamestnanci' => $new1->id.','.$new2->id]))
+            ->filterTable('not_printed')
+            ->assertCanSeeTableRecords([$new1, $new2])
+            ->assertCanNotSeeTableRecords([$printed]);
+
+        $this->get(route('admin.slips', ['zamestnanci' => $new1->id.','.$new2->id]));
+        Livewire::test(ListEmployees::class)->assertActionHidden('printNew');
+    });
+
+    it('refuses the slips page to non-admins and guests and ignores junk ids', function () {
+        $e = employee();
+        $this->get('/admin/listky?zamestnanci='.$e->id)->assertRedirect('/admin/login');
+        $this->actingAs(User::factory()->kitchen()->create())->get('/admin/listky?zamestnanci='.$e->id)->assertForbidden();
+        $this->actingAs($this->admin)->get('/admin/listky?zamestnanci=abc,,-1,999999')->assertOk()->assertSee('Nie sú vybraní žiadni zamestnanci');
     });
 });
 
@@ -147,7 +233,9 @@ describe('import', function () {
 
         $result = app(EmployeeImport::class)->apply($preview, deactivateMissing: true);
 
-        expect($result)->toBe(['created' => 1, 'updated' => 1, 'deactivated' => 1])
+        $new = Employee::where('osobne_cislo', '200')->sole();
+        expect($result)->toBe(['created' => 1, 'updated' => 1, 'deactivated' => 1, 'created_ids' => [$new->id]])
+            ->and($new->printablePin())->toMatch('/^\d{6}$/') // imported employees get a login right away
             ->and($existing->fresh()->last_name)->toBe('Nová')
             ->and($existing->fresh()->department)->toBe('Wellness')
             ->and(Employee::where('osobne_cislo', '200')->sole()->first_name)->toBe('Žofia')
@@ -176,9 +264,11 @@ describe('import', function () {
             ->assertHasNoErrors()
             ->assertSee('Kráľ Peter')
             ->call('commit')
-            ->assertRedirect('/admin/employees');
+            ->assertRedirect('/admin/employees')
+            ->assertNotified('Import dokončený');
 
-        expect(Employee::where('osobne_cislo', '321')->exists())->toBeTrue();
+        $e = Employee::where('osobne_cislo', '321')->sole();
+        expect($e->pinStatus())->toBe('na lístku');
     });
 
     it('rejects unsupported files', function () {

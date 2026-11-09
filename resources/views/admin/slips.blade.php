@@ -21,6 +21,7 @@
         .cred b { font-size: 16pt; letter-spacing: 1.5px; font-family: ui-monospace, Menlo, Consolas, monospace; }
         .qr { grid-row: 2 / 4; grid-column: 2; text-align: center; font-size: 6.5pt; word-break: break-all; }
         .qr img { width: 27mm; height: 27mm; display: block; }
+        .nopin span { display: block; font-size: 8pt; color: #444; }
         .how { grid-column: 1; font-size: 7.5pt; line-height: 1.3; align-self: end; margin-top: 2mm; }
         .how ol { margin: 0.5mm 0 0; padding-left: 4mm; }
         .empty { padding: 40px; text-align: center; font-size: 18px; }
@@ -34,12 +35,12 @@
 <body>
 @if ($slips === [])
     <div class="toolbar"><a href="/admin/employees">Späť na zamestnancov</a></div>
-    <p class="empty">Lístky sa zobrazujú iba raz, hneď po vygenerovaní PINov.<br>Ak ste ich nevytlačili, vygenerujte PINy znova.</p>
+    <p class="empty">Nie sú vybraní žiadni zamestnanci.<br>V zozname zamestnancov ich označte a zvoľte <em>Tlačiť lístky</em>.</p>
 @else
     <div class="toolbar">
         <button type="button" onclick="window.print()">Tlačiť ({{ count($slips) }} {{ count($slips) === 1 ? 'lístok' : (count($slips) < 5 ? 'lístky' : 'lístkov') }})</button>
         <a href="/admin/employees">Späť na zamestnancov</a>
-        <span class="warn">⚠ PINy sa zobrazujú iba teraz. Po opustení tejto stránky ich už nebude možné zobraziť — ak treba, vygenerujte nové.</span>
+        <span class="warn">⚠ Lístky obsahujú PIN — odovzdajte ich osobne, nenechávajte ich v tlačiarni.@if (collect($slips)->whereNull('pin')->isNotEmpty()) Pri {{ collect($slips)->whereNull('pin')->count() }} zamestnancoch PIN nie je možné vytlačiť (pozri lístok).@endif</span>
     </div>
     <div class="sheet">
         @foreach ($slips as $s)
@@ -49,7 +50,11 @@
                     <div class="name">{{ $s['name'] }}</div>
                     @if ($s['department'])<div class="dept">{{ $s['department'] }}</div>@endif
                     <div class="cred">Osobné číslo: <b>{{ $s['osobne_cislo'] }}</b></div>
-                    <div class="cred">PIN: <b>{{ $s['pin'] }}</b></div>
+                    @if ($s['pin'] !== null)
+                        <div class="cred">PIN: <b>{{ $s['pin'] }}</b></div>
+                    @else
+                        <div class="cred nopin">PIN: — <span>{{ $s['note'] }}</span></div>
+                    @endif
                 </div>
                 <div class="qr"><img src="{{ $qr }}" alt="QR kód">{{ $url }}</div>
                 <div class="how">

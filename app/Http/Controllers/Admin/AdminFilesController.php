@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Admin;
 
 use App\Domain\Backup\DatabaseBackup;
 use App\Domain\Employees\EmployeeImport;
+use App\Domain\Employees\PinIssuer;
 use App\Domain\Menus\MenuImport;
 use App\Enums\Role;
 use App\Http\Controllers\Controller;
+use App\Models\Employee;
 use App\Models\User;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
@@ -18,10 +20,17 @@ use Symfony\Component\HttpFoundation\Response;
 /** Plain (non-Filament) staff pages: printable access slips and import templates. */
 class AdminFilesController extends Controller
 {
-    /** A4 sheet of access slips. The plain PINs come from the session once (pull). */
-    public function slips(Request $request): Response
+    /**
+     * A4 sheet of access slips with each employee's CURRENT PIN (nothing is changed).
+     *   /admin/listky?zamestnanci=12,15,18
+     */
+    public function slips(Request $request, PinIssuer $issuer): Response
     {
-        $slips = $request->session()->pull('access_slips', []);
+        $ids = collect(explode(',', (string) $request->query('zamestnanci')))
+            ->map(fn ($id) => (int) trim($id))->filter()->unique()->take(1000)->values();
+
+        $employees = Employee::query()->whereIn('id', $ids)->alphabetical()->get();
+        $slips = $employees->isEmpty() ? [] : $issuer->slips($employees, Auth::guard('web')->user())->all();
         $url = rtrim(config('app.url'), '/').'/';
 
         $qr = (new QRCode(new QROptions([

@@ -12,6 +12,7 @@ class EditEmployee extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            EmployeeResource::printSlipAction()->label('Tlačiť lístok'),
             EmployeeResource::resetPinAction(),
         ];
     }

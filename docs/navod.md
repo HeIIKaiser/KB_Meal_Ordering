@@ -55,14 +55,19 @@ Ak tlačíte pred uzávierkou, v hlavičke je upozornenie „Objednávky ešte o
 **Ľudia → Zamestnanci**
 
 - **Nový zamestnanec:** tlačidlo *Nový zamestnanec* → osobné číslo, priezvisko, meno, stredisko → Uložiť.
-  Potom tlačidlo **Reset PIN** vytvorí PIN a otvorí lístok na tlač.
+  **PIN sa vygeneruje automaticky** — v oznámení kliknite na **Vytlačiť lístok**.
+- **Prístupový lístok** (meno, osobné číslo, **súčasný PIN**, QR kód s adresou, postup „pridať na plochu“; 8 lístkov na A4):
+  - jednému zamestnancovi: v riadku tlačidlo **Lístok** (alebo *Tlačiť lístok* pri úprave),
+  - viacerým naraz: zaškrtnite ich → *Hromadné akcie* → **Tlačiť prístupové lístky**,
+  - všetkým, ktorým ešte lístok nebol vytlačený (napr. po importe): tlačidlo **Nevytlačené lístky (N)** hore.
+
+  Tlač lístka PIN **nemení** — dá sa vytlačiť znova kedykoľvek. Stĺpec **PIN** ukazuje, či sa PIN dá vytlačiť:
+  *na lístku* = áno; *zmenil zamestnanec* = zamestnanec si PIN zmenil sám, aplikácia ho nepozná (na lístku je
+  len poznámka); *neznámy* = zamestnanec bol založený pred touto funkciou — vydajte mu nový PIN (*Reset PIN*).
+  Lístky obsahujú PIN — odovzdávajte ich osobne.
+- **Zabudnutý PIN / nový PIN:** pri zamestnancovi **Reset PIN** (viacerým naraz *Nové PINy + prístupové lístky*)
+  → otvorí sa lístok s novým PINom. Starý PIN prestane platiť a zamestnanec sa odhlási na všetkých zariadeniach.
 - **Odchod zamestnanca:** nemazať — vypnúť **Aktívny**. Prihlásenie prestane fungovať, história objednávok zostane.
-- **Zabudnutý PIN:** pri zamestnancovi **Reset PIN** → vytlačiť lístok a odovzdať. Starý PIN prestane platiť
-  a zamestnanec sa odhlási na všetkých zariadeniach.
-- **Prístupové lístky pre viac ľudí naraz:** v zozname zaškrtnite zamestnancov → *Hromadné akcie* →
-  **Nové PINy + prístupové lístky** → *Vygenerovať a tlačiť*. Na A4 sa zmestí 8 lístkov (meno, osobné číslo,
-  PIN, QR kód s adresou, postup „pridať na plochu“).
-  **PINy sa zobrazia iba raz.** Ak stránku zavriete bez tlače, treba PINy vygenerovať znova.
 
 ### Import zamestnancov z Excelu
 
@@ -72,7 +77,8 @@ Ak tlačíte pred uzávierkou, v hlavičke je upozornenie „Objednávky ešte o
    `stredisko` a voliteľne `aktivny` (áno/nie). Na veľkosti písmen a diakritike v názvoch stĺpcov nezáleží.
 2. Vyberte súbor → **Načítať a skontrolovať**. Uvidíte, kto pribudne, čo sa zmení a riadky s chybou.
 3. Ak chcete vypnúť ľudí, ktorí v súbore nie sú (odišli), zaškrtnite **Deaktivovať …** (zoznam mien je pod tým).
-4. **Uložiť zmeny.** Nikto sa nemaže. Novým zamestnancom potom vytlačte lístky s PINmi.
+4. **Uložiť zmeny.** Nikto sa nemaže. **Noví zamestnanci dostanú PIN automaticky** — v oznámení kliknite na
+   **Vytlačiť lístky nových** (alebo neskôr tlačidlo *Nevytlačené lístky*).
 
 ## Jedálny lístok (kuchyňa, administrátor)
 

@@ -6,6 +6,7 @@ use App\Domain\Employees\EmployeeImport;
 use App\Enums\NavGroup;
 use App\Enums\Role;
 use App\Filament\Resources\Employees\EmployeeResource;
+use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Livewire\Attributes\Locked;
@@ -68,8 +69,15 @@ class ImportEmployees extends Page
 
         Notification::make()
             ->title('Import dokončený')
-            ->body("Nových: {$result['created']}, upravených: {$result['updated']}, deaktivovaných: {$result['deactivated']}.")
+            ->body("Nových: {$result['created']} (PIN vygenerovaný), upravených: {$result['updated']}, deaktivovaných: {$result['deactivated']}.")
             ->success()
+            ->persistent()
+            ->actions($result['created_ids'] ? [
+                Action::make('print')
+                    ->label('Vytlačiť lístky nových ('.$result['created'].')')
+                    ->button()
+                    ->url(EmployeeResource::slipsUrl($result['created_ids']), shouldOpenInNewTab: true),
+            ] : [])
             ->send();
 
         return redirect(EmployeeResource::getUrl());

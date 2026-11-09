@@ -250,8 +250,12 @@ Ordering cutoffs do **not** depend on cron.
 | Size | ~15 kB per month of data for 80 employees |
 | Monitoring | `app:hosting-check` fails if the newest backup is older than 26 h; the *Zálohy* page shows a red warning |
 
-Backups contain personal data (names, osobné čísla, PIN hashes). Downloads in the panel are admin-only and
-logged in *História zmien*.
+Backups contain personal data (names, osobné čísla, PIN hashes and **encrypted printable PINs**). Downloads in
+the panel are admin-only and logged in *História zmien*.
+
+**Keep a copy of `APP_KEY` (from `.env`) in a safe place, separate from the backups.** Printable PINs are
+encrypted with it: after restoring onto a server with a different key, logins still work, but slips show
+„PIN nie je známy“ until PINs are reset.
 
 ### Offsite copy (pulled by the company)
 
@@ -292,7 +296,8 @@ or via phpMyAdmin → Import (the `.sql.gz` file directly). Restoring into an em
 | Add a staff user | Panel: *Ľudia → Používatelia správy → Nový*. First admin / emergency: `php artisan app:staff-user person@example.sk --role=admin` |
 | Staff forgot password | Admin edits the user and sets a new password. Locked-out admin: `php artisan app:staff-user <email>` (answer *yes* to set a new password) |
 | Staff lost 2FA phone | Admin: *Používatelia správy → Vypnúť 2FA* (2FA is optional, enabled per user in *Profil*) |
-| Employee forgot PIN | Panel: *Zamestnanci → Reset PIN* → print the slip (PIN shown once). CLI: `php artisan app:reset-pin <osobne_cislo>` |
+| Employee logins | Every new employee (form, import, CLI) gets a random PIN automatically. Slips with the **current** PIN: *Zamestnanci* → *Lístok* (one), select → *Tlačiť prístupové lístky* (batch), *Nevytlačené lístky (N)* (all not printed yet, e.g. after an import). Printing doesn't change the PIN |
+| Employee forgot PIN | Panel: *Zamestnanci → Reset PIN* (new PIN + slip, logs out other devices). CLI: `php artisan app:reset-pin <osobne_cislo>` |
 | Employee locked after wrong PINs | Waits 60 s (5 tries per phone) or 15 min (10 tries per osobné číslo from anywhere). Immediately: `php artisan cache:clear` |
 | New employees | *Zamestnanci → Import z XLSX/CSV* or *Nový*; then *Nové PINy + prístupové lístky* |
 | Employee leaves | Untick *Aktívny* (never delete — history stays) |

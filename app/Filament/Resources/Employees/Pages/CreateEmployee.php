@@ -3,6 +3,8 @@
 namespace App\Filament\Resources\Employees\Pages;
 
 use App\Filament\Resources\Employees\EmployeeResource;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateEmployee extends CreateRecord
@@ -14,8 +16,16 @@ class CreateEmployee extends CreateRecord
         return static::getResource()::getUrl('edit', ['record' => $this->record]);
     }
 
-    protected function getCreatedNotificationMessage(): ?string
+    protected function getCreatedNotification(): ?Notification
     {
-        return 'Zamestnanec vytvorený. Vygenerujte mu PIN tlačidlom „Reset PIN“.';
+        return Notification::make()
+            ->success()
+            ->title('Zamestnanec vytvorený – PIN bol vygenerovaný')
+            ->actions([
+                Action::make('print')
+                    ->label('Vytlačiť lístok')
+                    ->button()
+                    ->url(EmployeeResource::slipsUrl([$this->record->id]), shouldOpenInNewTab: true),
+            ]);
     }
 }

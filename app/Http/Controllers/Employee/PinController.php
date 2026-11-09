@@ -37,7 +37,7 @@ class PinController extends Controller
             throw ValidationException::withMessages(['current_pin' => 'Súčasný PIN nie je správny.']);
         }
 
-        $employee->setPin($data['pin']);
+        $employee->setPin($data['pin'], Employee::PIN_BY_EMPLOYEE); // not stored readable
         // New remember token logs out other devices; this device logs in again below.
         $employee->setRememberToken(Str::random(60));
         $employee->save();

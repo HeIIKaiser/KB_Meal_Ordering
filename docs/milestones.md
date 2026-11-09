@@ -151,3 +151,15 @@ the layout lives in one class (`MonthlyMatrixXlsx`) and can be matched exactly.
 - 211 tests green (SQLite + MariaDB).
 
 **Remaining from the brief:** OPEN §13.7 (go-live date) — drives the pilot plan in `docs/pilot.md`.
+
+### Follow-up: employee logins (2026-11-10)
+
+- New employees (form, import, CLI) get a PIN automatically. Access slips show the **current** PIN and can be
+  reprinted any time:
+  - **Lístok** per employee;
+  - **Tlačiť prístupové lístky** for a selection;
+  - **Nevytlačené lístky (N)** for everyone not printed yet, e.g. after an import (the import notification also offers it).
+- App-generated PINs are stored encrypted besides the hash. A PIN the employee chose stays unreadable, and their
+  slip shows a note. PIN status column + "lístok ešte nevytlačený" filter. Printing is audited.
+- Deploy: `bash deploy/update.sh` (new columns). Existing employees from before this change show PIN status
+  *neznámy*: use *Nové PINy + prístupové lístky* once for them.
