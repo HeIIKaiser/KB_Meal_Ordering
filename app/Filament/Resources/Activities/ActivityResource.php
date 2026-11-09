@@ -54,6 +54,7 @@ class ActivityResource extends Resource
         'employees' => 'Zamestnanci',
         'users' => 'Používatelia',
         'settings' => 'Nastavenia',
+        'exports' => 'Exporty',
     ];
 
     public static function canViewAny(): bool
@@ -95,6 +96,7 @@ class ActivityResource extends Resource
         $s = $a->subject;
 
         return match (true) {
+            $s === null && ! $a->subject_type => '–',
             $s === null => class_basename((string) $a->subject_type).' #'.$a->subject_id,
             $s instanceof Order => 'Objednávka #'.$s->id.' – '.$s->employee?->fullNameReversed().', '.$s->date->format('j. n. Y'),
             $s instanceof Employee => $s->fullNameReversed().' ('.$s->osobne_cislo.')',

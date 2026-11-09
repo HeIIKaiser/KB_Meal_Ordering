@@ -12,7 +12,7 @@ isn't spelled out in the brief. Update this file when Roman answers.
 | 3 | `max_extra_per_slot` | **Waiting** — using brief default | `1` (setting) |
 | 4 | Number of employees | Assumed ≈ 80 (demo seeder) | — |
 | 5 | Kitchen's real menu file sample | **Still needed** — M3 ships the generic template importer; the adapter for the kitchen's own file comes when the sample arrives | template `datum, jedlo, cislo_menu, nazov, alergeny` |
-| 6 | Monthly export layout matching the existing workbook | Needed for M5 | — |
+| 6 | Monthly export layout matching the existing workbook | **Still open** — M5 implements the brief's layout; all layout code is in `App\Domain\Exports\MonthlyMatrixXlsx` so it can be matched to Roman's workbook once he sends a sample | brief layout + summary sheet |
 | 7 | Go-live date | Needed for pilot planning | — |
 
 ## Design decisions (M1)
@@ -56,6 +56,16 @@ isn't spelled out in the brief. Update this file when Roman answers.
 4. **PDF** is generated with dompdf (pure PHP, works on shared hosting; DejaVu Sans for Slovak diacritics). Browser print is the primary path; PDF is for sending/archiving.
 5. **Lock button** is shown only before the cutoff (afterwards the slot is closed anyway); **Unlock** is shown whenever a manual lock exists. Payroll can view and print but not lock.
 6. The kitchen screen and dashboard **poll every 60 s** (cheap on shared hosting) while the selected day is today or later.
+
+## Design decisions (M5)
+
+1. **Who is in the monthly export:** every employee with at least one active order in the month (also people deactivated since — they ate that month). Option *Aj aktívni zamestnanci bez objednávok* adds currently active employees with zero rows (useful for matching against attendance).
+2. **Only active orders** are counted; € sums use each order's **snapshot price** (`unit_price_cents`), so later price changes or corrections of the price list never change past months.
+3. **Matrix layout** (sheet *Mesiac*): per employee a header row "Priezvisko Meno (osobné č. …) | mesiac | Po Ut St …", one row per price type (or per type × slot with *Rozdeliť na obed / večeru*), a *Spolu* row; day cells are counts (lunch + dinner donated = 2), weekends shaded, frozen panes, prints A4 landscape with all days on one page width.
+4. **Summary sheet** (*Súhrn*): Osobné číslo (as text, keeps leading zeros), Priezvisko, Meno, Stredisko, ks and € per price type, Suma €, total row. Money cells are numbers formatted `0,00 €` (not text), so they can be summed/imported.
+5. **Flat list** includes cancelled orders (column `stav`: aktivna / zrusena) so it can be reconciled; `typ` is `darovane` / `extra`; times are local (Europe/Bratislava). CSV = UTF-8 with BOM, `;` separator, decimal comma (opens correctly in Slovak Excel). Max. range 1 year.
+6. **Access:** exports are for payroll and admin (kitchen has its own daily export). Every export download is written to the audit log (it contains personal data of all employees).
+7. Downloads are plain GET routes that stream a temp file — not through Livewire — to stay within shared-hosting memory limits (demo month: 0.2 s, ~40 MB peak).
 
 ## Decisions by Roman
 

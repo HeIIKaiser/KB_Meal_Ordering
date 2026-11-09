@@ -87,3 +87,22 @@ click one, or **Objednávky → Denný prehľad (kuchyňa)**.
 - 158 tests green (SQLite + MariaDB), incl. a constant-query check for the list.
 
 Kitchen section added to `docs/navod.md`. Please try printing on the kitchen's printer.
+
+## M5 — Exports (done)
+
+Try it: log in as `mzdy@jedalen.test` / `heslo1234` → **Objednávky → Exporty**.
+
+- **Mesačný prehľad** → `stravovanie_2026-11_mesacny.xlsx`
+  - sheet *Mesiac*: per employee a block with day-of-week row, Darované / Extra counts per day (or split
+    obed / večera), Spolu and Suma €; weekends shaded; frozen name/header; prints on A4 landscape;
+  - sheet *Súhrn*: one row per employee (osobné číslo, priezvisko, meno, stredisko, ks and € per type, suma) + totals —
+    the sheet for the payroll import.
+- **Zoznam objednávok** for any period, XLSX or CSV → `stravovanie_2026-11_zoznam.csv` (one row per order incl.
+  cancelled, all columns from the brief).
+- Every export is logged in *História zmien*.
+- 168 tests green (SQLite + MariaDB): day counts (lunch + dinner = 2), extra, cancelled excluded, month
+  boundaries, snapshot prices after repricing, split rows, summary totals, CSV/XLSX content, permissions.
+  Checked the XLSX rendered in LibreOffice and downloads in Chromium.
+
+**Needs Roman:** if payroll must import into the existing attendance/meal workbook, send a sample of its input sheet —
+the layout lives in one class (`MonthlyMatrixXlsx`) and can be matched exactly.

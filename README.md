@@ -25,7 +25,8 @@ the old company software. **Flow: pick day → tap meal → done.**
 | M2 Employee app | Done — login (osobné číslo + PIN, 400-day remember-me), one-screen ordering, Môj mesiac, PIN change, PWA |
 | M3 Admin | Done — employees (+ import, PIN reset, access slips), prices, slots/cutoffs, settings, closed days, menus (weekly grid + import), orders + corrections, staff users, audit log |
 | M4 Kitchen | Done — daily overview (totals, alphabetical list, name filter, auto-refresh), print (A4, 2 columns, checkboxes), PDF (dompdf), XLSX, lock/unlock, dashboard counts |
-| M5–M6 | Not started |
+| M5 Exports | Done — monthly per-employee matrix (+ split by slot, summary sheet for payroll), flat order list XLSX/CSV |
+| M6 Hardening & handover | Not started |
 
 ---
 

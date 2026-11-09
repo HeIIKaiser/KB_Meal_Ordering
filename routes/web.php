@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminFilesController;
+use App\Http\Controllers\Admin\ExportController;
 use App\Http\Controllers\Admin\KitchenExportController;
 use App\Http\Controllers\Employee\LoginController;
 use App\Http\Controllers\Employee\MonthController;
@@ -35,4 +36,9 @@ Route::prefix('/admin/kuchyna')->name('kitchen.')->group(function () {
     Route::get('/tlac', [KitchenExportController::class, 'print'])->name('print');
     Route::get('/pdf', [KitchenExportController::class, 'pdf'])->name('pdf');
     Route::get('/xlsx', [KitchenExportController::class, 'xlsx'])->name('xlsx');
+});
+
+Route::prefix('/admin/exporty')->name('exports.')->group(function () {
+    Route::get('/mesiac', [ExportController::class, 'monthly'])->name('monthly');
+    Route::get('/zoznam', [ExportController::class, 'list'])->name('list');
 });

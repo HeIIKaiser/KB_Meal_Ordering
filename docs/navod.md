@@ -10,7 +10,7 @@ Zamestnanci objednávajú na hlavnej adrese (bez `/admin`) osobným číslom a P
 | Rola | Môže |
 |---|---|
 | **Kuchyňa** | denný prehľad, tlač, uzamknutie/odomknutie, jedálny lístok (týždeň, import), prezerať objednávky a zatvorené dni |
-| **Mzdy** | iba prezerať objednávky, denný prehľad a ceny (exporty pribudnú) |
+| **Mzdy** | prezerať objednávky, denný prehľad a ceny; exporty pre mzdy |
 | **Administrátor** | všetko: zamestnanci, PINy, ceny, uzávierky, nastavenia, opravy objednávok, používatelia správy, história zmien |
 
 Jeden človek môže mať viac rolí.
@@ -118,6 +118,34 @@ Administrátor navyše:
   (prvé jedlo darované, ďalšie extra) a zobrazí sa pred uložením.
 - Pri objednávke **Opraviť → Zmeniť jedlo / Zmeniť typ ceny / Zrušiť**.
   Po uzávierke alebo uzamknutí je **dôvod povinný**; pri zmene typu ceny vždy.
+
+## Exporty pre mzdy (mzdy, administrátor)
+
+**Objednávky → Exporty**
+
+### Mesačný prehľad
+
+Vyberte **mesiac** (prvých 10 dní v mesiaci je predvolený minulý mesiac) → **Stiahnuť Excel**.
+Súbor `stravovanie_RRRR-MM_mesacny.xlsx` má dva hárky:
+
+- **Mesiac** – pre každého zamestnanca blok: v hlavičke dni v týždni (víkendy sú podfarbené), pod tým
+  počet darovaných a extra jedál v každom dni (obed + večera v ten istý deň = 2), vpravo *Spolu* a *Suma €*.
+  Pri zaškrtnutí **Rozdeliť na obed / večeru** sú riadky zvlášť pre obed a večeru.
+  Tlačí sa na A4 na šírku, celý mesiac na šírku strany.
+- **Súhrn** – jeden riadok na zamestnanca: osobné číslo, priezvisko, meno, stredisko, počty a sumy
+  darovaných a extra jedál, celková suma. Tento hárok je určený na prenos do miezd.
+
+Počítajú sa iba platné (nezrušené) objednávky, a to za cenu, za ktorú boli objednané.
+V prehľade sú všetci, kto v mesiaci jedli (aj ľudia, ktorí medzičasom odišli). **Aj aktívni zamestnanci bez
+objednávok** pridá aj tých, ktorí nejedli ani raz (s nulami).
+
+### Zoznam objednávok
+
+Zvoľte obdobie (max. 1 rok) a formát **Excel** alebo **CSV** → **Stiahnuť**. Jeden riadok na objednávku,
+aj zrušené (stĺpec `stav`), s osobným číslom, strediskom, menu, typom, cenou a časom vytvorenia/zrušenia —
+vhodné na kontingenčnú tabuľku alebo napojenie na iný systém.
+
+Každé stiahnutie exportu sa zapíše do *Histórie zmien*.
 
 ## Používatelia správy (administrátor)
 
