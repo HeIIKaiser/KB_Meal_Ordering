@@ -7,7 +7,7 @@ isn't spelled out in the brief. Update this file when Roman answers.
 
 | # | Question | Status | Current value in the app |
 |---|---|---|---|
-| 1 | PHP version, SSH vs web console, DB credentials, subdomain (M0) | **Waiting for Roman** — run the M0 checklist in the README on the real hosting | — |
+| 1 | PHP version, SSH vs web console, DB credentials, subdomain (M0) | **Answered 2026-11-09** — verified on test hosting `kbsandbox.arpo.cc`, see README → M0 findings | PHP 8.5, MariaDB 11.4, SSH + Composer, symlinked doc root, cron via `deploy/websupport-cron.php` |
 | 2 | Cutoff times Obed / Večera | **Waiting** — using brief defaults | Obed same day 09:00, Večera same day 14:00 (editable per slot) |
 | 3 | `max_extra_per_slot` | **Waiting** — using brief default | `1` (setting) |
 | 4 | Number of employees | Assumed ≈ 80 (demo seeder) | — |
@@ -27,3 +27,9 @@ isn't spelled out in the brief. Update this file when Roman answers.
 8. **Dates** (`orders.date`, `menus.date`, …) are calendar dates stored as `Y-m-d` and read as local-midnight dates in Europe/Bratislava (`App\Casts\LocalDate`). Timestamps are stored in UTC (`app.timezone = UTC`).
 9. **Settings table** has a numeric `id` + unique `key` (the activity log needs numeric subject ids).
 10. **Slovak collation** `utf8mb4_slovak_ci` is recommended (`DB_COLLATION`) so alphabetical lists sort Č, Š, Ž, Ch correctly.
+
+## Decisions by Roman
+
+- **2026-11-09 — Staff 2FA is optional.** Users can enable TOTP in their Filament profile; it is not enforced on first login and there are no prompts. (Brief §5 said "email + password + 2FA" — relaxed because most staff can't handle authenticator apps.)
+- **2026-11-09 — Deployment from `main`.** The repository will be private with a `main` branch; servers deploy from `main` via a read-only deploy key.
+- **2026-11-09 — Test environment** is `kbsandbox.arpo.cc` (Roman's Websupport hosting). Production will be the company's Websupport hosting, same platform.

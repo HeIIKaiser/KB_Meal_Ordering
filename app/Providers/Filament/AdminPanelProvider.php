@@ -21,7 +21,8 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 /**
  * Staff panel (kitchen / payroll / admin) at /admin.
- * Email + password + mandatory TOTP two-factor authentication.
+ * Email + password. TOTP two-factor authentication is OPTIONAL: each user can
+ * enable it in their profile (decision by Roman, see docs/DECISIONS.md).
  */
 class AdminPanelProvider extends PanelProvider
 {
@@ -36,7 +37,7 @@ class AdminPanelProvider extends PanelProvider
             ->profile(isSimple: false)
             ->multiFactorAuthentication(
                 [AppAuthentication::make()->recoverable()->brandName('Jedáleň KB SPA')],
-                isRequired: true,
+                isRequired: false,
             )
             ->colors([
                 'primary' => Color::Emerald,

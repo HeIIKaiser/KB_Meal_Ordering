@@ -45,3 +45,15 @@ it('creates a staff user with roles', function () {
     expect($user->hasRole(Role::Kitchen))->toBeTrue()
         ->and($user->isAdmin())->toBeFalse();
 });
+
+it('does not force staff to set up 2FA', function () {
+    $this->actingAs(User::factory()->kitchen()->create())
+        ->get('/admin')
+        ->assertOk();
+});
+
+it('denies the panel to users without a staff role', function () {
+    $this->actingAs(User::factory()->create())
+        ->get('/admin')
+        ->assertForbidden();
+});

@@ -19,7 +19,7 @@ the old company software. **Flow: pick day → tap meal → done.**
 
 | Milestone | State |
 |---|---|
-| M0 Hosting spike | **Kit ready, not yet verified on the real hosting** — see [M0 checklist](#m0--hosting-checklist-websupport) |
+| M0 Hosting spike | **Verified** on Websupport test hosting (`kbsandbox.arpo.cc`) — see [M0 findings](#m0-findings) |
 | M1 Domain core | Done — migrations, models, ordering/pricing/cutoff/lock services, seeders, 54 tests |
 | M2–M6 | Not started |
 
@@ -46,7 +46,7 @@ php artisan serve
 ```
 
 Demo logins (DemoDataSeeder only): staff `admin@jedalen.test`, `kuchyna@jedalen.test`, `mzdy@jedalen.test`
-with password `heslo1234` (2FA setup is required on first login); employees `1001`–`1080` with PIN `1234`.
+with password `heslo1234`; employees `1001`–`1080` with PIN `1234`.
 
 ### Tests
 
@@ -87,30 +87,40 @@ finding in the [Findings](#m0-findings) table below.
 
 ### 2. Document root → `public/`
 
-Preferred layout (app code outside the web root):
+Verified layout on Websupport (option 2 below), app code outside the web root:
 
 ```
-/<home>/jedalen/            ← whole repository (app/, vendor/, .env, storage/ …)
-/<home>/jedalen/public/     ← the subdomain's document root must point HERE
+~/apps/<app>/                       ← whole repository (app/, vendor/, .env, storage/ …)
+~/<domain>/sub/<subdomain>          ← RELATIVE symlink → ../../apps/<app>/public
+~/<domain>/cron/<app>-schedule.php  ← cron wrapper (see Cron)
 ```
 
-Try in this order and note which works:
+```bash
+# a new subdomain folder contains a Websupport placeholder index.php — move it away first
+mv ~/<domain>/sub/<subdomain> ~/<subdomain>-placeholder-backup
+cd ~/<domain>/sub && ln -s ../../apps/<app>/public <subdomain>
+```
 
-1. **Set the subdomain's document root** to `…/jedalen/public` in the Websupport admin.
-2. If the root folder is fixed: **replace that folder with a symlink** to `…/jedalen/public`
-   (`ln -s ~/jedalen/public <subdomain-root>`), if symlinks are allowed (the probe tests it).
+Options, in order of preference:
+
+1. Set the subdomain's document root to `…/<app>/public` in WebAdmin (if offered).
+2. **Replace the subdomain folder with a relative symlink** to `…/<app>/public` (works on Websupport).
 3. Last resort: put the whole app *into* the subdomain root and copy
-   [`deploy/htaccess-root-fallback`](deploy/htaccess-root-fallback) there as `.htaccess`. It rewrites
-   everything into `public/` and denies access to `.env`, `vendor/`, `storage/` … —
-   **verify** that `https://<subdomain>/.env` and `https://<subdomain>/composer.json` return 403/404.
+   [`deploy/htaccess-root-fallback`](deploy/htaccess-root-fallback) there as `.htaccess`
+   (rewrites into `public/`, denies `.env`, `vendor/`, …).
+
+After setup, check that `public/` holds only `index.php`, `.htaccess`, `favicon.ico`, `robots.txt`,
+`manifest.webmanifest`, `sw.js`, `offline.html`, `icons/`, `build/` and the Filament asset folders
+(`css/`, `js/`, `fonts/`).
 
 ### 3. Install the app
 
-With SSH + Composer on the server:
+Websupport has a web console with SSH, Composer and git. Clone over SSH with a
+read-only GitHub **deploy key**, deploying the `main` branch:
 
 ```bash
-cd ~/jedalen
-git clone <repo> .            # or upload files
+mkdir -p ~/apps && cd ~/apps
+git clone -b main git@github.com:<owner>/<repo>.git <app> && cd <app>
 composer install --no-dev --optimize-autoloader
 cp .env.example .env && nano .env          # see "Production .env" below
 php artisan key:generate
@@ -119,9 +129,21 @@ php artisan app:staff-user <your-email> --role=admin
 php artisan optimize
 ```
 
-Without SSH: on your PC run `deploy/build-release.sh` → upload and unzip `build/jedalen-<commit>.zip`
-(it contains `vendor/`). Migrations then need a way to run `php artisan migrate --force`
-(cron one-off job, or Websupport's web console) — **note what's available**.
+Update an existing installation:
+
+```bash
+cd ~/apps/<app>
+php artisan down
+git pull origin main
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan optimize
+php artisan up
+```
+
+Compiled CSS/JS (`public/build`) is committed — never run `npm` on the server.
+
+Without SSH: on your PC run `deploy/build-release.sh` → upload and unzip `build/jedalen-<commit>.zip`.
 
 #### Production `.env` (differences from `.env.example`)
 
@@ -131,22 +153,35 @@ APP_DEBUG=false
 APP_URL=https://obedy.<firma>.sk
 SESSION_SECURE_COOKIE=true
 LOG_LEVEL=warning
-DB_HOST=… DB_DATABASE=… DB_USERNAME=… DB_PASSWORD=…
+DB_HOST=db.r6.websupport.sk       # the DB host shown in WebAdmin (see note)
+DB_PORT=3306
+DB_DATABASE=… DB_USERNAME=… DB_PASSWORD=…
 DB_COLLATION=utf8mb4_slovak_ci
 ```
 
+On Websupport, `localhost`/socket only works on the web servers, **not from the SSH console**
+(where `artisan migrate` and cron run). Use the full DB host name (e.g. `db.r6.websupport.sk`),
+which works from both.
+
 ### 4. Cron
 
-Add one cron job in the Websupport admin, **every minute**, using the PHP CLI binary of the
-right version (≥ 8.3; the probe shows its path):
+Websupport WebAdmin cron can only run a **PHP file** (path relative to the domain folder,
+no arguments), so `artisan schedule:run` is called through a wrapper:
+
+1. Copy [`deploy/websupport-cron.php`](deploy/websupport-cron.php) to e.g.
+   `~/<domain>/cron/<app>-schedule.php` (outside any web root).
+2. Edit `APP_DIR` at the top — absolute, or relative to the wrapper's folder
+   (default `../../apps/kbsandbox`).
+3. WebAdmin → Cron: new job, file `cron/<app>-schedule.php`, **every minute**, PHP 8.5.
+4. Each run writes `storage/logs/cron-last-run.txt` (start, end, exit code, PHP binary).
+
+On a host with a normal crontab the equivalent is:
 
 ```
-* * * * * /usr/local/bin/php8.3 /<home>/jedalen/artisan schedule:run >> /dev/null 2>&1
+* * * * * /usr/php85/bin/php /<home>/apps/<app>/artisan schedule:run >> /dev/null 2>&1
 ```
 
-(Exact PHP path depends on the hosting; if the admin only allows "run a PHP script", point it
-at `artisan` with argument `schedule:run`.) Ordering cutoffs do **not** depend on cron — cron is
-for backups and housekeeping.
+Ordering cutoffs do **not** depend on cron — cron is for backups and housekeeping.
 
 ### 5. Verify
 
@@ -160,22 +195,25 @@ Then open `https://<subdomain>/admin`, log in, set up 2FA, and check `https://<s
 
 ### M0 findings
 
-Fill in on the real hosting (and send to the developer):
+Verified by Roman on **2026-11-09** on `kbsandbox.arpo.cc` (Roman's arpo.cc Websupport hosting = test
+environment). Production will be the company's Websupport hosting — same platform, repeat the
+checklist there.
 
 | Check | Result |
 |---|---|
-| Websupport plan / server | |
-| PHP versions available (web / CLI / cron) | |
-| SSH available? Composer available? | |
-| Document root can point to `public/`? Which option (1/2/3) works? | |
-| HTTPS (Let's Encrypt) on the subdomain, HTTP→HTTPS redirect | |
-| MySQL/MariaDB version, InnoDB, `utf8mb4_slovak_ci` available | |
-| Cron: min. interval, can it run PHP CLI, which binary path | |
-| `proc_open` / `exec` enabled? `mysqldump` available? (backups, M6) | |
-| `memory_limit`, `max_execution_time`, `upload_max_filesize` | |
-| `app:hosting-check` result | |
+| Platform | Websupport shared webhosting, test subdomain `kbsandbox.arpo.cc` |
+| PHP (web) | 8.5, selected in WebAdmin |
+| PHP (SSH console CLI) | `/usr/bin/php8.5` — 8.5.12 |
+| PHP (cron) | `/usr/php85/bin/php` — 8.5.12 |
+| SSH / Composer / git | Web console with SSH ✔, Composer 2.10.3 ✔, git 2.34.1 ✔; outbound SSH to GitHub works (read-only deploy key) |
+| Database | MariaDB 11.4.12, InnoDB ✔, `utf8mb4_slovak_ci` ✔. Host `db.r6.websupport.sk:3306`; socket/`localhost` only work on the web servers, **not** from the console → always use the host name |
+| Document root → `public/` | Option 2 ✔: app in `~/apps/kbsandbox`, `~/arpo.cc/sub/kbsandbox` is a **relative** symlink to `../../apps/kbsandbox/public`. New subdomain folders contain a Websupport placeholder `index.php` — move it out before symlinking |
+| Sensitive files | Websupport WAF answers `/.env` with its own 403; `public/` verified to contain only `index.php`, `.htaccess`, favicon, robots and Filament assets |
+| HTTPS | ✔ |
+| Cron | WebAdmin cron runs only a PHP *file* (no arguments) → wrapper [`deploy/websupport-cron.php`](deploy/websupport-cron.php), writes `storage/logs/cron-last-run.txt` ✔ |
+| `php artisan app:hosting-check` | All checks passed ✔ |
 
-**If any of these blocks, stop and report before building more features.**
+Nothing blocks. Note: Laravel 13 / Filament 5 run on PHP 8.5 there; development and CI use ≥ 8.3.
 
 ---
 
@@ -187,7 +225,8 @@ Fill in on the real hosting (and send to the developer):
 php artisan app:staff-user person@example.sk --role=kitchen        # roles: admin, kitchen, payroll (repeatable)
 ```
 
-The user sets up 2FA (authenticator app) on first login at `/admin`. (In M3 this also moves into the panel.)
+2FA is optional: a user can enable it under *Profil* in `/admin` (authenticator app + recovery codes).
+(In M3 user management also moves into the panel.)
 
 ### Reset an employee's PIN
 
