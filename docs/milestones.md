@@ -186,3 +186,10 @@ the layout lives in one class (`MonthlyMatrixXlsx`) and can be matched exactly.
 - Tapping an already ordered meal now offers **Dokúpiť ďalšie rovnaké jedlo za 6,00 €** next to *Zrušiť objednávku*
   (phone and PC). With two or more of the same meal, cancelling removes the Dokupovaná one first. When an admin cap on
   Dokupovaná strava is reached, only cancelling is offered.
+
+### Follow-up: reusable branding (2026-11-10)
+
+- Organisation name moved from the code to *Nastavenia → Objednávanie → Názov firmy* (fallback `APP_COMPANY`).
+  Shown on access sheets, the login page, the installed app's name and in the 2FA app. Existing installations keep
+  "KB SPA" automatically (migration), new ones start neutral. README: *Using it for your organisation*.
+- Deploy: `bash deploy/update.sh` (one migration). On a brand-new installation, set the name once in the admin or `.env`.

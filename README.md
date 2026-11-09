@@ -1,7 +1,9 @@
-# Jedáleň — objednávanie stravy pre zamestnancov KB SPA
+# Jedáleň — objednávanie stravy pre zamestnancov
 
-Employee meal ordering for KB SPA / Kúpele Brusno. Replaces the lunch ordering of the old company
-software. **Flow: pick day → tap meal → done.**
+Employee meal ordering for a company canteen: employees order lunch and dinner on their phone or PC,
+the kitchen gets daily lists, payroll gets monthly exports. **Flow: pick day → tap meal → done.**
+Originally built for KB SPA (Kúpele Brusno); nothing organisation-specific is in the code — see
+[Using it for your organisation](#using-it-for-your-organisation).
 
 This README is the handover document: a future admin should be able to install, run, update, back up
 and restore the app with it alone.
@@ -18,10 +20,26 @@ and restore the app with it alone.
 | | |
 |---|---|
 | Stack | Laravel 13, Filament 5 (staff panel `/admin`), Livewire 4 + Alpine, Tailwind 4 (built locally), MySQL/MariaDB |
-| Hosting | Websupport shared webhosting, subdomain (test: `kbsandbox.arpo.cc`) |
+| Hosting | Any PHP shared webhosting with MySQL/MariaDB and cron (built and verified on Websupport) |
 | Runtime needs | PHP ≥ 8.3 + MySQL/MariaDB + cron. **No** Node, queue workers or daemons on the server |
 | Language | UI Slovak; code, comments, commits English |
 | Time | Timestamps stored in UTC; business dates and cutoffs in `Europe/Bratislava` |
+
+## Using it for your organisation
+
+Everything organisation-specific is configuration or data, so updates (`git pull`) never overwrite it:
+
+| What | Where |
+|---|---|
+| Organisation name (access sheets, login page, installed app name, 2FA) | `APP_COMPANY` in `.env`, or *Nastavenia → Objednávanie → Názov firmy* (wins once saved) |
+| Address on the access sheets / QR code | `APP_URL` in `.env` (use the full `https://…`) |
+| Prices (Zamestnanecká 1,50 € / Dokupovaná 6,00 €), price history | *Nastavenia → Ceny* |
+| Meals, cutoff times, soup of the day | *Nastavenia → Jedlá a uzávierky* |
+| Ordering horizon, cap on Dokupovaná strava | *Nastavenia → Objednávanie* |
+| Employees, staff accounts, menus, closed days | Admin panel (with Excel/CSV import) |
+
+The price rule (first lunch and first dinner of a day at the employee price, anything more at the full
+price) and the Slovak UI are built in; see `docs/DECISIONS.md` for the reasoning before changing them.
 
 ## Status
 
@@ -221,7 +239,7 @@ Websupport WebAdmin cron can only run a **PHP file** (no arguments), so `artisan
 through a wrapper:
 
 1. Copy [`deploy/websupport-cron.php`](deploy/websupport-cron.php) to `~/<domain>/cron/<app>-schedule.php`.
-2. Edit `APP_DIR` at the top (absolute, or relative to the wrapper's folder; default `../../apps/kbsandbox`).
+2. Edit `APP_DIR` at the top (absolute, or relative to the wrapper's folder; default `../../apps/jedalen`).
 3. WebAdmin → Cron: file `cron/<app>-schedule.php`, **every minute**, PHP 8.5.
 4. Each run writes `storage/logs/cron-last-run.txt` (start, end, exit code, PHP binary).
 

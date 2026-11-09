@@ -14,9 +14,13 @@ class Settings
 
     public const MAX_EXTRA_PER_SLOT = 'max_extra_per_slot';
 
+    /** Organisation name shown on access sheets, login page, installed app and 2FA; '' = no name. */
+    public const COMPANY_NAME = 'company_name';
+
     public const DEFAULTS = [
         self::ORDERING_HORIZON_DAYS => 14,
         self::MAX_EXTRA_PER_SLOT => null, // null = unlimited (Roman 2026-11-09: extras are unlimited at 6 € each)
+        self::COMPANY_NAME => null,
     ];
 
     /** @var array<string, mixed>|null */
@@ -43,6 +47,20 @@ class Settings
     public function orderingHorizonDays(): int
     {
         return max(0, $this->int(self::ORDERING_HORIZON_DAYS));
+    }
+
+    /** From the admin settings; until it is saved there, APP_COMPANY from .env (per installation). */
+    public function companyName(): ?string
+    {
+        $value = trim((string) ($this->get(self::COMPANY_NAME) ?? config('app.company')));
+
+        return $value === '' ? null : $value;
+    }
+
+    /** "Jedáleň" or "Jedáleň <firma>" — the product name with the organisation, for titles. */
+    public function appTitle(): string
+    {
+        return trim('Jedáleň '.$this->companyName());
     }
 
     /** Max. extra (full-price) orders per employee, slot and day; null = unlimited. */

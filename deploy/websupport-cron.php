@@ -17,8 +17,8 @@
  */
 
 // Path to the application directory (the one containing `artisan`).
-// Example layout: ~/arpo.cc/cron/this-file.php  and  ~/apps/kbsandbox
-const APP_DIR = '../../apps/kbsandbox';
+// Example layout: ~/<domain>/cron/this-file.php  and  ~/apps/jedalen
+const APP_DIR = '../../apps/jedalen';
 
 use Illuminate\Foundation\Application;
 use Symfony\Component\Console\Input\ArgvInput;

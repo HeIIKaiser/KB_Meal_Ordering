@@ -6,12 +6,15 @@ use App\Http\Controllers\Admin\KitchenExportController;
 use App\Http\Controllers\Employee\LoginController;
 use App\Http\Controllers\Employee\MonthController;
 use App\Http\Controllers\Employee\PinController;
+use App\Http\Controllers\ManifestController;
 use App\Livewire\OrderScreen;
 use Illuminate\Support\Facades\Route;
 
 /*
 | Employee app (guard "employee"). Staff use the Filament panel at /admin.
 */
+
+Route::get('/manifest.webmanifest', ManifestController::class)->name('manifest');
 
 Route::middleware('guest:employee')->group(function () {
     Route::get('/prihlasenie', [LoginController::class, 'create'])->name('login');

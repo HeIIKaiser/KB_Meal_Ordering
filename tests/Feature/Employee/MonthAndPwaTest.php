@@ -38,7 +38,7 @@ it('shows previous months and ignores invalid month parameters', function () {
 });
 
 it('ships an installable PWA manifest, icons and a service worker', function () {
-    $manifest = json_decode(file_get_contents(public_path('manifest.webmanifest')), true, flags: JSON_THROW_ON_ERROR);
+    $manifest = $this->get('/manifest.webmanifest')->assertOk()->assertHeader('Content-Type', 'application/manifest+json')->json();
 
     expect($manifest['display'])->toBe('standalone')
         ->and($manifest['start_url'])->toBe('/')

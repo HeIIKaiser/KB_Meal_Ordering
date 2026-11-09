@@ -2,6 +2,9 @@
 
 @section('content')
 <div class="mx-auto mt-6 max-w-sm">
+    @if ($company = app(\App\Support\Settings::class)->companyName())
+        <p class="mb-1 text-lg font-semibold text-emerald-800">{{ $company }}</p>
+    @endif
     <h1 class="mb-1 text-2xl font-bold">Prihlásenie</h1>
     <p class="mb-6 text-stone-600">Objednávanie obedov a večerí pre zamestnancov.</p>
 

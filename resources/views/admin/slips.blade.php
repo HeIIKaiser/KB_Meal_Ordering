@@ -78,7 +78,7 @@
         <div class="page">
             <div class="brand">
                 <div class="app">Jedáleň</div>
-                <div class="sub">KB SPA – objednávanie stravy pre zamestnancov<br>prístupové údaje (osobné, neodovzdávajte ďalej)</div>
+                <div class="sub">{{ $company ? $company.' – ' : '' }}objednávanie stravy pre zamestnancov<br>prístupové údaje (osobné, neodovzdávajte ďalej)</div>
             </div>
 
             <div class="who">

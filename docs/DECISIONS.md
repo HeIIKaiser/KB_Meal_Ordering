@@ -92,3 +92,8 @@ isn't spelled out in the brief. Update this file when Roman answers.
 - **2026-11-10 — Wording: „Zamestnanecká strava“ / „Dokupovaná strava“.** The 1,50 € meal is the mandatory employer contribution, not a gift, so the earlier label „Darované“ was wrong. Display names of the price types are now *Zamestnanecká strava* (code `donated`) and *Dokupovaná strava* (code `extra`). A migration renames them in existing databases. UI, prints, exports (flat list `typ`: `zamestnanecka` / `dokupovana`) and docs follow. Internal codes are unchanged.
 - **2026-11-10 — Weekly menu print + A4 login sheet + aligned desktop week.** *Jedálny lístok → Tlačiť týždeň / PDF*: A4 landscape Monday–Sunday with soup, options, dinner, allergens and legend, for the board. Access slips are now **one A4 page per employee** with large credentials, QR and full instructions (live cutoffs and prices); the 8-per-page cards remain as *Malé lístky*. On desktop the week view uses CSS subgrid, so Obed / soup / Menu 1 / Menu 2 / Večera line up across all days.
 - **2026-11-09 — Test environment** is `kbsandbox.arpo.cc` (Roman's Websupport hosting). Production will be the company's Websupport hosting, same platform.
+
+- **2026-11-10 — Reusable for other organisations** (Roman). The organisation name is no longer in the code: it is the
+  setting *Názov firmy* (Nastavenia → Objednávanie), falling back to `APP_COMPANY` in `.env`. Existing installations
+  (with employees) get "KB SPA" preset by a migration, so updates need no manual change. The PWA manifest is now
+  served by Laravel (`/manifest.webmanifest`) so the installed app's name follows the setting.

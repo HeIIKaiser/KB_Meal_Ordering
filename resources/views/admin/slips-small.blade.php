@@ -46,7 +46,7 @@
     <div class="sheet">
         @foreach ($slips as $s)
             <div class="slip">
-                <div class="head">Jedáleň KB SPA – objednávanie stravy</div>
+                <div class="head">{{ $appTitle }} – objednávanie stravy</div>
                 <div>
                     <div class="name">{{ $s['name'] }}</div>
                     @if ($s['department'])<div class="dept">{{ $s['department'] }}</div>@endif

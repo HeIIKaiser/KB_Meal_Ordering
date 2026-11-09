@@ -13,7 +13,7 @@ beforeEach(fn () => $this->withoutVite());
 describe('routes', function () {
     /** Routes that may be reached without logging in. Anything else must require auth. */
     $public = [
-        'up', 'prihlasenie', 'admin/login',
+        'up', 'prihlasenie', 'admin/login', 'manifest.webmanifest',
         'livewire*', 'filament/assets*', // framework assets / endpoints (Livewire re-applies the page's auth)
     ];
 
