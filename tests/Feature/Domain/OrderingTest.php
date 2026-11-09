@@ -85,7 +85,19 @@ describe('automatic price typing', function () {
             ->and($extra->unit_price_cents)->toBe(600);
     });
 
-    it('limits extra orders per slot per day to max_extra_per_slot (default 1)', function () {
+    it('allows unlimited extra orders by default (each at 6,00 €)', function () {
+        orders()->place($this->emp, $this->lunchItems[0], $this->me);
+        foreach (range(1, 5) as $i) {
+            $extra = orders()->place($this->emp, $this->lunchItems[$i % 3], $this->me, acceptExtra: true);
+            expect($extra->priceType->code)->toBe(PriceType::EXTRA)->and($extra->unit_price_cents)->toBe(600);
+        }
+
+        expect(Order::count())->toBe(6)
+            ->and(Order::query()->where('price_type_id', PriceType::byCode('donated')->id)->count())->toBe(1);
+    });
+
+    it('can cap extra orders per slot per day with the max_extra_per_slot setting', function () {
+        app(Settings::class)->set(Settings::MAX_EXTRA_PER_SLOT, 1);
         orders()->place($this->emp, $this->lunchItems[0], $this->me);
         orders()->place($this->emp, $this->lunchItems[1], $this->me, acceptExtra: true);
 
@@ -94,6 +106,10 @@ describe('automatic price typing', function () {
 
         app(Settings::class)->set(Settings::MAX_EXTRA_PER_SLOT, 2);
         expect(orders()->place($this->emp, $this->lunchItems[2], $this->me, acceptExtra: true)->priceType->code)->toBe(PriceType::EXTRA);
+
+        app(Settings::class)->set(Settings::MAX_EXTRA_PER_SLOT, null); // back to unlimited
+        expect(app(Settings::class)->maxExtraPerSlot())->toBeNull();
+        orders()->place($this->emp, $this->lunchItems[0], $this->me, acceptExtra: true);
     });
 
     it('quotes the next order', function () {

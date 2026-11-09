@@ -26,6 +26,7 @@
         @if ($isCurrent)
             <div class="mt-1 text-sm opacity-80">Vrátane objednávok na zvyšok mesiaca.</div>
         @endif
+        <div class="mt-2 border-t border-white/30 pt-2 text-sm font-semibold">{{ Money::ESTIMATE_DISCLAIMER }}</div>
     </div>
 
     @forelse ($byDay as $ymd => $dayOrders)

@@ -23,7 +23,8 @@ use Illuminate\Support\Facades\DB;
  * Rules (brief §3):
  *  - Price type is assigned automatically: the first type (by sort) whose per-slot
  *    daily limit is not yet used up. With the default setup: no active donated
- *    order in the slot/day → Darované, otherwise Extra (up to max_extra_per_slot).
+ *    order in the slot/day → Darované, otherwise Extra (unlimited unless the
+ *    setting max_extra_per_slot sets a cap).
  *  - Price is resolved for the meal date and snapshotted on the order.
  *  - Cancelling never re-types other orders.
  *  - Employees act only while the slot is orderable; staff (admin) may act any

@@ -13,9 +13,9 @@
             <label class="grid gap-1">
                 <span class="text-sm font-semibold">Max. počet extra jedál (6 €) na jedlo a deň</span>
                 <x-filament::input.wrapper :valid="! $errors->has('maxExtra')">
-                    <x-filament::input type="number" min="0" max="10" wire:model="maxExtra" />
+                    <x-filament::input type="number" min="0" max="50" wire:model="maxExtra" placeholder="bez obmedzenia" />
                 </x-filament::input.wrapper>
-                <span class="text-sm text-gray-500">Okrem jedného darovaného. 0 = extra sa nedá objednať.</span>
+                <span class="text-sm text-gray-500">Okrem jedného darovaného. Prázdne = bez obmedzenia (predvolené), 0 = extra sa nedá objednať.</span>
                 @error('maxExtra') <span class="text-sm text-danger-600">{{ $message }}</span> @enderror
             </label>
 

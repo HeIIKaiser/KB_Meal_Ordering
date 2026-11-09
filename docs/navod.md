@@ -105,8 +105,13 @@ ponechajú cenu, za ktorú boli objednané. Cenu, ktorá už platí, nemožno me
 ## Uzávierky a nastavenia (administrátor)
 
 - **Nastavenia → Jedlá a uzávierky:** dokedy sa dá objednať obed/večeru (v ten istý deň alebo deň vopred, čas).
-- **Nastavenia → Objednávanie:** koľko dní dopredu sa dá objednať a koľko extra jedál (6 €) môže mať
-  zamestnanec na jedno jedlo a deň (okrem jedného darovaného).
+- **Nastavenia → Objednávanie:** koľko dní dopredu sa dá objednať a voliteľne najviac koľko extra jedál (6 €)
+  môže mať zamestnanec na jedno jedlo a deň (okrem jedného darovaného). Prázdne = bez obmedzenia (predvolené).
+
+**Ako sa určuje cena:** každý deň je prvý obed a prvá večera zamestnanca za 1,50 € (darované), každé ďalšie jedlo
+za 6,00 € (extra). Aplikácia nevie, či mal zamestnanec 8- alebo 12-hodinovú smenu (pri 8 h má nárok len na jedno
+darované jedlo), preto je pri mesačných súhrnoch upozornenie *„Cena stravy je odhadom a po porovnaní s dochádzkou
+sa môže zmeniť.“* Úpravu podľa dochádzky robia mzdy.
 
 ## Objednávky
 

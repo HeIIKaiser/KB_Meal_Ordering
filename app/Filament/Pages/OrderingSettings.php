@@ -30,7 +30,8 @@ class OrderingSettings extends Page
 
     public int|string $horizon = 14;
 
-    public int|string $maxExtra = 1;
+    /** Empty = unlimited. */
+    public int|string|null $maxExtra = null;
 
     public static function canAccess(): bool
     {
@@ -40,7 +41,7 @@ class OrderingSettings extends Page
     public function mount(Settings $settings): void
     {
         $this->horizon = $settings->orderingHorizonDays();
-        $this->maxExtra = $settings->maxExtraPerSlot();
+        $this->maxExtra = $settings->maxExtraPerSlot() ?? '';
     }
 
     public function save(Settings $settings): void
@@ -49,14 +50,14 @@ class OrderingSettings extends Page
 
         $data = $this->validate([
             'horizon' => ['required', 'integer', 'min:0', 'max:90'],
-            'maxExtra' => ['required', 'integer', 'min:0', 'max:10'],
+            'maxExtra' => ['nullable', 'integer', 'min:0', 'max:50'],
         ], [
             'horizon.*' => 'Zadajte počet dní 0 – 90.',
-            'maxExtra.*' => 'Zadajte číslo 0 – 10.',
+            'maxExtra.*' => 'Zadajte číslo 0 – 50 alebo nechajte prázdne (bez obmedzenia).',
         ]);
 
         $settings->set(Settings::ORDERING_HORIZON_DAYS, (int) $data['horizon']);
-        $settings->set(Settings::MAX_EXTRA_PER_SLOT, (int) $data['maxExtra']);
+        $settings->set(Settings::MAX_EXTRA_PER_SLOT, ($data['maxExtra'] ?? '') === '' ? null : (int) $data['maxExtra']);
 
         Notification::make()->title('Nastavenia uložené')->success()->send();
     }

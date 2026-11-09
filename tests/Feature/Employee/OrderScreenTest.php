@@ -8,6 +8,7 @@ use App\Livewire\OrderScreen;
 use App\Models\Order;
 use App\Models\PriceType;
 use App\Models\User;
+use App\Support\Settings;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
@@ -76,7 +77,9 @@ it('adds an extra at 6,00 € from the change dialog', function () {
     expect(Order::query()->where('price_type_id', PriceType::byCode('extra')->id)->sole()->unit_price_cents)->toBe(600);
 });
 
-it('only offers switching once the extra limit is reached', function () {
+it('only offers switching once an extra limit set by the admin is reached', function () {
+    app(Settings::class)->set(Settings::MAX_EXTRA_PER_SLOT, 1);
+
     screen()->call('choose', $this->lunch[0]->id)
         ->call('choose', $this->lunch[1]->id)->call('confirmExtra')
         ->call('choose', $this->lunch[2]->id)

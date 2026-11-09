@@ -114,7 +114,8 @@ describe('monthly XLSX', function () {
         expect(array_keys($sheets))->toBe(['Mesiac', 'Súhrn']);
 
         $m = $sheets['Mesiac'];
-        expect($m[0][0])->toBe('Stravovanie – november 2026');
+        expect($m[0][0])->toBe('Stravovanie – november 2026')
+            ->and($m[2][0])->toBe('Cena stravy je odhadom a po porovnaní s dochádzkou sa môže zmeniť.');
 
         $header = collect($m)->first(fn ($r) => $r[0] === 'Zamestnanec');
         expect(array_slice($header, 2, 3))->toBe([1, 2, 3])->and(array_slice($header, -2))->toBe(['Spolu', 'Suma €']);
@@ -133,7 +134,8 @@ describe('monthly XLSX', function () {
         $s = $sheets['Súhrn'];
         expect($s[0])->toBe(['Osobné číslo', 'Priezvisko', 'Meno', 'Stredisko', 'Darované ks', 'Extra ks', 'Darované €', 'Extra €', 'Suma €'])
             ->and(collect($s)->first(fn ($r) => $r[0] === '0123'))->toBe(['0123', 'Novák', 'Ján', 'Kuchyňa', 3, 1, 5, 6, 11])
-            ->and(collect($s)->last())->toBe(['Spolu', '', '', '', 5, 1, 8.5, 6, 14.5]);
+            ->and(collect($s)->first(fn ($r) => $r[0] === 'Spolu'))->toBe(['Spolu', '', '', '', 5, 1, 8.5, 6, 14.5])
+            ->and(collect($s)->last())->toBe(['Cena stravy je odhadom a po porovnaní s dochádzkou sa môže zmeniť.']);
     });
 
     it('splits rows by slot on request', function () {
@@ -161,7 +163,7 @@ describe('download routes', function () {
         $this->actingAs(User::factory()->kitchen()->create())->get('/admin/exporty')->assertForbidden();
 
         $payroll = User::factory()->withRoles(Role::Payroll)->create();
-        $this->actingAs($payroll)->get('/admin/exporty')->assertOk()->assertSee('Mesačný prehľad');
+        $this->actingAs($payroll)->get('/admin/exporty')->assertOk()->assertSee('Mesačný prehľad')->assertSee('Cena stravy je odhadom');
         $this->actingAs($payroll)->get('/admin/exporty/mesiac?mesiac=11/2026')->assertSessionHasErrors('mesiac');
         $this->actingAs($payroll)->get('/admin/exporty/zoznam?od=2026-11-30&do=2026-11-01&format=xlsx')->assertSessionHasErrors('do');
         $this->actingAs($payroll)->get('/admin/exporty/zoznam?od=2026-11-01&do=2026-11-30&format=pdf')->assertSessionHasErrors('format');

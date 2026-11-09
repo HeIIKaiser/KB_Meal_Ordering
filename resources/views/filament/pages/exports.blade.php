@@ -7,6 +7,8 @@
             Excel s dvoma hárkami: <strong>Mesiac</strong> – pre každého zamestnanca počty jedál po dňoch (darované / extra, víkendy podfarbené), spolu a suma;
             <strong>Súhrn</strong> – jeden riadok na zamestnanca (osobné číslo, meno, kusy, sumy) na import do miezd.
             Sumy sú podľa cien v čase objednania; zrušené objednávky sa nepočítajú.
+            <br><strong class="text-danger-600">{{ \App\Support\Money::ESTIMATE_DISCLAIMER }}</strong>
+            Aplikácia počíta za 1,50 € prvý obed aj prvú večeru dňa; nárok podľa dĺžky smeny (8 h = 1 jedlo, 12 h = 2 jedlá) sa overí v dochádzke.
         </x-slot>
 
         <form method="GET" action="{{ route('exports.monthly') }}" class="flex flex-wrap items-end gap-4">

@@ -13,7 +13,9 @@ use Illuminate\Support\Facades\DB;
  *
  *   DB_CONNECTION=mysql DB_DATABASE=jedalen_test ... ./vendor/bin/pest tests/Concurrency
  */
-it('serialises simultaneous orders of one employee (row locking)', function () {
+it('serialises simultaneous orders of one employee (row locking)', function (?int $maxExtra, int $expectedOk) {
+    app(\App\Support\Settings::class)->set(\App\Support\Settings::MAX_EXTRA_PER_SLOT, $maxExtra);
+
     if (! in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true) || ! function_exists('pcntl_fork')) {
         $this->markTestSkipped('Needs MySQL/MariaDB and the pcntl extension.');
     }
@@ -60,9 +62,14 @@ it('serialises simultaneous orders of one employee (row locking)', function () {
 
     $active = Order::query()->where('employee_id', $employee->id)->where('status', OrderStatus::Active->value)->get();
 
-    expect($results->filter(fn ($r) => $r === 'ok'))->toHaveCount(2)
-        ->and($active)->toHaveCount(2)
+    // Without the lock, parallel requests would either create two donated meals (stopped by the
+    // DB guard → a failed request) or exceed the extra cap.
+    expect($results->filter(fn ($r) => $r === 'ok'))->toHaveCount($expectedOk)
+        ->and($active)->toHaveCount($expectedOk)
         ->and($active->where('price_type_id', PriceType::byCode('donated')->id))->toHaveCount(1)
-        ->and($active->where('price_type_id', PriceType::byCode('extra')->id))->toHaveCount(1)
+        ->and($active->where('price_type_id', PriceType::byCode('extra')->id))->toHaveCount($expectedOk - 1)
         ->and($results->reject(fn ($r) => $r === 'ok')->every(fn ($r) => str_contains($r, 'maximálny počet')))->toBeTrue();
-});
+})->with([
+    'unlimited extras (default)' => [null, 6],
+    'extras capped at 1' => [1, 2],
+]);

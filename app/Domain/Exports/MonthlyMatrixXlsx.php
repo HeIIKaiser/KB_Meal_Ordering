@@ -3,6 +3,7 @@
 namespace App\Domain\Exports;
 
 use App\Support\LocalTime;
+use App\Support\Money;
 use App\Support\SlovakDate;
 use OpenSpout\Common\Entity\Cell;
 use OpenSpout\Common\Entity\Row;
@@ -67,7 +68,7 @@ class MonthlyMatrixXlsx
         $sheet->setColumnWidthForRange(4.2, 3, 2 + $days);
         $sheet->setColumnWidth(8, 3 + $days);
         $sheet->setColumnWidth(11, 4 + $days);
-        $sheet->setSheetView((new SheetView)->setFreezeRow(4)->setFreezeColumn('C'));
+        $sheet->setSheetView((new SheetView)->setFreezeRow(5)->setFreezeColumn('C'));
 
         $weekend = [];
         for ($d = 1; $d <= $days; $d++) {
@@ -90,6 +91,7 @@ class MonthlyMatrixXlsx
             'Vytvorené '.LocalTime::now()->format('j. n. Y H:i'),
             'Počty jedál podľa dní; suma podľa cien v čase objednania. Iba platné (nezrušené) objednávky.',
         ]));
+        $writer->addRow(Row::fromValues([Money::ESTIMATE_DISCLAIMER], (new Style)->setFontBold()->setFontColor('B91C1C')));
         $writer->addRow(Row::fromValues([]));
 
         // Column header: day numbers
@@ -210,5 +212,9 @@ class MonthlyMatrixXlsx
             $cells[] = Cell::fromValue($isMoney ? $totals[$i] / 100 : $totals[$i], $isMoney ? $moneyBold : $bold);
         }
         $writer->addRow(new Row($cells));
+
+        // Below the data (row 1 stays the header for imports)
+        $writer->addRow(Row::fromValues([]));
+        $writer->addRow(Row::fromValues([Money::ESTIMATE_DISCLAIMER], (new Style)->setFontBold()->setFontColor('B91C1C')));
     }
 }

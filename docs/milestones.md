@@ -106,3 +106,11 @@ Try it: log in as `mzdy@jedalen.test` / `heslo1234` → **Objednávky → Export
 
 **Needs Roman:** if payroll must import into the existing attendance/meal workbook, send a sample of its input sheet —
 the layout lives in one class (`MonthlyMatrixXlsx`) and can be matched exactly.
+
+### Follow-up after M5 (Roman's answers, 2026-11-09)
+
+- Extra meals are unlimited by default (6 € each); a cap can still be set in *Nastavenia → Objednávanie* (empty = unlimited).
+- Cutoff defaults kept (09:00 / 14:00), adjustable in the admin.
+- Disclaimer „Cena stravy je odhadom a po porovnaní s dochádzkou sa môže zmeniť.“ on the employee's *Môj mesiac*,
+  in the monthly export (both sheets) and on the export page.
+- Concurrency test now covers both unlimited extras and a cap. 170 tests green (SQLite + MariaDB).

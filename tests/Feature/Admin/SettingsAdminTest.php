@@ -105,6 +105,12 @@ it('saves ordering settings', function () {
         ->set('horizon', 21)->set('maxExtra', 2)->call('save')->assertHasNoErrors();
     expect(app(Settings::class)->orderingHorizonDays())->toBe(21);
 
+    expect(app(Settings::class)->maxExtraPerSlot())->toBe(2);
+
+    Livewire::test(OrderingSettings::class)->assertSet('maxExtra', 2)->set('maxExtra', '')->call('save')->assertHasNoErrors();
+    expect(app(Settings::class)->maxExtraPerSlot())->toBeNull();
+    Livewire::test(OrderingSettings::class)->assertSet('maxExtra', '');
+
     Livewire::test(OrderingSettings::class)->set('maxExtra', 99)->call('save')->assertHasErrors('maxExtra');
 });
 

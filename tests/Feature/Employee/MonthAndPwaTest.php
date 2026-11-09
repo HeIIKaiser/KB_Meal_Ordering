@@ -28,7 +28,8 @@ it('shows the month with count and total from snapshot prices', function () {
         ->assertSee('9,00 €')         // 1,50 + 6,00 + 1,50
         ->assertSee('3 jedlá')
         ->assertSee('Darované: 2 ks (3,00 €)')
-        ->assertSee('Extra: 1 ks (6,00 €)');
+        ->assertSee('Extra: 1 ks (6,00 €)')
+        ->assertSee('Cena stravy je odhadom a po porovnaní s dochádzkou sa môže zmeniť.');
 });
 
 it('shows previous months and ignores invalid month parameters', function () {

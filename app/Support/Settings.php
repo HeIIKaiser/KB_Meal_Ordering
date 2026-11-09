@@ -16,7 +16,7 @@ class Settings
 
     public const DEFAULTS = [
         self::ORDERING_HORIZON_DAYS => 14,
-        self::MAX_EXTRA_PER_SLOT => 1,   // OPEN (brief §13.3): confirm with Roman
+        self::MAX_EXTRA_PER_SLOT => null, // null = unlimited (Roman 2026-11-09: extras are unlimited at 6 € each)
     ];
 
     /** @var array<string, mixed>|null */
@@ -45,8 +45,11 @@ class Settings
         return max(0, $this->int(self::ORDERING_HORIZON_DAYS));
     }
 
-    public function maxExtraPerSlot(): int
+    /** Max. extra (full-price) orders per employee, slot and day; null = unlimited. */
+    public function maxExtraPerSlot(): ?int
     {
-        return max(0, $this->int(self::MAX_EXTRA_PER_SLOT));
+        $value = $this->get(self::MAX_EXTRA_PER_SLOT);
+
+        return $value === null || $value === '' ? null : max(0, (int) $value);
     }
 }

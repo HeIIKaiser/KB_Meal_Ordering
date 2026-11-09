@@ -4,6 +4,14 @@ namespace App\Support;
 
 final class Money
 {
+    /**
+     * Shown on every monthly rundown (employee "Môj mesiac", monthly export): the app
+     * gives every first lunch and first dinner the donated price, but 8-hour shifts
+     * are entitled to only one donated meal a day — payroll settles it against
+     * attendance. (Roman, 2026-11-09)
+     */
+    public const ESTIMATE_DISCLAIMER = 'Cena stravy je odhadom a po porovnaní s dochádzkou sa môže zmeniť.';
+
     /** 150 → "1,50 €" */
     public static function format(int $cents): string
     {
