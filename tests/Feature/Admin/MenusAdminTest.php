@@ -276,7 +276,7 @@ it('imports through the page and opens the imported week', function () {
         ->call('analyze')
         ->assertHasNoErrors()
         ->assertSee('Bryndzové halušky')
-        ->call('commit')
+        ->call('saveImport')
         ->assertRedirect(MenuWeek::getUrl(['tyzden' => '2026-11-23']));
 
     expect(MenuItem::sole()->name)->toBe('Bryndzové halušky');

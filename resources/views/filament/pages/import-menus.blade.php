@@ -91,7 +91,7 @@
             </div>
 
             <div class="mt-4 flex gap-3">
-                <x-filament::button wire:click="commit" wire:loading.attr="disabled" :disabled="$plan->whereIn('action', ['create', 'update'])->isEmpty()">Uložiť jedálny lístok</x-filament::button>
+                <x-filament::button wire:click="saveImport" wire:loading.attr="disabled" :disabled="$plan->whereIn('action', ['create', 'update'])->isEmpty()">Uložiť jedálny lístok</x-filament::button>
                 <x-filament::button color="gray" wire:click="resetImport">Zrušiť</x-filament::button>
             </div>
         </x-filament::section>

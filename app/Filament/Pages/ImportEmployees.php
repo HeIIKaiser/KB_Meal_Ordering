@@ -61,7 +61,7 @@ class ImportEmployees extends Page
         }
     }
 
-    public function commit(EmployeeImport $import)
+    public function saveImport(EmployeeImport $import)
     {
         abort_unless(static::canAccess() && $this->preview, 403);
 

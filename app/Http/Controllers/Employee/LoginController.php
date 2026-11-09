@@ -48,6 +48,9 @@ class LoginController extends Controller
             }
         }
 
+        // App-generated PINs are hashed lazily on the first login (see Employee::setPin).
+        Employee::query()->where('osobne_cislo', $number)->where('is_active', true)->first()?->ensurePinHash();
+
         $ok = Auth::guard('employee')->attempt([
             'osobne_cislo' => $number,
             'is_active' => true,

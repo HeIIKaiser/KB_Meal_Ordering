@@ -70,7 +70,7 @@ class ImportMenus extends Page
         }
     }
 
-    public function commit(MenuWriter $writer)
+    public function saveImport(MenuWriter $writer)
     {
         abort_unless(static::canAccess() && $this->preview, 403);
 

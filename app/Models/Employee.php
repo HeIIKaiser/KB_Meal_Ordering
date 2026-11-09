@@ -60,22 +60,46 @@ class Employee extends Model implements AuthenticatableContract
     {
         // Every new employee gets a login right away (form, import, CLI).
         static::creating(function (Employee $employee) {
-            if ($employee->pin_hash === null) {
+            if ($employee->pin_hash === null && ($employee->getAttributes()['pin_plain'] ?? null) === null) {
                 $employee->setPin(PinIssuer::generate(), self::PIN_BY_SYSTEM);
             }
         });
     }
 
     /**
-     * Set a new PIN. PINs set by the system/admin are also kept encrypted so the
-     * access slip can be reprinted; a PIN chosen by the employee is never stored readable.
+     * Set a new PIN.
+     *
+     * - Set by the system/admin: stored ENCRYPTED only (printable slip); the bcrypt hash is
+     *   computed lazily on the first login (ensurePinHash). Hashing is deliberately slow
+     *   (~0.2 s), so hashing on import/batch reset would take minutes for hundreds of
+     *   people and hit the hosting's time limit. Security is the same: the encrypted
+     *   PIN exists anyway.
+     * - Chosen by the employee: hashed immediately, never stored readable.
      */
     public function setPin(string $pin, string $by = self::PIN_BY_ADMIN): void
     {
-        $this->pin_hash = Hash::make($pin);
-        $this->pin_plain = $by === self::PIN_BY_EMPLOYEE ? null : $pin;
+        $byEmployee = $by === self::PIN_BY_EMPLOYEE;
+        $this->pin_hash = $byEmployee ? Hash::make($pin) : null;
+        $this->pin_plain = $byEmployee ? null : $pin;
         $this->pin_set_by = $by;
         $this->pin_changed_at = now();
+    }
+
+    /** Materialise the hash of a system/admin PIN (first login). Returns true if it changed. */
+    public function ensurePinHash(): bool
+    {
+        if ($this->pin_hash !== null || ($pin = $this->printablePin()) === null) {
+            return false;
+        }
+        $this->pin_hash = Hash::make($pin);
+        $this->saveQuietly();
+
+        return true;
+    }
+
+    public function hasPin(): bool
+    {
+        return $this->pin_hash !== null || $this->printablePin() !== null;
     }
 
     /** Current PIN if it can be printed, else null (changed by the employee, unknown, or APP_KEY changed). */
@@ -92,7 +116,7 @@ class Employee extends Model implements AuthenticatableContract
     public function pinStatus(): string
     {
         return match (true) {
-            $this->pin_hash === null => 'chýba',
+            ! $this->hasPin() => 'chýba',
             $this->pin_set_by === self::PIN_BY_EMPLOYEE => 'zmenil zamestnanec',
             $this->printablePin() !== null => 'na lístku',
             default => 'neznámy',
@@ -101,7 +125,13 @@ class Employee extends Model implements AuthenticatableContract
 
     public function checkPin(string $pin): bool
     {
-        return $this->pin_hash !== null && Hash::check($pin, $this->pin_hash);
+        if ($this->pin_hash !== null) {
+            return Hash::check($pin, $this->pin_hash);
+        }
+
+        $plain = $this->printablePin();
+
+        return $plain !== null && hash_equals($plain, $pin);
     }
 
     /** "Priezvisko Meno" — the sort/display order used on kitchen lists and exports. */

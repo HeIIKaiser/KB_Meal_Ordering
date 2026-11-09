@@ -45,7 +45,7 @@ class PinIssuer
     public function slips(iterable $employees, User $by): Collection
     {
         $slips = collect($employees)->map(function (Employee $employee) {
-            if ($employee->pin_hash === null) {
+            if (! $employee->hasPin()) {
                 $employee->setPin(self::generate(), Employee::PIN_BY_SYSTEM);
             }
             $employee->slip_printed_at = now();

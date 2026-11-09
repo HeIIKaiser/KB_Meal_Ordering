@@ -87,7 +87,7 @@
             @endif
 
             <div class="mt-4 flex gap-3">
-                <x-filament::button wire:click="commit" wire:loading.attr="disabled" :disabled="$rows->whereIn('action', ['create', 'update'])->isEmpty() && ! $preview['missing']">Uložiť zmeny</x-filament::button>
+                <x-filament::button wire:click="saveImport" wire:loading.attr="disabled" :disabled="$rows->whereIn('action', ['create', 'update'])->isEmpty() && ! $preview['missing']">Uložiť zmeny</x-filament::button>
                 <x-filament::button color="gray" wire:click="resetImport">Zrušiť</x-filament::button>
             </div>
         </x-filament::section>

@@ -9,8 +9,10 @@ use App\Filament\Resources\Employees\Pages\EditEmployee;
 use App\Filament\Resources\Employees\Pages\ListEmployees;
 use App\Models\Employee;
 use App\Models\User;
+use Illuminate\Hashing\HashManager;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
 use OpenSpout\Common\Entity\Row;
 use OpenSpout\Writer\XLSX\Writer;
@@ -263,7 +265,7 @@ describe('import', function () {
             ->call('analyze')
             ->assertHasNoErrors()
             ->assertSee('Kráľ Peter')
-            ->call('commit')
+            ->call('saveImport')
             ->assertRedirect('/admin/employees')
             ->assertNotified('Import dokončený');
 
@@ -283,5 +285,59 @@ describe('import', function () {
     it('serves the CSV template', function () {
         $this->actingAs($this->admin)->get('/admin/sablona/zamestnanci')
             ->assertOk()->assertHeader('Content-Type', 'text/csv; charset=UTF-8')->assertSee('osobne_cislo;priezvisko', false);
+    });
+});
+
+describe('fast imports (PIN hash computed at first login)', function () {
+    it('does not hash app-generated PINs up front, and hashes them on the first login', function () {
+        $e = Employee::query()->create(['osobne_cislo' => '8001', 'last_name' => 'Rýchla', 'first_name' => 'Eva']);
+        $pin = $e->printablePin();
+
+        expect($e->pin_hash)->toBeNull()
+            ->and($e->pinStatus())->toBe('na lístku')
+            ->and($e->checkPin($pin))->toBeTrue()
+            ->and($e->checkPin('000000'))->toBeFalse();
+
+        $this->withoutVite();
+        $this->post('/prihlasenie', ['osobne_cislo' => '8001', 'pin' => '000000'])->assertSessionHasErrors('osobne_cislo');
+        $this->post('/prihlasenie', ['osobne_cislo' => '8001', 'pin' => $pin])->assertRedirect(route('home'));
+
+        $e->refresh();
+        expect($e->pin_hash)->not->toBeNull()
+            ->and(Hash::check($pin, $e->pin_hash))->toBeTrue()
+            ->and($e->printablePin())->toBe($pin); // still printable
+    });
+
+    it('hashes a PIN chosen by the employee immediately and never stores it readable', function () {
+        $e = employee();
+        $e->setPin('5577', Employee::PIN_BY_EMPLOYEE);
+        $e->save();
+
+        expect($e->pin_hash)->not->toBeNull()->and($e->pin_plain)->toBeNull()->and($e->checkPin('5577'))->toBeTrue();
+    });
+
+    it('imports and batch-resets many employees without computing hashes', function () {
+        $csv = "osobne_cislo;priezvisko;meno\n".collect(range(1, 300))->map(fn ($i) => (9000 + $i).";Priezvisko$i;Meno")->join("\n");
+        $path = tempnam(sys_get_temp_dir(), 'imp');
+        file_put_contents($path, $csv);
+
+        Hash::swap(new class(app()) extends HashManager
+        {
+            public static int $calls = 0;
+
+            public function make($value, array $options = [])
+            {
+                self::$calls++;
+
+                return parent::make($value, $options);
+            }
+        });
+
+        $import = app(EmployeeImport::class);
+        $import->apply($import->preview($path, 'x.csv'));
+        app(PinIssuer::class)->issue(Employee::query()->get(), $this->admin);
+
+        expect(Employee::count())->toBe(300)
+            ->and(Hash::getFacadeRoot()::$calls)->toBe(0);
     });
 });
