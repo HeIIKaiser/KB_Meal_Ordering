@@ -18,7 +18,7 @@ isn't spelled out in the brief. Update this file when Roman answers.
 ## Design decisions (M1)
 
 1. **Which price version applies:** the version with the latest `valid_from` **on or before the meal date** (not the ordering date). *The amount is still snapshotted on the order when it is placed* — adding a price version later never changes existing orders. Roman (2026-11-09): prices are simply 1,50 € / 6,00 € and practically never change, so this is a corner case; kept as is.
-2. **Price typing:** price types are tried in `sort` order; the first one whose per-slot daily limit isn't used up by the employee's *active* orders wins. Default data: Darované (limit 1) → Extra (limit = setting `max_extra_per_slot`). This gives exactly the brief's rules incl. "cancel the donated one, keep the extra → next order is donated again".
+2. **Price typing:** price types are tried in `sort` order; the first one whose per-slot daily limit isn't used up by the employee's *active* orders wins. Default data: Darované (limit 1) → Extra (limit = setting `max_extra_per_slot`). Cancelling the donated order moves the oldest remaining extra in that slot/day to the donated price (changed 2026-11-10, see below).
 3. **Extra confirmation is enforced server-side:** `OrderService::place()` refuses to create an Extra order unless the caller passes `acceptExtra: true`, so a double tap can never silently create a 6 € meal.
 4. **Concurrency:** every order write runs in a transaction that first locks the employee row (`SELECT … FOR UPDATE`). A unique index `(employee_id, date, meal_slot_id, donated_guard)` additionally makes two active donated orders impossible at the DB level. Proven by `tests/Concurrency` (6 parallel processes, MariaDB).
 5. **Manual unlock** only removes a manual lock; it does not reopen a slot whose automatic cutoff has passed. Late orders after the cutoff are entered by an admin (with reason) — **confirmed by Roman 2026-11-09**.
@@ -99,3 +99,6 @@ isn't spelled out in the brief. Update this file when Roman answers.
   served by Laravel (`/manifest.webmanifest`) so the installed app's name follows the setting.
 - **2026-11-10 — Public, MIT** (Roman). Repository licensed MIT; demo logins removed (seeder + a migration that disables
   them on existing installations).
+- **2026-11-10 — Cancelling re-types the remaining order** (Roman, after alpha testing). Order Menu 1 (1,50 €) + Menu 2 (6,00 €),
+  cancel Menu 1 → Menu 2 becomes Zamestnanecká strava at 1,50 € (oldest extra first; audited as `price_type_changed`;
+  the employee sees it in the confirmation message). Same for admin cancellations. Cancelling an extra changes nothing.

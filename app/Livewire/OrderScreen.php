@@ -22,6 +22,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
@@ -160,8 +161,10 @@ class OrderScreen extends Component
         $this->dialog = null;
 
         $this->attempt(function () use ($order) {
-            app(OrderService::class)->cancel($order, Actor::employee($this->employee()));
-            $this->success('Zrušené: '.$order->menuItem->label().' – '.$order->menuItem->name);
+            $cancelled = app(OrderService::class)->cancel($order, Actor::employee($this->employee()));
+            $promoted = $cancelled->getRelation('promoted')?->loadMissing('menuItem');
+            $this->success('Zrušené: '.$order->menuItem->label().' – '.$order->menuItem->name
+                .($promoted ? '. '.$promoted->menuItem->label().' je teraz '.Str::lower($promoted->priceType->name).' za '.Money::format($promoted->unit_price_cents).'.' : ''));
         });
     }
 

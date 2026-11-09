@@ -26,7 +26,9 @@ use Illuminate\Support\Facades\DB;
  *    order in the slot/day → Zamestnanecká strava (donated), otherwise Dokupovaná strava (extra) (unlimited unless the
  *    setting max_extra_per_slot sets a cap).
  *  - Price is resolved for the meal date and snapshotted on the order.
- *  - Cancelling never re-types other orders.
+ *  - Cancelling re-types: if it frees a cheaper type (e.g. the Zamestnanecká strava
+ *    is cancelled while a Dokupovaná one remains), the oldest remaining order of a
+ *    later type moves into it at that type's price (Roman 2026-11-10), audited.
  *  - Employees act only while the slot is orderable; staff (admin) may act any
  *    time, but outside the window a reason is mandatory. Everything is audited.
  *  - Concurrency: every write runs in a transaction that first locks the
@@ -150,8 +152,58 @@ class OrderService
 
             $this->audit($order, 'cancelled', $actor, 'Objednávka zrušená');
 
+            // Not persisted: lets the UI tell the employee which order became cheaper.
+            $order->setRelation('promoted', $this->promoteAfterCancel($order, $actor));
+
             return $order;
         });
+    }
+
+    /**
+     * After a cancellation: move the oldest remaining order of a later price type into the
+     * freed (cheaper) type, e.g. Dokupovaná 6,00 € → Zamestnanecká 1,50 €. Runs inside the
+     * cancel transaction (employee row locked). Returns the re-typed order, if any.
+     */
+    private function promoteAfterCancel(Order $cancelled, Actor $actor): ?Order
+    {
+        $type = $cancelled->priceType;
+        $limit = $this->limitFor($type);
+        $counts = $this->activeCounts($cancelled->employee, $cancelled->date, $cancelled->mealSlot);
+        if ($limit !== null && $counts->get($type->id, 0) >= $limit) {
+            return null;
+        }
+
+        $laterTypeIds = PriceType::query()
+            ->where(fn ($q) => $q->where('sort', '>', $type->sort)->orWhere(fn ($q) => $q->where('sort', $type->sort)->where('id', '>', $type->id)))
+            ->pluck('id');
+
+        $candidate = Order::query()
+            ->where('employee_id', $cancelled->employee_id)
+            ->where('date', $cancelled->date->toDateString())
+            ->where('meal_slot_id', $cancelled->meal_slot_id)
+            ->active()
+            ->whereIn('price_type_id', $laterTypeIds)
+            ->with('priceType')
+            ->orderBy('created_at')->orderBy('id')
+            ->first();
+        if (! $candidate) {
+            return null;
+        }
+
+        $old = ['price_type' => $candidate->priceType->code, 'unit_price_cents' => $candidate->unit_price_cents];
+        $candidate->update([
+            'price_type_id' => $type->id,
+            'unit_price_cents' => $this->prices->amountFor($type, $candidate->date),
+        ]);
+        $candidate->setRelation('priceType', $type);
+
+        $this->audit($candidate, 'price_type_changed', $actor, 'Typ ceny upravený automaticky po zrušení inej objednávky', [
+            'old' => $old,
+            'attributes' => ['price_type' => $type->code, 'unit_price_cents' => $candidate->unit_price_cents],
+            'cancelled_order_id' => $cancelled->id,
+        ]);
+
+        return $candidate;
     }
 
     /**

@@ -221,6 +221,8 @@ uzamknutia, nastavenia) vrátane dôvodu opravy. Detail záznamu ukáže hodnoty
 - **Ťuknite na jedlo = objednané.** Jedlo sa zafarbí a ukáže sa ✓ a cena.
 - Ťuknite znova na objednané jedlo → *Zrušiť objednávku* alebo *Dokúpiť ďalšie rovnaké jedlo za 6,00 €*
   (napr. druhá porcia toho istého). Pri viacerých rovnakých sa ruší najprv dokupované.
+- Keď zrušíte jedlo za 1,50 € a máte ešte dokupované jedlo (6,00 €) v ten istý obed/večeru, to sa automaticky
+  zmení na zamestnaneckú stravu za 1,50 €.
 - Ťuknete na iné jedlo, keď už máte objednané → *Zmeniť na …* (vymení jedlo) alebo
   *Dokúpiť ďalšie jedlo za 6,00 €* (jedlo navyše).
 - **Polievka** sa podáva ku každému obedu, neobjednáva sa.

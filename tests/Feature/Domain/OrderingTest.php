@@ -17,6 +17,7 @@ use App\Support\Settings;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
+use Spatie\Activitylog\Models\Activity;
 
 function orders(): OrderService
 {
@@ -138,17 +139,57 @@ describe('cancellation', function () {
             ->and($cancelled->cancelled_by_user_id)->toBeNull();
     });
 
-    it('does not re-type other orders, and the next order is donated again', function () {
+    it('moves the remaining extra order to the employee price when the donated one is cancelled', function () {
         $donated = orders()->place($this->emp, $this->lunchItems[0], $this->me);
         $extra = orders()->place($this->emp, $this->lunchItems[1], $this->me, acceptExtra: true);
 
+        $cancelled = orders()->cancel($donated, $this->me);
+
+        expect($extra->fresh()->priceType->code)->toBe(PriceType::DONATED)
+            ->and($extra->fresh()->unit_price_cents)->toBe(150)
+            ->and($extra->fresh()->donated_guard)->toBe(1)
+            ->and($cancelled->getRelation('promoted')->id)->toBe($extra->id);
+
+        $log = Activity::query()->where('event', 'price_type_changed')->sole();
+        expect($log->subject_id)->toBe($extra->id)
+            ->and($log->properties['old']['price_type'])->toBe(PriceType::EXTRA);
+
+        // the next order is extra again (one donated per slot and day)
+        expect(orders()->place($this->emp, $this->lunchItems[2], $this->me, acceptExtra: true)->priceType->code)->toBe(PriceType::EXTRA);
+    });
+
+    it('promotes only the oldest of several extras, and nothing when an extra is cancelled', function () {
+        $donated = orders()->place($this->emp, $this->lunchItems[0], $this->me);
+        $first = orders()->place($this->emp, $this->lunchItems[1], $this->me, acceptExtra: true);
+        $this->travel(1)->seconds();
+        $second = orders()->place($this->emp, $this->lunchItems[1], $this->me, acceptExtra: true);
+
+        expect(orders()->cancel($second, $this->me)->getRelation('promoted'))->toBeNull();
+        expect($donated->fresh()->priceType->code)->toBe(PriceType::DONATED)
+            ->and($first->fresh()->priceType->code)->toBe(PriceType::EXTRA);
+
+        $third = orders()->place($this->emp, $this->lunchItems[2], $this->me, acceptExtra: true);
         orders()->cancel($donated, $this->me);
+        expect($first->fresh()->priceType->code)->toBe(PriceType::DONATED)
+            ->and($third->fresh()->priceType->code)->toBe(PriceType::EXTRA);
+    });
 
-        expect($extra->fresh()->priceType->code)->toBe(PriceType::EXTRA)
-            ->and($extra->fresh()->unit_price_cents)->toBe(600);
+    it('does not touch the other slot or another day', function () {
+        $lunch = orders()->place($this->emp, $this->lunchItems[0], $this->me);
+        $dinner = orders()->place($this->emp, $this->dinnerItems[0], $this->me);
 
-        $next = orders()->place($this->emp, $this->lunchItems[2], $this->me);
-        expect($next->priceType->code)->toBe(PriceType::DONATED);
+        expect(orders()->cancel($lunch, $this->me)->getRelation('promoted'))->toBeNull()
+            ->and($dinner->fresh()->priceType->code)->toBe(PriceType::DONATED);
+    });
+
+    it('also promotes when an admin cancels after the cutoff (with a reason)', function () {
+        $donated = orders()->place($this->emp, $this->lunchItems[0], $this->me);
+        $extra = orders()->place($this->emp, $this->lunchItems[1], $this->me, acceptExtra: true);
+        travelToLocal('2026-11-10 11:00:00');
+
+        orders()->cancel($donated, Actor::staff(User::factory()->admin()->create(), 'neprišiel'));
+
+        expect($extra->fresh()->priceType->code)->toBe(PriceType::DONATED);
     });
 
     it('refuses cancellation after the cutoff with a Slovak message', function () {

@@ -201,3 +201,9 @@ the layout lives in one class (`MonthlyMatrixXlsx`) and can be matched exactly.
   to run in production. A migration disables the old demo logins on installations that ran it (demo staff
   accounts deactivated with a random password, demo PIN 1234 replaced by a new printable PIN).
 - Deploy: `bash deploy/update.sh` (one migration).
+
+### Follow-up: cancelling makes the remaining meal cheaper (2026-11-10)
+
+- Alpha-tester note: with Menu 1 (1,50 €) + Menu 2 (6,00 €), cancelling Menu 1 left Menu 2 at 6,00 €. Now the remaining
+  Dokupovaná order becomes Zamestnanecká strava at 1,50 € (oldest first), the employee sees it in the message, and it is
+  in *História zmien*. Applies to admin cancellations too. Existing orders are not changed retroactively.
