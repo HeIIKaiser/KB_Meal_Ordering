@@ -28,7 +28,7 @@ Route::middleware(['auth:employee', 'employee.active'])->group(function () {
 
 /*
 | Staff helpers outside the Filament layout. Every route here MUST carry a
-| staff:<roles> middleware (enforced by tests/Feature/Security/RoutesTest.php).
+| staff:<roles> middleware (enforced by tests/Feature/Security/SecurityTest.php).
 */
 Route::get('/admin/listky', [AdminFilesController::class, 'slips'])->middleware('staff:admin')->name('admin.slips');
 Route::get('/admin/zalohy/stiahnut/{file}', [AdminFilesController::class, 'backup'])->middleware('staff:admin')->name('admin.backup');
