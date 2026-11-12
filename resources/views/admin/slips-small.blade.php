@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex">
-    <title>Prístupové lístky – Jedáleň</title>
+    <title>Prístupové lístky – {{ $appName }}</title>
     <style>
         @page { size: A4; margin: 8mm; }
         * { box-sizing: border-box; }
@@ -46,7 +46,7 @@
     <div class="sheet">
         @foreach ($slips as $s)
             <div class="slip">
-                <div class="head">{{ $appTitle }} – objednávanie stravy</div>
+                <div class="head">{{ $appName }}{{ $company ? ' – '.$company : '' }}</div>
                 <div>
                     <div class="name">{{ $s['name'] }}</div>
                     @if ($s['department'])<div class="dept">{{ $s['department'] }}</div>@endif
@@ -63,7 +63,7 @@
                     <ol>
                         <li>Naskenujte QR kód a prihláste sa.</li>
                         <li>Android ⋮ / iPhone □↑ → <em>Pridať na plochu</em>.</li>
-                        <li>Objednávajte ikonou <em>Jedáleň</em>.</li>
+                        <li>Objednávajte ikonou <em>{{ $appName }}</em>.</li>
                     </ol>
                 </div>
             </div>

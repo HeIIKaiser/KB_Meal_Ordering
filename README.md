@@ -31,7 +31,8 @@ Everything organisation-specific is configuration or data, so updates (`git pull
 
 | What | Where |
 |---|---|
-| Organisation name (access sheets, login page, installed app name, 2FA) | `APP_COMPANY` in `.env`, or *Nastavenia → Objednávanie → Názov firmy* (wins once saved) |
+| App name on the home screen, in the header and on the login sheets (e.g. „KB Zamestnanci“) | `APP_NAME` in `.env`, or *Nastavenia → Objednávanie → Názov aplikácie* (wins once saved) |
+| Organisation name (access sheets, login page, 2FA) | `APP_COMPANY` in `.env`, or *Nastavenia → Objednávanie → Názov firmy* (wins once saved) |
 | Address on the access sheets / QR code | `APP_URL` in `.env` (use the full `https://…`) |
 | Prices (Zamestnanecká 1,50 € / Dokupovaná 6,00 €), price history | *Nastavenia → Ceny* |
 | Meals, cutoff times, soup of the day | *Nastavenia → Jedlá a uzávierky* |

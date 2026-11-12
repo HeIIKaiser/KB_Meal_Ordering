@@ -31,7 +31,7 @@ it('shows no organisation name on a fresh installation', function () {
 it('uses APP_COMPANY until the name is set in the admin', function () {
     config(['app.company' => 'Hotel Lipa']);
 
-    expect($this->get('/manifest.webmanifest')->json('name'))->toBe('Jedáleň Hotel Lipa')
+    expect($this->get('/manifest.webmanifest')->json('description'))->toBe('Aplikácia pre zamestnancov – Hotel Lipa')
         ->and(brandingSlips())->toContain('Hotel Lipa – objednávanie stravy pre zamestnancov');
     $this->get('/prihlasenie')->assertSee('Hotel Lipa');
     expect(app(BrandedAppAuthentication::class)->getBrandName())->toBe('Jedáleň Hotel Lipa');
@@ -46,7 +46,7 @@ it('lets the admin set or clear the name, overriding APP_COMPANY', function () {
         ->set('company', '  KB SPA ')->call('save')->assertHasNoErrors();
     app()->forgetScopedInstances();
     expect(app(Settings::class)->companyName())->toBe('KB SPA')
-        ->and($this->get('/manifest.webmanifest')->json('name'))->toBe('Jedáleň KB SPA');
+        ->and($this->get('/manifest.webmanifest')->json('description'))->toBe('Aplikácia pre zamestnancov – KB SPA');
 
     Livewire::test(OrderingSettings::class)->set('company', '')->call('save');
     app()->forgetScopedInstances();
@@ -70,4 +70,45 @@ it('presets the former hard-coded name only on installations that already have e
     $migration->up();
     app()->forgetScopedInstances();
     expect(app(Settings::class)->companyName())->toBe('Iné');
+});
+
+describe('app name (home screen)', function () {
+    it('defaults to APP_NAME and is used for the installed app, the header and the login sheets', function () {
+        config(['app.name' => 'Jedáleň']);
+        $manifest = $this->get('/manifest.webmanifest')->json();
+        expect([$manifest['name'], $manifest['short_name']])->toBe(['Jedáleň', 'Jedáleň']);
+
+        app(Settings::class)->set(Settings::APP_NAME, 'KB Zamestnanci');
+        $manifest = $this->get('/manifest.webmanifest')->json();
+        expect([$manifest['name'], $manifest['short_name']])->toBe(['KB Zamestnanci', 'KB Zamestnanci'])
+            ->and(brandingSlips())->toContain('<div class="app">KB Zamestnanci</div>')
+            ->toContain('ikonou <em>KB Zamestnanci</em>');
+
+        $this->actingAs(employee(), 'employee')->get('/ucet')
+            ->assertSee('<meta name="apple-mobile-web-app-title" content="KB Zamestnanci">', false)
+            ->assertSee('ikonou <em>KB Zamestnanci</em>', false);
+    });
+
+    it('is set in Nastavenia → Objednávanie and cannot be empty', function () {
+        $this->actingAs(User::factory()->admin()->create());
+
+        Livewire::test(OrderingSettings::class)->set('appName', '')->call('save')->assertHasErrors('appName');
+        Livewire::test(OrderingSettings::class)->set('appName', ' KB Zamestnanci ')->call('save')->assertHasNoErrors();
+        app()->forgetScopedInstances();
+
+        expect(app(Settings::class)->appName())->toBe('KB Zamestnanci');
+    });
+
+    it('presets "KB Zamestnanci" only on installations that already have employees', function () {
+        $migration = require database_path('migrations/2026_11_13_000100_preset_app_name.php');
+        config(['app.name' => 'Jedáleň']);
+
+        $migration->up();
+        expect(app(Settings::class)->appName())->toBe('Jedáleň');
+
+        employee();
+        $migration->up();
+        app()->forgetScopedInstances();
+        expect(app(Settings::class)->appName())->toBe('KB Zamestnanci');
+    });
 });

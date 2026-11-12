@@ -166,3 +166,9 @@ the default; nothing changes until an admin creates a group in ticket mode.
 - **2026-11-12 — Ticket mode (lístky)** (Roman's spec). Per employee group: monthly tickets at the employee price, no
   daily limits, the rest at 6 €. The month-end import of final counts from attendance is followed by closing the month.
   See "Design decisions — ticket mode" above.
+- **2026-11-13 — App name and icon are neutral** (Roman). The installed app is called by the setting *Názov aplikácie*
+  (fallback `APP_NAME`; existing installations get „KB Zamestnanci“ via a migration) and the icon is a neutral „people“
+  pictogram instead of plate + cutlery, so the app can grow beyond meal ordering. The name is also used in the app header
+  and in the instructions on the access sheets. Already installed icons update when the phone refreshes the manifest
+  or when the app is added to the home screen again; the service-worker cache version was bumped.
+

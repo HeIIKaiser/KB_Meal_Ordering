@@ -2,6 +2,15 @@
     <x-filament::section>
         <form wire:submit="save" class="grid max-w-xl gap-6">
             <label class="grid gap-1">
+                <span class="text-sm font-semibold">Názov aplikácie</span>
+                <x-filament::input.wrapper :valid="! $errors->has('appName')">
+                    <x-filament::input type="text" maxlength="30" wire:model="appName" placeholder="napr. KB Zamestnanci" />
+                </x-filament::input.wrapper>
+                <span class="text-sm text-gray-500">Názov pod ikonou na ploche telefónu, v hlavičke aplikácie a v návode na prístupových listoch. Na telefóne sa zmestí asi 12 znakov. Už nainštalované ikony sa premenujú, keď si ich zamestnanec znova pridá na plochu.</span>
+                @error('appName') <span class="text-sm text-danger-600">{{ $message }}</span> @enderror
+            </label>
+
+            <label class="grid gap-1">
                 <span class="text-sm font-semibold">Názov firmy</span>
                 <x-filament::input.wrapper :valid="! $errors->has('company')">
                     <x-filament::input type="text" maxlength="60" wire:model="company" placeholder="napr. KB SPA" />

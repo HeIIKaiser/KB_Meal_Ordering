@@ -134,7 +134,8 @@ ponechajú cenu, za ktorú boli objednané. Cenu, ktorá už platí, nemožno me
 - **Nastavenia → Jedlá a uzávierky:** dokedy sa dá objednať obed/večeru (v ten istý deň alebo deň vopred, čas).
 - **Nastavenia → Objednávanie:** koľko dní dopredu sa dá objednať a voliteľne najviac koľko dokupovaných jedál (6 €)
   môže mať zamestnanec na jedno jedlo a deň (okrem zamestnaneckej stravy). Prázdne = bez obmedzenia (predvolené).
-  Tu je aj **Názov firmy** — zobrazí sa na prístupových listoch, na prihlasovacej stránke a pri ikone aplikácie.
+  Tu je aj **Názov aplikácie** (napr. *KB Zamestnanci* — názov pod ikonou na ploche telefónu, v hlavičke a v návode na lístkoch;
+  zmestí sa asi 12 znakov) a **Názov firmy** (prístupové listy, prihlasovacia stránka).
 
 **Ako sa určuje cena:** každý deň je prvý obed a prvá večera zamestnanca sú **zamestnanecká strava** za 1,50 €, každé ďalšie jedlo
 je **dokupovaná strava** za 6,00 €. Aplikácia nevie, či mal zamestnanec 8- alebo 12-hodinovú smenu (pri 8 h má nárok len na jednu
