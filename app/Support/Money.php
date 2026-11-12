@@ -12,6 +12,12 @@ final class Money
      */
     public const ESTIMATE_DISCLAIMER = 'Cena stravy je odhadom a po porovnaní s dochádzkou sa môže zmeniť.';
 
+    /** Instead of the disclaimer once the month is closed (final ticket counts imported). */
+    public const CLOSED_NOTE = 'Mesiac uzavretý – konečné ceny.';
+
+    /** Added for ticket mode while the month is open. */
+    public const TICKETS_NOTE = 'Počet lístkov sa na konci mesiaca upraví podľa dochádzky.';
+
     /** 150 → "1,50 €" */
     public static function format(int $cents): string
     {

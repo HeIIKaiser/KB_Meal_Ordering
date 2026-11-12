@@ -2,6 +2,8 @@
 
 namespace App\Filament\Pages;
 
+use App\Domain\Tickets\ClosedMonths;
+use App\Domain\Tickets\Month;
 use App\Enums\NavGroup;
 use App\Enums\Role;
 use App\Support\LocalTime;
@@ -44,6 +46,11 @@ class Exports extends Page
             'defaultMonth' => ($today->day <= 10 ? $prev : $today)->format('Y-m'),
             'from' => $prev->startOfMonth()->toDateString(),
             'to' => $prev->endOfMonth()->toDateString(),
+            'months' => collect(range(3, 0))->map(function ($i) use ($today) {
+                $m = $today->startOfMonth()->subMonthsNoOverflow($i)->format('Y-m');
+
+                return ['label' => Month::label($m), 'closed' => app(ClosedMonths::class)->isClosed($m)];
+            }),
         ];
     }
 }

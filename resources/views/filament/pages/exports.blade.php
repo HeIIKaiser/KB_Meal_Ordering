@@ -6,10 +6,21 @@
         <x-slot name="description">
             Excel s dvoma hárkami: <strong>Mesiac</strong> – pre každého zamestnanca počty jedál po dňoch (zamestnanecká / dokupovaná strava, víkendy podfarbené), spolu a suma;
             <strong>Súhrn</strong> – jeden riadok na zamestnanca (osobné číslo, meno, kusy, sumy) na import do miezd.
-            Sumy sú podľa cien v čase objednania; zrušené objednávky sa nepočítajú.
-            <br><strong class="text-danger-600">{{ \App\Support\Money::ESTIMATE_DISCLAIMER }}</strong>
+            Sumy sú podľa uložených cien (denný režim: v čase objednania, režim lístkov: podľa počtu lístkov); zrušené objednávky sa nepočítajú.
+            V hárku Súhrn sú aj stĺpce Skupina, Režim (denny / listky / zmiesany) a lístky pridelené / použité / prepadnuté.
+            <br><strong class="text-danger-600">{{ \App\Support\Money::ESTIMATE_DISCLAIMER }}</strong> Pre uzavretý mesiac je v exporte „{{ \App\Support\Money::CLOSED_NOTE }}“
             Aplikácia počíta ako zamestnaneckú stravu (1,50 €) prvý obed aj prvú večeru dňa; nárok podľa dĺžky smeny (8 h = 1 jedlo, 12 h = 2 jedlá) sa overí v dochádzke.
         </x-slot>
+
+        <div class="mb-4 flex flex-wrap items-center gap-2 text-sm">
+            <span class="font-semibold">Stav mesiacov:</span>
+            @foreach ($months as $m)
+                <x-filament::badge :color="$m['closed'] ? 'success' : 'gray'" :icon="$m['closed'] ? 'heroicon-m-lock-closed' : null">
+                    {{ $m['label'] }} – {{ $m['closed'] ? 'uzavretý (konečné ceny)' : 'otvorený (odhad)' }}
+                </x-filament::badge>
+            @endforeach
+            <a class="font-semibold text-primary-600 underline" href="{{ \App\Filament\Pages\TicketMonth::getUrl() }}">Lístky a uzávierka mesiaca</a>
+        </div>
 
         <form method="GET" action="{{ route('exports.monthly') }}" class="flex flex-wrap items-end gap-4">
             <label class="grid gap-1 text-sm">
@@ -30,7 +41,7 @@
         <x-slot name="heading">Zoznam objednávok</x-slot>
         <x-slot name="description">
             Jeden riadok na objednávku (aj zrušené – stĺpec <code>stav</code>) za ľubovoľné obdobie, napr. na kontingenčnú tabuľku.
-            Stĺpce: datum, jedlo, osobne_cislo, priezvisko, meno, stredisko, menu_cislo, menu_nazov, typ, cena, stav, vytvorene, zrusene, vytvoril.
+            Stĺpce: datum, jedlo, osobne_cislo, priezvisko, meno, stredisko, menu_cislo, menu_nazov, typ, cena, stav, vytvorene, zrusene, vytvoril, rezim (denny / listky).
         </x-slot>
 
         <form method="GET" action="{{ route('exports.list') }}" class="flex flex-wrap items-end gap-4">

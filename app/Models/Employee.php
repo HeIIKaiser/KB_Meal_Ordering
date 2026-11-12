@@ -150,6 +150,16 @@ class Employee extends Model implements AuthenticatableContract
         return $this->hasMany(Order::class);
     }
 
+    public function groupMemberships(): HasMany
+    {
+        return $this->hasMany(EmployeeGroupMembership::class)->orderBy('effective_from');
+    }
+
+    public function ticketOverrides(): HasMany
+    {
+        return $this->hasMany(TicketOverride::class);
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

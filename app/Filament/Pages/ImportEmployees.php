@@ -65,7 +65,7 @@ class ImportEmployees extends Page
     {
         abort_unless(static::canAccess() && $this->preview, 403);
 
-        $result = $import->apply($this->preview, $this->deactivateMissing);
+        $result = $import->apply($this->preview, $this->deactivateMissing, auth()->user());
 
         Notification::make()
             ->title('Import dokončený')

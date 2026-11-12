@@ -89,6 +89,18 @@ it('offers only cancelling the same meal once an extra limit is reached', functi
         ->assertDontSee('Dokúpiť');
 });
 
+it('tells the employee when cancelling makes the remaining meal cheaper', function () {
+    $c = screen()->call('choose', $this->lunch[0]->id)
+        ->call('choose', $this->lunch[1]->id)->call('confirmExtra')
+        ->assertSee('Dokupované · 6,00 €');
+
+    $c->call('choose', $this->lunch[0]->id)->call('confirmCancel')
+        ->assertSet('flash.type', 'ok')
+        ->assertSee('Menu 2 je teraz zamestnanecká strava za 1,50 €.')
+        ->assertDontSee('Dokupované · 6,00 €')
+        ->assertSee('Objednané · 1,50 €');
+});
+
 it('offers switch or extra when another option in the slot is tapped', function () {
     $c = screen()->call('choose', $this->lunch[0]->id)->call('choose', $this->lunch[1]->id)
         ->assertSet('dialog.type', 'change')

@@ -10,8 +10,8 @@ Zamestnanci objednávajú na hlavnej adrese (bez `/admin`) osobným číslom a P
 | Rola | Môže |
 |---|---|
 | **Kuchyňa** | denný prehľad, tlač, uzamknutie/odomknutie, jedálny lístok (týždeň, import), prezerať objednávky a uzavreté dni |
-| **Mzdy** | prezerať objednávky, denný prehľad a ceny; exporty pre mzdy |
-| **Administrátor** | všetko: zamestnanci, PINy, ceny, uzávierky, nastavenia, opravy objednávok, správcovia, história zmien |
+| **Mzdy** | prezerať objednávky, denný prehľad, ceny, skupiny stravníkov, lístky na mesiac a stav mesiaca; exporty pre mzdy |
+| **Administrátor** | všetko: zamestnanci, skupiny a lístky, uzavretie mesiaca, PINy, ceny, uzávierky, nastavenia, opravy objednávok, správcovia, história zmien |
 
 Jeden človek môže mať viac rolí.
 
@@ -141,6 +141,65 @@ je **dokupovaná strava** za 6,00 €. Aplikácia nevie, či mal zamestnanec 8- 
 zamestnaneckú stravu), preto je pri mesačných súhrnoch upozornenie *„Cena stravy je odhadom a po porovnaní s dochádzkou
 sa môže zmeniť.“* Úpravu podľa dochádzky robia mzdy.
 
+## Lístky – skupiny stravníkov (administrátor)
+
+Popri **dennom režime** (prvý obed a prvá večera dňa za 1,50 €) môže skupina zamestnancov používať **režim lístkov**:
+
+- Každý zamestnanec skupiny dostane na mesiac **počet lístkov**. Jeden lístok = jedno jedlo za 1,50 € (zamestnanecká strava).
+- **Bez denných limitov** – v jeden deň môže mať aj 3 obedy za lístky.
+- Keď lístky v mesiaci minie, každé ďalšie jedlo stojí 6,00 € (dokupovaná strava); aplikácia to pred objednaním povie.
+- Lístky patria **mesiacu jedla** (nie dňu objednania), nevyužité na konci mesiaca prepadnú, nedajú sa presúvať.
+- Za lístky sú vždy **najskoršie jedlá mesiaca**; za 6 € sú tie posledné. Keď zamestnanec niečo zruší alebo sa zmení počet
+  lístkov, ceny v mesiaci sa hneď prepočítajú (napr. 18 lístkov a 19 jedál → posledné jedlo 6 €; zruší jedno → všetky za 1,50 €).
+
+Kto nie je v žiadnej skupine, je v dennom režime. Kým nevytvoríte skupinu v režime lístkov, nič sa nemení.
+
+### Nastavenie skupín
+
+**Ľudia → Skupiny stravníkov → Vytvoriť**: názov (napr. *8 h*, *12 h*, *Brigádnici*), **lístkov na mesiac** (predvolený počet)
+a režim. **Zmeniť režim** pri skupine: nový režim a dátum *Platí od* (predvolene dnes, môže byť aj v budúcnosti). Platí pre
+jedlá od toho dňa, staršie si ponechajú ceny. Ak už sú od toho dňa objednané jedlá, pred uložením vidíte, koľkým zamestnancom
+a objednávkam sa zmení cena a o koľko eur.
+
+**Zaradenie zamestnanca:** v karte zamestnanca pole **Skupina stravníkov** a **Skupina platí od** – predvolene od 1. dňa
+budúceho mesiaca, aby sa nezmenili už objednané jedlá. Ak zvolíte skorší dátum, pod poľom uvidíte, čo sa prepočíta.
+Hromadne cez **Import zamestnancov** so stĺpcom `skupina` (názov existujúcej skupiny; zmena platí od 1. dňa budúceho mesiaca,
+nový zamestnanec od začiatku tohto mesiaca; neznámy názov je chyba v riadku; prázdne = bez zmeny).
+V zozname zamestnancov je stĺpec *Skupina* a filter podľa skupiny.
+
+### Lístky na mesiac
+
+**Objednávky → Lístky na mesiac**: zvoľte mesiac.
+
+- Hore **skupiny v režime lístkov** s počtom lístkov na tento mesiac (predvyplnené z minulého mesiaca, inak z predvoleného počtu).
+- Dole **zamestnanci** s počtom *pridelené / použité / zostáva* a stĺpcom **Individuálne** (nástup alebo odchod počas mesiaca,
+  dlhšia neprítomnosť). Prázdne = počet skupiny.
+- **Uložiť** uloží všetko naraz. Ak sa tým zmenia ceny už objednaných jedál, aplikácia najprv ukáže koľko a o koľko eur
+  a uloží až po *Uložiť a prepočítať*.
+
+Lístky existujú automaticky na každý mesiac (aj na budúci, na ktorý sa objednáva vopred) – nič netreba generovať.
+Pri prechode skupiny na lístky v polovici mesiaca nastavte počet na zvyšok mesiaca tu.
+
+### Koniec mesiaca: konečné lístky a uzavretie
+
+1. Podľa dochádzky pripravte súbor (XLSX alebo CSV) so stĺpcami **`osobne_cislo`** a **`listky`**
+   (ďalšie stĺpce ako `priezvisko`, `meno` sa ignorujú; oddeľovač `;` `,` alebo tabulátor; UTF-8 alebo Windows-1250;
+   osobné číslo ako text, aby ostali nuly na začiatku). Šablónu stiahnete na stránke importu.
+
+   ```
+   osobne_cislo;listky;priezvisko;meno
+   1001;19;Nováková;Mária
+   1002;22;Kováč;Peter
+   ```
+2. **Objednávky → Konečné lístky (import)** → mesiac → súbor → **Načítať a skontrolovať**. Pre každého uvidíte
+   lístky pred → po, počet jedál, koľkým jedlám sa zmení cena a sumu pred → po. Chyby po riadkoch (neznáme osobné číslo,
+   zamestnanec nie je v režime lístkov, záporné alebo neceločíselné číslo) sa preskočia. Zamestnanci v režime lístkov,
+   ktorí v súbore chýbajú, sú uvedení ako upozornenie a ponechajú si súčasný počet.
+3. **Uložiť a prepočítať** – počty sa uložia ako individuálne lístky na mesiac a ceny sa prepočítajú.
+4. **Uzavrieť mesiac** (ponúkne sa hneď, alebo na stránke *Lístky na mesiac*). Po uzavretí sa v mesiaci nedajú meniť
+   objednávky, lístky ani typy cien – pre nikoho, ani v dennom režime. Exporty potom namiesto upozornenia na odhad
+   uvádzajú *„Mesiac uzavretý – konečné ceny.“* **Otvoriť mesiac** sa dá s povinným dôvodom (zapíše sa do histórie zmien).
+
 ## Objednávky
 
 **Objednávky → Všetky objednávky** — filtre vpravo hore (obdobie, jedlo, typ, stav, zamestnanec), vyhľadávanie podľa mena alebo osobného čísla.
@@ -151,6 +210,7 @@ Administrátor navyše:
   (prvý obed a prvá večera dňa = zamestnanecká strava, ďalšie = dokupovaná) a zobrazí sa pred uložením.
 - Pri objednávke **Opraviť → Zmeniť jedlo / Zmeniť typ ceny / Zrušiť**.
   Po uzávierke alebo uzamknutí je **dôvod povinný**; pri zmene typu ceny vždy.
+  V režime lístkov sa typ ceny ručne nemení – určuje ho počet lístkov (upravte ho v *Lístky na mesiac*).
 
 ## Exporty pre mzdy (mzdy, administrátor)
 
@@ -166,16 +226,22 @@ Súbor `stravovanie_RRRR-MM_mesacny.xlsx` má dva hárky:
   Pri zaškrtnutí **Rozdeliť na obed / večeru** sú riadky zvlášť pre obed a večeru.
   Tlačí sa na A4 na šírku, celý mesiac na šírku strany.
 - **Súhrn** – jeden riadok na zamestnanca: osobné číslo, priezvisko, meno, stredisko, počty a sumy
-  zamestnaneckej a dokupovanej stravy, celková suma. Tento hárok je určený na prenos do miezd.
+  zamestnaneckej a dokupovanej stravy, celková suma a za nimi *Skupina*, *Režim* (`denny` / `listky` / `zmiesany`
+  pri zmene režimu počas mesiaca) a *Lístky pridelené / použité / prepadnuté* (len za časť mesiaca v režime lístkov).
+  Tento hárok je určený na prenos do miezd.
 
-Počítajú sa iba platné (nezrušené) objednávky, a to za cenu, za ktorú boli objednané.
+Pri otvorenom mesiaci je v exporte upozornenie na odhad (pri lístkoch aj *„Počet lístkov sa na konci mesiaca upraví podľa
+dochádzky.“*), pri uzavretom *„Mesiac uzavretý – konečné ceny.“* Stav posledných mesiacov vidíte hore na stránke Exporty.
+
+Počítajú sa iba platné (nezrušené) objednávky, za uloženú cenu (v dennom režime cena z času objednania, v režime lístkov
+aktuálny stav podľa počtu lístkov).
 V prehľade sú všetci, kto v mesiaci jedli (aj ľudia, ktorí medzičasom odišli). **Aj aktívni zamestnanci bez
 objednávok** pridá aj tých, ktorí nejedli ani raz (s nulami).
 
 ### Zoznam objednávok
 
 Zvoľte obdobie (max. 1 rok) a formát **Excel** alebo **CSV** → **Stiahnuť**. Jeden riadok na objednávku,
-aj zrušené (stĺpec `stav`), s osobným číslom, strediskom, menu, typom, cenou a časom vytvorenia/zrušenia —
+aj zrušené (stĺpec `stav`), s osobným číslom, strediskom, menu, typom, cenou, časom vytvorenia/zrušenia a režimom (`rezim`) —
 vhodné na kontingenčnú tabuľku alebo napojenie na iný systém.
 
 Každé stiahnutie exportu sa zapíše do *Histórie zmien*.
@@ -221,6 +287,8 @@ uzamknutia, nastavenia) vrátane dôvodu opravy. Detail záznamu ukáže hodnoty
 - **Ťuknite na jedlo = objednané.** Jedlo sa zafarbí a ukáže sa ✓ a cena.
 - Ťuknite znova na objednané jedlo → *Zrušiť objednávku* alebo *Dokúpiť ďalšie rovnaké jedlo za 6,00 €*
   (napr. druhá porcia toho istého). Pri viacerých rovnakých sa ruší najprv dokupované.
+- Keď zrušíte jedlo za 1,50 € a máte ešte dokupované jedlo (6,00 €) v ten istý obed/večeru, to sa automaticky
+  zmení na zamestnaneckú stravu za 1,50 €.
 - Ťuknete na iné jedlo, keď už máte objednané → *Zmeniť na …* (vymení jedlo) alebo
   *Dokúpiť ďalšie jedlo za 6,00 €* (jedlo navyše).
 - **Polievka** sa podáva ku každému obedu, neobjednáva sa.
@@ -231,7 +299,10 @@ uzamknutia, nastavenia) vrátane dôvodu opravy. Detail záznamu ukáže hodnoty
 
 - **1,50 €** — prvý obed a prvá večera v daný deň (**zamestnanecká strava**).
 - **6,00 €** — každé ďalšie jedlo v ten istý deň (**dokupovaná strava**). Pred objednaním sa vždy ukáže cena.
-- V časti **Môj mesiac** vidíte všetky objednávky a sumu za mesiac.
+- **Ak ste v skupine s lístkami:** máte na mesiac určitý počet lístkov. Každé jedlo (aj viac v jeden deň) je za lístok
+  za 1,50 €, kým lístky nemíňate; potom 6,00 €. Hore pri dňoch vidíte *„Zostáva 7 z 20 lístkov – november“*.
+  Nevyužité lístky na konci mesiaca prepadnú. Ak zrušíte jedlo, lístok sa vráti.
+- V časti **Môj mesiac** vidíte všetky objednávky a sumu za mesiac (pri lístkoch aj pridelené / použité / zostáva).
   *Cena stravy je odhadom a po porovnaní s dochádzkou sa môže zmeniť* (napr. pri 8-hodinovej zmene patrí
   jedna zamestnanecká strava denne).
 

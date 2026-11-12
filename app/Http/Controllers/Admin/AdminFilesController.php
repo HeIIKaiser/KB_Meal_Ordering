@@ -7,6 +7,7 @@ use App\Domain\Employees\EmployeeImport;
 use App\Domain\Employees\PinIssuer;
 use App\Domain\Menus\MenuImport;
 use App\Domain\Ordering\PriceResolver;
+use App\Domain\Tickets\FinalTicketImport;
 use App\Enums\Role;
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
@@ -103,13 +104,15 @@ class AdminFilesController extends Controller
     {
         match ($type) {
             'menu' => $this->authorizeRoles(Role::Admin, Role::Kitchen),
-            'zamestnanci' => $this->authorizeRoles(Role::Admin),
+            'zamestnanci', 'konecne-listky' => $this->authorizeRoles(Role::Admin),
             default => abort(404),
         };
 
-        [$content, $file] = $type === 'menu'
-            ? [MenuImport::templateCsv(), 'sablona_jedalny_listok.csv']
-            : [EmployeeImport::templateCsv(), 'sablona_zamestnanci.csv'];
+        [$content, $file] = match ($type) {
+            'menu' => [MenuImport::templateCsv(), 'sablona_jedalny_listok.csv'],
+            'zamestnanci' => [EmployeeImport::templateCsv(), 'sablona_zamestnanci.csv'],
+            'konecne-listky' => [FinalTicketImport::templateCsv(), 'sablona_konecne_listky.csv'],
+        };
 
         return response($content, 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',

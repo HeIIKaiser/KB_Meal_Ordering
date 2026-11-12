@@ -110,4 +110,20 @@ $bad = [
 ];
 csv("$out/jedalny_listok_s_chybami.csv", $bad);
 
+// ---------------------------------------------------------------- ticket mode (lístky)
+// Groups for the first 30 employees (import AFTER zamestnanci.xlsx; create the groups "12 h" and "8 h" first).
+$groups = [['osobne_cislo', 'skupina']];
+for ($i = 1; $i <= 30; $i++) {
+    $groups[] = [$employees[$i][0], $i <= 20 ? '12 h' : '8 h'];
+}
+csv("$out/zamestnanci_skupiny.csv", $groups);
+
+// Month-end final ticket counts for the "12 h" people (from attendance).
+$final = [['osobne_cislo', 'listky', 'priezvisko', 'meno']];
+for ($i = 1; $i <= 20; $i++) {
+    $final[] = [$employees[$i][0], (string) mt_rand(14, 22), $employees[$i][1], $employees[$i][2]];
+}
+xlsx("$out/konecne_listky_2026-11.xlsx", $final, [1 => 14, 2 => 8, 3 => 18, 4 => 14]);
+csv("$out/konecne_listky_2026-11.csv", $final);
+
 echo "done\n";

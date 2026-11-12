@@ -82,6 +82,7 @@ Rules live in one place: **`app/Domain/Ordering/OrderService.php`** — every or
 | `app/Domain/Ordering/PriceResolver.php`, `SlotLockService.php` | Versioned prices; manual lock/unlock |
 | `app/Domain/Menus/*` | Menu writer (plan → affected employees → apply), menu import (weekly + long format, allergens) |
 | `app/Domain/Employees/*` | Employee import, PIN issuing |
+| `app/Domain/Tickets/*` | Ticket mode: employee groups and their mode/membership history (`EmployeeCalendar`), allocation, **`Repricer`** (the month's first N meals at the employee price), monthly counts, month-end import, closed months |
 | `app/Domain/Kitchen/*`, `resources/views/kitchen/*` | Kitchen daily overview data (shared by screen, print, PDF, XLSX); printable sheet |
 | `app/Domain/Exports/*` | Payroll exports: `MonthlyData` (numbers), **`MonthlyMatrixXlsx` (whole monthly layout)**, `OrderListExport` |
 | `app/Domain/Backup/DatabaseBackup.php` | Pure-PHP gzipped SQL backup, rotation, restore |

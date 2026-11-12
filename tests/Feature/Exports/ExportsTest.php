@@ -132,9 +132,10 @@ describe('monthly XLSX', function () {
             ->and(array_slice($m[$i + 3], -2))->toBe([4, 11]);
 
         $s = $sheets['Súhrn'];
-        expect($s[0])->toBe(['Osobné číslo', 'Priezvisko', 'Meno', 'Stredisko', 'Zamestnanecká strava ks', 'Dokupovaná strava ks', 'Zamestnanecká strava €', 'Dokupovaná strava €', 'Suma €'])
-            ->and(collect($s)->first(fn ($r) => $r[0] === '0123'))->toBe(['0123', 'Novák', 'Ján', 'Kuchyňa', 3, 1, 5, 6, 11])
-            ->and(collect($s)->first(fn ($r) => $r[0] === 'Spolu'))->toBe(['Spolu', '', '', '', 5, 1, 8.5, 6, 14.5])
+        expect($s[0])->toBe(['Osobné číslo', 'Priezvisko', 'Meno', 'Stredisko', 'Zamestnanecká strava ks', 'Dokupovaná strava ks', 'Zamestnanecká strava €', 'Dokupovaná strava €', 'Suma €',
+            'Skupina', 'Režim', 'Lístky pridelené', 'Lístky použité', 'Lístky prepadnuté'])
+            ->and(array_slice(collect($s)->first(fn ($r) => $r[0] === '0123'), 0, 11))->toBe(['0123', 'Novák', 'Ján', 'Kuchyňa', 3, 1, 5, 6, 11, '', 'denny'])
+            ->and(array_slice(collect($s)->first(fn ($r) => $r[0] === 'Spolu'), 0, 9))->toBe(['Spolu', '', '', '', 5, 1, 8.5, 6, 14.5])
             ->and(collect($s)->last())->toBe(['Cena stravy je odhadom a po porovnaní s dochádzkou sa môže zmeniť.']);
     });
 
@@ -185,12 +186,13 @@ describe('download routes', function () {
         expect(str_starts_with($csv, "\xEF\xBB\xBF"))->toBeTrue();
         $lines = array_map(fn ($l) => str_getcsv($l, ';', '"', ''), array_filter(explode("\n", trim(substr($csv, 3)))));
 
-        expect($lines[0])->toBe(['datum', 'jedlo', 'osobne_cislo', 'priezvisko', 'meno', 'stredisko', 'menu_cislo', 'menu_nazov', 'typ', 'cena', 'stav', 'vytvorene', 'zrusene', 'vytvoril'])
+        expect($lines[0])->toBe(['datum', 'jedlo', 'osobne_cislo', 'priezvisko', 'meno', 'stredisko', 'menu_cislo', 'menu_nazov', 'typ', 'cena', 'stav', 'vytvorene', 'zrusene', 'vytvoril', 'rezim'])
             ->and(count($lines) - 1)->toBe(8); // 7 in November incl. 1 cancelled + Igor's
 
         $first = $lines[1];
         expect([$first[0], $first[1], $first[2], $first[3], $first[8], $first[9], $first[10], $first[13]])
             ->toBe(['2026-11-02', 'obed', '0123', 'Novák', 'zamestnanecka', '1,50', 'aktivna', 'sám'])
+            ->and($first[14])->toBe('denny')
             ->and($first[11])->toBe('2026-11-02 07:00:00'); // local time
 
         $cancelled = collect($lines)->first(fn ($l) => $l[10] === 'zrusena');

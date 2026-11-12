@@ -201,3 +201,34 @@ the layout lives in one class (`MonthlyMatrixXlsx`) and can be matched exactly.
   to run in production. A migration disables the old demo logins on installations that ran it (demo staff
   accounts deactivated with a random password, demo PIN 1234 replaced by a new printable PIN).
 - Deploy: `bash deploy/update.sh` (one migration).
+
+### Follow-up: cancelling makes the remaining meal cheaper (2026-11-10)
+
+- Alpha-tester note: with Menu 1 (1,50 €) + Menu 2 (6,00 €), cancelling Menu 1 left Menu 2 at 6,00 €. Now the remaining
+  Dokupovaná order becomes Zamestnanecká strava at 1,50 € (oldest first), the employee sees it in the message, and it is
+  in *História zmien*. Applies to admin cancellations too. Existing orders are not changed retroactively.
+
+### Ticket mode / lístky (2026-11-12)
+
+Roman's spec: an alternative pricing rule per **employee group**. Daily mode is unchanged and stays the default.
+
+- **Admin**
+  - *Ľudia → Skupiny stravníkov*: groups with a dated mode switch and a preview of the repriced orders.
+  - *Objednávky → Lístky na mesiac*: count per group and individual overrides, with a confirmation when prices change;
+    close/reopen the month.
+  - *Objednávky → Konečné lístky (import)*: month-end file `osobne_cislo;listky` → preview → save → close the month.
+  - The employee form, list (column + filter) and import (`skupina`) know the group.
+- **Employees**
+  - Chip „Zostáva 7 z 20 lístkov – november“.
+  - Several meals a day on tickets, then 6 € with confirmation.
+  - Messages when another meal's price changes.
+  - *Môj mesiac*: pridelené / použité / zostáva.
+- **Exports**: group, mode (`denny` / `listky` / `zmiesany`) and ticket columns; „Mesiac uzavretý – konečné ceny.“ for
+  closed months.
+- **Rules**: `app/Domain/Tickets/*`. Repricing runs inside the existing transaction and employee lock; every change is
+  audited (`repriced` with the cause).
+- **Tests**: 47 new Pest tests, including a MariaDB multi-process test proving that parallel ticket orders never exceed
+  the allocation. All 293 tests are green on SQLite and MariaDB.
+- **Samples**: `docs/samples/zamestnanci_skupiny.csv`, `docs/samples/konecne_listky_2026-11.xlsx/.csv`.
+- **Deploy**: `bash deploy/update.sh` (one migration, safe on existing data).
+

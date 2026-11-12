@@ -2,7 +2,14 @@
 
 namespace App\Domain\Ordering;
 
+use App\Domain\Tickets\ClosedMonths;
+use App\Domain\Tickets\EmployeeCalendar;
+use App\Domain\Tickets\Month;
+use App\Domain\Tickets\Repricer;
+use App\Domain\Tickets\RepriceResult;
+use App\Domain\Tickets\TicketAllocation;
 use App\Enums\OrderStatus;
+use App\Enums\PricingMode;
 use App\Enums\Role;
 use App\Models\Employee;
 use App\Models\MealSlot;
@@ -26,7 +33,14 @@ use Illuminate\Support\Facades\DB;
  *    order in the slot/day → Zamestnanecká strava (donated), otherwise Dokupovaná strava (extra) (unlimited unless the
  *    setting max_extra_per_slot sets a cap).
  *  - Price is resolved for the meal date and snapshotted on the order.
- *  - Cancelling never re-types other orders.
+ *  - Ticket mode (employee's group is in ticket mode on the meal date): no daily
+ *    limits; the month's first N meals (N = tickets) are Zamestnanecká strava, the
+ *    rest Dokupovaná. The quote is the marginal price; after every change the month
+ *    is repriced by Tickets\Repricer (stored prices = current state).
+ *  - Closed months (Tickets\ClosedMonths) block every change, for everyone.
+ *  - Daily mode, cancelling re-types: if it frees a cheaper type (e.g. the Zamestnanecká strava
+ *    is cancelled while a Dokupovaná one remains), the oldest remaining order of a
+ *    later type moves into it at that type's price (Roman 2026-11-10), audited.
  *  - Employees act only while the slot is orderable; staff (admin) may act any
  *    time, but outside the window a reason is mandatory. Everything is audited.
  *  - Concurrency: every write runs in a transaction that first locks the
@@ -40,11 +54,19 @@ class OrderService
         private AvailabilityService $availability,
         private PriceResolver $prices,
         private Settings $settings,
+        private Repricer $repricer,
+        private TicketAllocation $tickets,
+        private ClosedMonths $closedMonths,
     ) {}
 
-    /** What the employee's next order in this slot/day would be (type + price). */
+    /** What the employee's next order in this slot/day would cost (marginal type + price). */
     public function quote(Employee $employee, DateTimeInterface|string $date, MealSlot $slot): PriceQuote
     {
+        $calendar = EmployeeCalendar::for($employee);
+        if ($calendar->modeOn($date) === PricingMode::Tickets) {
+            return $this->ticketQuote($employee, $date, $calendar);
+        }
+
         return $this->nextQuote($this->activeCounts($employee, $date, $slot), $date, $slot);
     }
 
@@ -68,9 +90,14 @@ class OrderService
 
         return $this->transaction(function () use ($employee, $item, $menu, $slot, $actor, $acceptExtra, $note) {
             $this->lockEmployee($employee);
+            $this->closedMonths->assertOpen($menu->date);
             $this->assertWindow($menu->date, $slot, $actor);
 
-            $quote = $this->nextQuote($this->activeCounts($employee, $menu->date, $slot), $menu->date, $slot);
+            $calendar = EmployeeCalendar::for($employee);
+            $mode = $calendar->modeOn($menu->date);
+            $quote = $mode === PricingMode::Tickets
+                ? $this->ticketQuote($employee, $menu->date, $calendar)
+                : $this->nextQuote($this->activeCounts($employee, $menu->date, $slot), $menu->date, $slot);
 
             if ($quote->isExtra() && ! $acceptExtra) {
                 throw new ExtraConfirmationRequired($quote);
@@ -83,6 +110,7 @@ class OrderService
                 'menu_item_id' => $item->id,
                 'price_type_id' => $quote->priceType->id,
                 'unit_price_cents' => $quote->unitPriceCents,
+                'pricing_mode' => $mode,
                 'status' => OrderStatus::Active,
                 'created_by_user_id' => $actor->user?->id,
                 'note' => $note,
@@ -92,7 +120,16 @@ class OrderService
                 'menu_item' => $item->label().': '.$item->name,
                 'price_type' => $quote->priceType->code,
                 'unit_price_cents' => $quote->unitPriceCents,
+                'pricing_mode' => $mode->value,
             ]);
+
+            // Ticket mode: the new meal may take a ticket from a later one (marginal price
+            // was 6 €, but the latest meal of the month is the one that ends up at 6 €).
+            if ($mode === PricingMode::Tickets) {
+                $repriced = $this->repricer->reprice($employee, Month::of($menu->date), 'place', $actor->causer(), $calendar);
+                $order->refresh()->load('priceType');
+                $order->setRelation('repriced', $this->otherChanges($repriced, $order));
+            }
 
             return $order;
         });
@@ -114,6 +151,7 @@ class OrderService
         return $this->transaction(function () use ($order, $newItem, $actor) {
             $this->lockEmployee($order->employee);
             $order = $this->freshActive($order);
+            $this->closedMonths->assertOpen($order->date);
             $this->assertWindow($order->date, $order->mealSlot, $actor);
 
             $old = $order->menuItem;
@@ -140,6 +178,7 @@ class OrderService
         return $this->transaction(function () use ($order, $actor) {
             $this->lockEmployee($order->employee);
             $order = $this->freshActive($order);
+            $this->closedMonths->assertOpen($order->date);
             $this->assertWindow($order->date, $order->mealSlot, $actor);
 
             $order->update([
@@ -150,8 +189,67 @@ class OrderService
 
             $this->audit($order, 'cancelled', $actor, 'Objednávka zrušená');
 
+            // Not persisted: lets the UI tell the employee which order became cheaper.
+            if ($order->pricing_mode === PricingMode::Tickets) {
+                // The ticket goes back: the earliest 6 € meal of the month gets it.
+                $repriced = $this->repricer->reprice($order->employee, Month::of($order->date), 'cancel', $actor->causer());
+                $promoted = $repriced->isEmpty() ? null : Order::query()->with(['menuItem', 'priceType'])->find($repriced->orderIds()[0]);
+                $order->setRelation('promoted', $promoted?->priceType->isDonated() ? $promoted : null);
+                $order->setRelation('repriced', $this->otherChanges($repriced, $order));
+            } else {
+                $order->setRelation('promoted', $this->promoteAfterCancel($order, $actor));
+            }
+
             return $order;
         });
+    }
+
+    /**
+     * After a cancellation: move the oldest remaining order of a later price type into the
+     * freed (cheaper) type, e.g. Dokupovaná 6,00 € → Zamestnanecká 1,50 €. Runs inside the
+     * cancel transaction (employee row locked). Returns the re-typed order, if any.
+     */
+    private function promoteAfterCancel(Order $cancelled, Actor $actor): ?Order
+    {
+        $type = $cancelled->priceType;
+        $limit = $this->limitFor($type);
+        $counts = $this->activeCounts($cancelled->employee, $cancelled->date, $cancelled->mealSlot);
+        if ($limit !== null && $counts->get($type->id, 0) >= $limit) {
+            return null;
+        }
+
+        $laterTypeIds = PriceType::query()
+            ->where(fn ($q) => $q->where('sort', '>', $type->sort)->orWhere(fn ($q) => $q->where('sort', $type->sort)->where('id', '>', $type->id)))
+            ->pluck('id');
+
+        $candidate = Order::query()
+            ->where('pricing_mode', PricingMode::Daily->value)
+            ->where('employee_id', $cancelled->employee_id)
+            ->where('date', $cancelled->date->toDateString())
+            ->where('meal_slot_id', $cancelled->meal_slot_id)
+            ->active()
+            ->whereIn('price_type_id', $laterTypeIds)
+            ->with('priceType')
+            ->orderBy('created_at')->orderBy('id')
+            ->first();
+        if (! $candidate) {
+            return null;
+        }
+
+        $old = ['price_type' => $candidate->priceType->code, 'unit_price_cents' => $candidate->unit_price_cents];
+        $candidate->update([
+            'price_type_id' => $type->id,
+            'unit_price_cents' => $this->prices->amountFor($type, $candidate->date),
+        ]);
+        $candidate->setRelation('priceType', $type);
+
+        $this->audit($candidate, 'price_type_changed', $actor, 'Typ ceny upravený automaticky po zrušení inej objednávky', [
+            'old' => $old,
+            'attributes' => ['price_type' => $type->code, 'unit_price_cents' => $candidate->unit_price_cents],
+            'cancelled_order_id' => $cancelled->id,
+        ]);
+
+        return $candidate;
     }
 
     /**
@@ -171,6 +269,10 @@ class OrderService
         return $this->transaction(function () use ($order, $type, $actor, $unitPriceCents) {
             $this->lockEmployee($order->employee);
             $order = $this->freshActive($order);
+            $this->closedMonths->assertOpen($order->date);
+            if ($order->pricing_mode === PricingMode::Tickets) {
+                throw new OrderingException('V režime lístkov sa typ ceny určuje automaticky podľa počtu lístkov. Upravte počet lístkov zamestnanca v časti Lístky na mesiac.', 'ticket_mode');
+            }
 
             if ($type->isDonated() && $order->price_type_id !== $type->id
                 && $this->activeCounts($order->employee, $order->date, $order->mealSlot)->get($type->id, 0) >= $this->limitFor($type)) {
@@ -194,6 +296,25 @@ class OrderService
     }
 
     // ------------------------------------------------------------------------
+
+    /** Ticket mode: 1,50 € while the month's tickets last, then 6 € (marginal price of one more meal). */
+    private function ticketQuote(Employee $employee, DateTimeInterface|string $date, EmployeeCalendar $calendar): PriceQuote
+    {
+        $month = Month::of($date);
+        $allocated = $this->tickets->allocation($employee, $month, $calendar) ?? 0;
+        $used = $this->tickets->used($employee, $month);
+        $type = PriceType::byCode($used < $allocated ? PriceType::DONATED : PriceType::EXTRA);
+
+        return new PriceQuote($type, $this->prices->amountFor($type, $date), ticketsMonth: $month, ticketsLeft: max(0, $allocated - $used));
+    }
+
+    /** Changes of a repricing run on orders other than $order, with their dish loaded (for messages). */
+    private function otherChanges(RepriceResult $result, Order $order): Collection
+    {
+        $ids = array_values(array_diff($result->orderIds(), [$order->id]));
+
+        return $ids === [] ? collect() : Order::query()->with(['menuItem', 'mealSlot', 'priceType'])->whereKey($ids)->get();
+    }
 
     /** @return Collection<int, int> active order count keyed by price_type_id */
     private function activeCounts(Employee $employee, DateTimeInterface|string $date, MealSlot $slot): Collection

@@ -6,7 +6,7 @@ Read `docs/BRIEF.md` (requirements) and `docs/DECISIONS.md` (answers to OPEN ite
 - UI text is **Slovak** with correct diacritics; code, comments, identifiers and commits are English.
 - Timestamps are stored in UTC; business dates/cutoffs use `App\Support\LocalTime` (Europe/Bratislava). Calendar-date columns use the `App\Casts\LocalDate` cast.
 - Money is integer cents; format with `App\Support\Money::format()` ("1,50 €").
-- **Never create or modify orders directly** — go through `App\Domain\Ordering\OrderService` (price typing, limits, row locking, audit). Locks via `SlotLockService`.
+- **Never create or modify orders directly** — go through `App\Domain\Ordering\OrderService` (price typing, limits, row locking, audit). Locks via `SlotLockService`. Ticket-mode prices are rewritten only by `App\Domain\Tickets\Repricer` (inside the caller's transaction + employee lock); closed months (`Tickets\ClosedMonths`) block every change.
 - Plain (non-Filament) staff routes need a `staff:<roles>` middleware; `tests/Feature/Security/SecurityTest.php` fails for unauthenticated routes. Keep the CSP (`App\Http\Middleware\SecurityHeaders`) — no third-party scripts, fonts or images.
 - Every business rule needs a Pest feature test. Run `./vendor/bin/pest` (SQLite) and, for locking/SQL changes, also against MySQL/MariaDB (see README). Format with `./vendor/bin/pint`.
 - Every milestone ends with green tests, notes in `docs/milestones.md`, and a commit.
