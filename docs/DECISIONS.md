@@ -77,6 +77,67 @@ isn't spelled out in the brief. Update this file when Roman answers.
 6. **Laravel's private-storage serving route is disabled** (`filesystems.disks.local.serve = false`): backups and uploads have no URL.
 7. **Trusted proxies off by default** (`TRUSTED_PROXIES`), so `X-Forwarded-For` can't be spoofed to dodge rate limits.
 
+## Design decisions — ticket mode (2026-11-12)
+
+Spec from Roman (ticket mode / lístky as an alternative pricing rule per employee group). Daily mode is unchanged and
+the default; nothing changes until an admin creates a group in ticket mode.
+
+1. **Data model.**
+   - `meal_groups` (name, default tickets, active);
+   - `meal_group_modes` (group, mode, effective_from): history, the latest row on or before a date applies;
+   - `employee_group_memberships` (employee, group or NULL, effective_from): history;
+   - `ticket_month_counts` (group, month);
+   - `ticket_overrides` (employee, month, source manual | import);
+   - `closed_months`;
+   - `orders.pricing_mode`.
+
+   Months are stored as `YYYY-MM`. Existing orders get `daily`.
+2. **Mode of a meal** = the mode of the employee's group on the meal date; no group or no mode row = daily. It is stored
+   on the order (`pricing_mode`) when the order is created and rewritten when repriced.
+3. **Allocation** = individual override → the group's count for the month → the group's default, so tickets exist for every
+   month (also the next one) without a cron job. If an employee changes group mid-month, the count of the group they
+   are in on the last ticket-mode day of the month applies. *Lístky na mesiac* prefills from last month's count; until
+   saved, the default applies.
+4. **Repricing rule (`app/Domain/Tickets/Repricer.php`)**, per employee and month:
+   - active ticket-mode orders sorted by date, slot order, id; the first N are Zamestnanecká strava, the rest Dokupovaná,
+     priced by `PriceResolver` for the meal date;
+   - for ticket-mode orders the stored price is the current state, not a snapshot;
+   - daily-mode orders keep their snapshot, except slot-days whose orders change mode (group mode switch / group change),
+     which are re-typed by the daily rule (oldest order donated, the rest extra);
+   - only changed orders are written, each with one `repriced` audit entry (old/new mode, type, price, cause);
+   - it runs inside the caller's transaction with the employee row locked (place, cancel, allocation/override, month
+     import, mode switch, group change).
+5. **Quote = marginal price.** Ticket mode: 1,50 € while active ticket orders in the month < allocation, else 6,00 € with
+   the extra confirmation „Lístky na <mesiac> sú minuté. Toto jedlo bude za 6,00 €.“ No per-day limit; `max_extra_per_slot`
+   does not apply. Ordering an earlier date after the tickets are used up costs a ticket from the latest meal, and the
+   employee is told which meal now costs 6 €.
+6. **DB guard.** `donated_guard` (unique per employee/date/slot) is set only for daily-mode orders. Parallel ticket orders are
+   serialised by the employee row lock (`tests/Concurrency/SimultaneousTicketOrdersTest.php`).
+7. **Previews run the real change in a rolled-back transaction** (`Tickets\Simulation`), so preview numbers always equal
+   the result. Used for the mode switch, group change, monthly counts and the month-end import.
+8. **Group change dates.**
+   - The employee form and the import apply a change from the 1st of next month by default.
+   - A new employee joins from the 1st of the current month (no orders yet).
+   - An earlier date is allowed: the form shows what will be repriced, and the notification after saving says it again.
+   - A new assignment replaces later planned ones.
+9. **Admin price-type correction is refused for ticket-mode orders** (the rule decides); change the allocation instead.
+10. **Closed months** block placing, switching, cancelling, price-type changes, counts/overrides, mode switches and group
+    changes with a date in the month, for everybody and both modes. Kitchen lock/unlock is unaffected. Reopen = admin
+    with a mandatory reason (audited). Exports of a closed month say „Mesiac uzavretý – konečné ceny.“ instead of the
+    estimate disclaimer.
+11. **Month-end import.** `osobne_cislo ; listky` (other columns are ignored). Accepted counts are 0–999; `19,0` / `19.0`
+    from Excel are accepted. Saved as overrides with source `import`. Employees in ticket mode who are missing from the
+    file keep their allocation.
+12. **Exports.**
+    - Súhrn: new columns Skupina, Režim (`denny` / `listky` / `zmiesany`), Lístky pridelené / použité / prepadnuté are
+      appended after *Suma €*, so existing column positions stay the same for payroll imports.
+    - použité = min(ticket meals, allocation); prepadnuté = max(0, allocation − ticket meals); only the ticket-mode part
+      of a mixed month counts.
+    - Flat list: column `rezim` appended last.
+    - Matrix: a "Lístky" line under each ticket-mode employee.
+13. **Navigation.** *Ľudia → Skupiny stravníkov* (admin edits, payroll reads); *Objednávky → Lístky na mesiac* (payroll
+    reads, admin edits, close/reopen); *Objednávky → Konečné lístky (import)* (admin).
+
 ## Decisions by Roman
 
 - **2026-11-09 — Staff 2FA is optional.** Users can enable TOTP in their Filament profile; it is not enforced on first login and there are no prompts. (Brief §5 said "email + password + 2FA" — relaxed because most staff can't handle authenticator apps.)
@@ -102,3 +163,6 @@ isn't spelled out in the brief. Update this file when Roman answers.
 - **2026-11-10 — Cancelling re-types the remaining order** (Roman, after alpha testing). Order Menu 1 (1,50 €) + Menu 2 (6,00 €),
   cancel Menu 1 → Menu 2 becomes Zamestnanecká strava at 1,50 € (oldest extra first; audited as `price_type_changed`;
   the employee sees it in the confirmation message). Same for admin cancellations. Cancelling an extra changes nothing.
+- **2026-11-12 — Ticket mode (lístky)** (Roman's spec). Per employee group: monthly tickets at the employee price, no
+  daily limits, the rest at 6 €. The month-end import of final counts from attendance is followed by closing the month.
+  See "Design decisions — ticket mode" above.

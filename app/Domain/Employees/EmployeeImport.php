@@ -2,7 +2,12 @@
 
 namespace App\Domain\Employees;
 
+use App\Domain\Tickets\EmployeeCalendar;
+use App\Domain\Tickets\MealGroupService;
 use App\Models\Employee;
+use App\Models\MealGroup;
+use App\Models\User;
+use App\Support\LocalTime;
 use App\Support\Spreadsheet\SheetReader;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -12,7 +17,9 @@ use Illuminate\Support\Str;
  * optionally deactivates employees missing from the file.
  *
  * Recognised columns (header names, diacritics/case ignored):
- *   osobne_cislo (required), priezvisko, meno, stredisko | oddelenie, aktivny (áno/nie, 1/0)
+ *   osobne_cislo (required), priezvisko, meno, stredisko | oddelenie, aktivny (áno/nie, 1/0),
+ *   skupina (name of an existing employee group; empty = no change). A group change of an
+ *   existing employee applies from the 1st of next month; a new employee's from this month.
  */
 class EmployeeImport
 {
@@ -22,16 +29,23 @@ class EmployeeImport
         'first_name' => ['meno', 'first_name', 'krstne_meno'],
         'department' => ['stredisko', 'oddelenie', 'department', 'nazov_strediska'],
         'is_active' => ['aktivny', 'aktivna', 'active', 'is_active'],
+        'group' => ['skupina', 'skupina_stravnikov', 'group'],
     ];
 
-    public function __construct(private SheetReader $reader) {}
+    public function __construct(
+        private SheetReader $reader,
+        private MealGroupService $groups,
+    ) {}
 
     /**
      * @return array{rows: list<array<string, mixed>>, errors: list<array{line: int, messages: list<string>}>, missing: list<array{id: int, name: string, osobne_cislo: string}>}
      */
     public function preview(string $path, ?string $originalName = null): array
     {
-        $existing = Employee::query()->get()->keyBy('osobne_cislo');
+        $existing = Employee::query()->with('groupMemberships.group.modes')->get()->keyBy('osobne_cislo');
+        $groups = MealGroup::query()->get()->keyBy(fn (MealGroup $g) => mb_strtolower(trim($g->name)));
+        $thisMonth = LocalTime::today()->startOfMonth();
+        $nextMonth = $thisMonth->addMonthNoOverflow();
         $rows = [];
         $errors = [];
         $seen = [];
@@ -70,6 +84,14 @@ class EmployeeImport
                 $data['is_active'] = true;
             }
 
+            $group = null;
+            $groupName = $this->clean($v['group']);
+            if ($groupName !== null && ! isset($groups[mb_strtolower($groupName)])) {
+                $messages[] = "Neznáma skupina „{$groupName}“. Najprv ju vytvorte v časti Skupiny stravníkov.";
+            } elseif ($groupName !== null) {
+                $group = $groups[mb_strtolower($groupName)];
+            }
+
             if ($messages !== []) {
                 $errors[] = ['line' => $line, 'messages' => $messages];
 
@@ -85,6 +107,16 @@ class EmployeeImport
                 }
             }
 
+            $groupChange = null;
+            if ($group) {
+                $from = $employee ? $nextMonth : $thisMonth;
+                $old = $employee ? EmployeeCalendar::fromMemberships($employee, $employee->groupMemberships)->groupOn($from) : null;
+                if ($old?->id !== $group->id) {
+                    $groupChange = ['id' => $group->id, 'from' => $from->toDateString()];
+                    $changes['group'] = ['old' => $old?->name, 'new' => $group->name.' (od '.$from->format('j. n. Y').')'];
+                }
+            }
+
             $rows[] = [
                 'line' => $line,
                 'osobne_cislo' => $number,
@@ -92,6 +124,7 @@ class EmployeeImport
                 'action' => $employee ? ($changes ? 'update' : 'unchanged') : 'create',
                 'changes' => $changes,
                 'name' => trim(($data['last_name'] ?? $employee?->last_name).' '.($data['first_name'] ?? $employee?->first_name)),
+                'group' => $groupChange,
             ];
         }
 
@@ -103,18 +136,24 @@ class EmployeeImport
     }
 
     /** @return array{created: int, updated: int, deactivated: int, created_ids: list<int>} New employees get a PIN automatically. */
-    public function apply(array $preview, bool $deactivateMissing = false): array
+    public function apply(array $preview, bool $deactivateMissing = false, ?User $by = null): array
     {
         $result = ['created' => 0, 'updated' => 0, 'deactivated' => 0, 'created_ids' => []];
 
-        DB::transaction(function () use ($preview, $deactivateMissing, &$result) {
+        DB::transaction(function () use ($preview, $deactivateMissing, $by, &$result) {
             foreach ($preview['rows'] as $row) {
+                $employee = null;
                 if ($row['action'] === 'create') {
-                    $result['created_ids'][] = Employee::query()->create(['osobne_cislo' => $row['osobne_cislo'], ...$row['data']])->id;
+                    $employee = Employee::query()->create(['osobne_cislo' => $row['osobne_cislo'], ...$row['data']]);
+                    $result['created_ids'][] = $employee->id;
                     $result['created']++;
                 } elseif ($row['action'] === 'update') {
-                    Employee::query()->where('osobne_cislo', $row['osobne_cislo'])->firstOrFail()->update($row['data']);
+                    $employee = Employee::query()->where('osobne_cislo', $row['osobne_cislo'])->firstOrFail();
+                    $employee->update($row['data']);
                     $result['updated']++;
+                }
+                if ($employee && ($row['group'] ?? null)) {
+                    $this->groups->assign($employee, $row['group']['id'], $row['group']['from'], $by);
                 }
             }
 
@@ -131,7 +170,7 @@ class EmployeeImport
 
     public static function templateCsv(): string
     {
-        return "\xEF\xBB\xBF"."osobne_cislo;priezvisko;meno;stredisko;aktivny\r\n1001;Nováková;Mária;Recepcia;áno\r\n1002;Kováč;Peter;Kuchyňa;áno\r\n";
+        return "\xEF\xBB\xBF"."osobne_cislo;priezvisko;meno;stredisko;aktivny;skupina\r\n1001;Nováková;Mária;Recepcia;áno;\r\n1002;Kováč;Peter;Kuchyňa;áno;\r\n";
     }
 
     private function map(array $values): array

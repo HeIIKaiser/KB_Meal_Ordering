@@ -2,12 +2,20 @@
 
 namespace App\Domain\Exports;
 
+use App\Domain\Tickets\ClosedMonths;
+use App\Domain\Tickets\EmployeeCalendar;
+use App\Domain\Tickets\Month;
 use App\Enums\OrderStatus;
+use App\Enums\PricingMode;
 use App\Models\Employee;
+use App\Models\EmployeeGroupMembership;
 use App\Models\MealSlot;
 use App\Models\Order;
 use App\Models\PriceType;
+use App\Models\TicketMonthCount;
+use App\Models\TicketOverride;
 use App\Support\LocalTime;
+use App\Support\Money;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
 
@@ -21,15 +29,32 @@ use Illuminate\Support\Collection;
 final class MonthlyData
 {
     /**
-     * @param  Collection<int, array{employee: Employee, counts: array<string, array<int, int>>, cents: array<string, int>}>  $employees
-     *                                                                                                                                    counts keyed "typeId|slotId" → [day => n]; cents keyed "typeId|slotId"
+     * @param  Collection<int, array{employee: Employee, counts: array<string, array<int, int>>, cents: array<string, int>, group: ?string, mode: string, tickets: array{allocated: int, used: int, expired: int}|null}>  $employees
+     *                                                                                                                                                                                                                                counts keyed "typeId|slotId" → [day => n]; cents keyed "typeId|slotId"; mode denny|listky|zmiesany
      */
     private function __construct(
         public readonly CarbonImmutable $month,
         public readonly Collection $priceTypes,
         public readonly Collection $slots,
         public readonly Collection $employees,
+        public readonly bool $closed = false,
     ) {}
+
+    /** Someone was in ticket mode this month (adds the ticket note to the export). */
+    public function hasTickets(): bool
+    {
+        return $this->employees->contains(fn ($e) => $e['tickets'] !== null);
+    }
+
+    /** Text instead of / next to the estimate disclaimer. */
+    public function note(): string
+    {
+        if ($this->closed) {
+            return Money::CLOSED_NOTE;
+        }
+
+        return Money::ESTIMATE_DISCLAIMER.($this->hasTickets() ? ' '.Money::TICKETS_NOTE : '');
+    }
 
     public static function for(string $yearMonth, bool $includeWithoutOrders = false): self
     {
@@ -52,8 +77,9 @@ final class MonthlyData
             ->get();
 
         $byEmployee = $rows->groupBy('employee_id');
+        $tickets = self::tickets($employees, $month->format('Y-m'));
 
-        $data = $employees->map(function (Employee $e) use ($byEmployee) {
+        $data = $employees->map(function (Employee $e) use ($byEmployee, $tickets) {
             $counts = [];
             $cents = [];
             foreach ($byEmployee[$e->id] ?? [] as $r) {
@@ -63,7 +89,7 @@ final class MonthlyData
                 $cents[$key] = ($cents[$key] ?? 0) + (int) $r->cents;
             }
 
-            return ['employee' => $e, 'counts' => $counts, 'cents' => $cents];
+            return ['employee' => $e, 'counts' => $counts, 'cents' => $cents, ...$tickets[$e->id]];
         })->values();
 
         return new self(
@@ -71,7 +97,47 @@ final class MonthlyData
             PriceType::query()->orderBy('sort')->orderBy('id')->get(),
             MealSlot::query()->ordered()->get(),
             $data,
+            app(ClosedMonths::class)->isClosed($month->format('Y-m')),
         );
+    }
+
+    /**
+     * Group, mode (denny | listky | zmiesany) and tickets (only for the ticket-mode part
+     * of the month) per employee, batch-loaded.
+     *
+     * @param  Collection<int, Employee>  $employees
+     * @return array<int, array{group: ?string, mode: string, tickets: array{allocated: int, used: int, expired: int}|null}>
+     */
+    private static function tickets(Collection $employees, string $month): array
+    {
+        $memberships = EmployeeGroupMembership::query()->whereIn('employee_id', $employees->pluck('id'))->with('group.modes')->get()->groupBy('employee_id');
+        $overrides = TicketOverride::query()->where('month', $month)->pluck('tickets', 'employee_id');
+        $groupCounts = TicketMonthCount::query()->where('month', $month)->pluck('tickets', 'meal_group_id');
+        $used = Order::query()
+            ->where('status', OrderStatus::Active->value)
+            ->where('pricing_mode', PricingMode::Tickets->value)
+            ->whereBetween('date', [Month::first($month)->toDateString(), Month::last($month)->toDateString()])
+            ->selectRaw('employee_id, COUNT(*) as n')->groupBy('employee_id')->pluck('n', 'employee_id');
+
+        $out = [];
+        foreach ($employees as $e) {
+            $calendar = EmployeeCalendar::fromMemberships($e, $memberships[$e->id] ?? collect());
+            $modes = $calendar->memberships()->isEmpty() ? [PricingMode::Daily] : $calendar->modesIn($month);
+            $ticketGroup = $calendar->ticketGroupFor($month);
+            $tickets = null;
+            if ($ticketGroup) {
+                $allocated = (int) ($overrides[$e->id] ?? $groupCounts[$ticketGroup->id] ?? $ticketGroup->default_tickets);
+                $n = (int) ($used[$e->id] ?? 0);
+                $tickets = ['allocated' => $allocated, 'used' => min($n, $allocated), 'expired' => max(0, $allocated - $n)];
+            }
+            $out[$e->id] = [
+                'group' => ($ticketGroup ?? $calendar->groupOn(Month::last($month)))?->name,
+                'mode' => count($modes) > 1 ? 'zmiesany' : $modes[0]->exportCode(),
+                'tickets' => $tickets,
+            ];
+        }
+
+        return $out;
     }
 
     public function daysInMonth(): int

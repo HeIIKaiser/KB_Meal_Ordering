@@ -3,7 +3,6 @@
 namespace App\Domain\Exports;
 
 use App\Support\LocalTime;
-use App\Support\Money;
 use App\Support\SlovakDate;
 use OpenSpout\Common\Entity\Cell;
 use OpenSpout\Common\Entity\Row;
@@ -89,9 +88,9 @@ class MonthlyMatrixXlsx
         $writer->addRow(Row::fromValues(['Stravovanie – '.$monthLabel], (new Style)->setFontBold()->setFontSize(14)));
         $writer->addRow(Row::fromValues([
             'Vytvorené '.LocalTime::now()->format('j. n. Y H:i'),
-            'Počty jedál podľa dní; suma podľa cien v čase objednania. Iba platné (nezrušené) objednávky.',
+            'Počty jedál podľa dní; suma podľa uložených cien (denný režim: v čase objednania, režim lístkov: podľa počtu lístkov). Iba platné (nezrušené) objednávky.',
         ]));
-        $writer->addRow(Row::fromValues([Money::ESTIMATE_DISCLAIMER], (new Style)->setFontBold()->setFontColor('B91C1C')));
+        $writer->addRow(Row::fromValues([$data->note()], (new Style)->setFontBold()->setFontColor($data->closed ? '065F46' : 'B91C1C')));
         $writer->addRow(Row::fromValues([]));
 
         // Column header: day numbers
@@ -120,7 +119,7 @@ class MonthlyMatrixXlsx
 
             // employee header row with day-of-week
             $cells = [
-                Cell::fromValue($e->fullNameReversed().' (osobné č. '.$e->osobne_cislo.')', $bold),
+                Cell::fromValue($e->fullNameReversed().' (osobné č. '.$e->osobne_cislo.')'.($entry['group'] ? ' – '.$entry['group'] : ''), $bold),
                 Cell::fromValue($monthLabel, $bold),
             ];
             for ($d = 1; $d <= $days; $d++) {
@@ -149,6 +148,11 @@ class MonthlyMatrixXlsx
             $cells[] = Cell::fromValue(MonthlyData::cents($entry) / 100, $moneyBold);
             $writer->addRow(new Row($cells));
 
+            if ($t = $entry['tickets']) {
+                $writer->addRow(Row::fromValues(['', 'Lístky ('.($entry['mode'] === 'zmiesany' ? 'zmiešaný režim' : 'režim lístkov').')',
+                    'pridelené '.$t['allocated'].' · použité '.$t['used'].' · prepadnuté '.$t['expired']]));
+            }
+
             $writer->addRow(Row::fromValues([]));
         }
     }
@@ -172,6 +176,8 @@ class MonthlyMatrixXlsx
             $titles[] = $t->name.' €';
         }
         $titles[] = 'Suma €';
+        $numeric = count($titles);
+        array_push($titles, 'Skupina', 'Režim', 'Lístky pridelené', 'Lístky použité', 'Lístky prepadnuté');
 
         $sheet->setColumnWidth(13, 1);
         $sheet->setColumnWidth(18, 2, 3, 4);
@@ -202,12 +208,20 @@ class MonthlyMatrixXlsx
             $c = MonthlyData::cents($entry);
             $totals[$i] += $c;
             $cells[] = Cell::fromValue($c / 100, $money);
+            $t = $entry['tickets'];
+            array_push($cells,
+                Cell::fromValue((string) $entry['group']),
+                Cell::fromValue($entry['mode']),
+                $t ? Cell::fromValue($t['allocated']) : Cell::fromValue(''),
+                $t ? Cell::fromValue($t['used']) : Cell::fromValue(''),
+                $t ? Cell::fromValue($t['expired']) : Cell::fromValue(''),
+            );
             $writer->addRow(new Row($cells));
         }
 
         $cells = [Cell::fromValue('Spolu', $bold), Cell::fromValue(''), Cell::fromValue(''), Cell::fromValue('')];
         $types = $data->priceTypes->count();
-        for ($i = 4; $i < count($titles); $i++) {
+        for ($i = 4; $i < $numeric; $i++) {
             $isMoney = $i >= 4 + $types;
             $cells[] = Cell::fromValue($isMoney ? $totals[$i] / 100 : $totals[$i], $isMoney ? $moneyBold : $bold);
         }
@@ -215,6 +229,6 @@ class MonthlyMatrixXlsx
 
         // Below the data (row 1 stays the header for imports)
         $writer->addRow(Row::fromValues([]));
-        $writer->addRow(Row::fromValues([Money::ESTIMATE_DISCLAIMER], (new Style)->setFontBold()->setFontColor('B91C1C')));
+        $writer->addRow(Row::fromValues([$data->note()], (new Style)->setFontBold()->setFontColor($data->closed ? '065F46' : 'B91C1C')));
     }
 }

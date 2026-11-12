@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Employee;
 
+use App\Domain\Tickets\ClosedMonths;
+use App\Domain\Tickets\TicketAllocation;
 use App\Http\Controllers\Controller;
 use App\Models\Employee;
 use App\Support\LocalTime;
@@ -38,6 +40,9 @@ class MonthController extends Controller
             'prev' => $month->subMonth()->format('Y-m'),
             'next' => $month->addMonth()->format('Y-m'),
             'isCurrent' => $month->isSameMonth(LocalTime::today()),
+            'tickets' => app(TicketAllocation::class)->summary($employee, $month->format('Y-m')),
+            'closed' => app(ClosedMonths::class)->isClosed($month->format('Y-m')),
+            'ended' => $end->lessThan(LocalTime::today()),
         ]);
     }
 

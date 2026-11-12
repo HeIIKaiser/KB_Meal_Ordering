@@ -2,6 +2,7 @@
 
 namespace App\Domain\Ordering;
 
+use App\Domain\Tickets\Month;
 use App\Support\Money;
 
 /**
@@ -12,6 +13,10 @@ class ExtraConfirmationRequired extends OrderingException
 {
     public function __construct(public readonly PriceQuote $quote)
     {
-        parent::__construct('Toto jedlo bude za '.Money::format($quote->unitPriceCents).'.', 'extra_confirmation_required');
+        parent::__construct(
+            ($quote->isTicketMode() ? 'Lístky na '.Month::name($quote->ticketsMonth).' sú minuté. ' : '')
+            .'Toto jedlo bude za '.Money::format($quote->unitPriceCents).'.',
+            'extra_confirmation_required',
+        );
     }
 }

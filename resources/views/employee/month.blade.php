@@ -26,7 +26,22 @@
         @if ($isCurrent)
             <div class="mt-1 text-sm opacity-80">Vrátane objednávok na zvyšok mesiaca.</div>
         @endif
-        <div class="mt-2 border-t border-white/30 pt-2 text-sm font-semibold">{{ Money::ESTIMATE_DISCLAIMER }}</div>
+        @if ($tickets)
+            <div class="mt-2 border-t border-white/30 pt-2 text-base">
+                <span class="font-semibold">Lístky:</span>
+                pridelené {{ $tickets['allocated'] }} · použité {{ min($tickets['used'], $tickets['allocated']) }} ·
+                @if ($ended) prepadnuté {{ $tickets['left'] }} @else zostáva {{ $tickets['left'] }} @endif
+                @if ($tickets['over']) · nad počet lístkov {{ $tickets['over'] }} (dokupovaná strava) @endif
+                @unless ($ended)<div class="text-sm opacity-80">Nevyužité lístky na konci mesiaca prepadnú.</div>@endunless
+            </div>
+        @endif
+        <div class="mt-2 border-t border-white/30 pt-2 text-sm font-semibold">
+            @if ($closed)
+                {{ Money::CLOSED_NOTE }}
+            @else
+                {{ Money::ESTIMATE_DISCLAIMER }} @if ($tickets) {{ Money::TICKETS_NOTE }} @endif
+            @endif
+        </div>
     </div>
 
     @forelse ($byDay as $ymd => $dayOrders)

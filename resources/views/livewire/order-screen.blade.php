@@ -11,6 +11,7 @@
      x-data="{
         sel: @js($selected),
         days: @js($days->map->toDateString()->values()),
+        tm: @js((object) $tickets['days']),
         sx: null, sy: null,
         go(d) { this.sel = d; window.scrollTo({ top: 0 }) },
         step(dir) {
@@ -54,6 +55,20 @@
                 </button>
             @endforeach
         </div>
+
+        {{-- Ticket mode: tickets left in the month of the viewed day (phone) / of the week (desktop) --}}
+        @foreach ($tickets['months'] as $m => $chip)
+            <div :class="{ 'max-lg:hidden': tm[sel] !== '{{ $m }}' }"
+                 @class([
+                     'mt-2 flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-center text-base font-bold lg:inline-flex lg:mr-2',
+                     'bg-emerald-700 text-white' => ! $chip['empty'],
+                     'bg-amber-400 text-black' => $chip['empty'],
+                     'max-lg:hidden' => ($tickets['days'][$selected] ?? null) !== $m,
+                 ])
+                 role="status">
+                {{ $chip['text'] }}
+            </div>
+        @endforeach
     </div>
 
     {{-- Days: one visible on phones (swipe), the whole week on desktop --}}

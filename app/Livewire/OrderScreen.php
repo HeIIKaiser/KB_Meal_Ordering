@@ -7,8 +7,13 @@ use App\Domain\Ordering\AvailabilityService;
 use App\Domain\Ordering\ExtraConfirmationRequired;
 use App\Domain\Ordering\OrderingException;
 use App\Domain\Ordering\OrderService;
+use App\Domain\Ordering\PriceResolver;
 use App\Domain\Ordering\SlotAvailability;
 use App\Domain\Ordering\SlotState;
+use App\Domain\Tickets\EmployeeCalendar;
+use App\Domain\Tickets\Month;
+use App\Domain\Tickets\TicketAllocation;
+use App\Enums\PricingMode;
 use App\Models\Employee;
 use App\Models\MealSlot;
 use App\Models\Menu;
@@ -110,21 +115,22 @@ class OrderScreen extends Component
         // Tapping an option I already have → cancel it (the extra one first), or buy one more of the same.
         $onItem = $mine->where('menu_item_id', $item->id)->sortByDesc(fn (Order $o) => $o->priceType->sort)->first();
         if ($onItem) {
-            $extraPrice = $this->extraPrice($date, $slot);
+            $more = $this->morePrice($date, $slot);
             $count = $mine->where('menu_item_id', $item->id)->count();
 
             $this->dialog = [
                 'type' => 'cancel',
                 'order' => $onItem->id,
                 'item' => $item->id,
-                'title' => $extraPrice !== null ? 'Zrušiť alebo dokúpiť?' : 'Zrušiť objednávku?',
+                'title' => $more !== null ? 'Zrušiť alebo dokúpiť?' : 'Zrušiť objednávku?',
                 'text' => ($count > 1 ? 'Máte objednané '.$count.'×: ' : 'Máte objednané: ').$this->describe($item, $date, $slot).'.',
                 'cancel_label' => match (true) {
-                    $count > 1 => 'Zrušiť jedno dokupované ('.Money::format($onItem->unit_price_cents).')',
+                    $count > 1 && ! $onItem->priceType->isDonated() => 'Zrušiť jedno dokupované ('.Money::format($onItem->unit_price_cents).')',
+                    $count > 1 => 'Zrušiť jedno ('.Money::format($onItem->unit_price_cents).')',
                     ! $onItem->priceType->isDonated() => 'Zrušiť objednávku ('.Money::format($onItem->unit_price_cents).')',
                     default => 'Zrušiť objednávku',
                 },
-                'extra_label' => $extraPrice !== null ? 'Dokúpiť ďalšie rovnaké jedlo za '.Money::format($extraPrice) : null,
+                'extra_label' => $more !== null ? 'Dokúpiť ďalšie rovnaké jedlo za '.$more : null,
             ];
 
             return;
@@ -133,7 +139,7 @@ class OrderScreen extends Component
         // Another option already ordered in this slot → switch, or add an extra.
         if ($mine->isNotEmpty()) {
             $switchable = $mine->sortBy(fn (Order $o) => $o->priceType->sort)->first();
-            $extraPrice = $this->extraPrice($date, $slot);
+            $more = $this->morePrice($date, $slot);
 
             $this->dialog = [
                 'type' => 'change',
@@ -142,7 +148,7 @@ class OrderScreen extends Component
                 'title' => 'Zmeniť objednávku?',
                 'text' => 'Máte objednané '.$switchable->menuItem->label().': '.$switchable->menuItem->name.'.',
                 'switch_label' => 'Zmeniť na '.$item->label().': '.$item->name,
-                'extra_label' => $extraPrice !== null ? 'Dokúpiť ďalšie jedlo za '.Money::format($extraPrice) : null,
+                'extra_label' => $more !== null ? 'Dokúpiť ďalšie jedlo za '.$more : null,
             ];
 
             return;
@@ -162,9 +168,10 @@ class OrderScreen extends Component
 
         $this->attempt(function () use ($order) {
             $cancelled = app(OrderService::class)->cancel($order, Actor::employee($this->employee()));
-            $promoted = $cancelled->getRelation('promoted')?->loadMissing('menuItem');
+            $promoted = $cancelled->getRelation('promoted')?->loadMissing(['menuItem', 'mealSlot']);
+            $sameSlotDay = $promoted && $promoted->date->equalTo($order->date) && $promoted->meal_slot_id === $order->meal_slot_id;
             $this->success('Zrušené: '.$order->menuItem->label().' – '.$order->menuItem->name
-                .($promoted ? '. '.$promoted->menuItem->label().' je teraz '.Str::lower($promoted->priceType->name).' za '.Money::format($promoted->unit_price_cents).'.' : ''));
+                .($promoted ? '. '.($sameSlotDay ? '' : $this->when($promoted).' ').$promoted->menuItem->label().' je teraz '.Str::lower($promoted->priceType->name).' za '.Money::format($promoted->unit_price_cents).'.' : ''));
         });
     }
 
@@ -248,7 +255,45 @@ class OrderScreen extends Component
             'menus' => $menus,
             'ordersByItem' => $orders->groupBy('menu_item_id'),
             'orderDays' => $orders->pluck('date')->map->toDateString()->unique()->flip(),
+            'tickets' => $this->ticketChips($days),
         ]);
+    }
+
+    /**
+     * Ticket mode: "Zostáva 7 z 20 lístkov – november" for the month of each viewed day.
+     *
+     * @return array{days: array<string, string>, months: array<string, array{text: string, empty: bool}>}
+     */
+    private function ticketChips(Collection $days): array
+    {
+        $calendar = EmployeeCalendar::for($this->employee());
+        $dayMonth = [];
+        foreach ($days as $day) {
+            if ($calendar->modeOn($day) === PricingMode::Tickets) {
+                $dayMonth[$day->toDateString()] = Month::of($day);
+            }
+        }
+
+        $months = [];
+        foreach (array_unique($dayMonth) as $month) {
+            $s = app(TicketAllocation::class)->summary($this->employee(), $month, $calendar);
+            if ($s === null) {
+                continue;
+            }
+            if ($s['left'] > 0) {
+                $text = 'Zostáva '.$s['left'].' z '.$s['allocated'].' '.($s['allocated'] === 1 ? 'lístka' : 'lístkov').' – '.Month::name($month);
+            } else {
+                try {
+                    $price = Money::format(app(PriceResolver::class)->amountFor(PriceType::byCode(PriceType::EXTRA), Month::first($month)));
+                } catch (OrderingException) {
+                    $price = 'plnej cene';
+                }
+                $text = 'Lístky minuté – ďalšie jedlá po '.$price.' ('.Month::name($month).')';
+            }
+            $months[$month] = ['text' => $text, 'empty' => $s['left'] === 0];
+        }
+
+        return ['days' => $dayMonth, 'months' => $months];
     }
 
     // ------------------------------------------------------------------------
@@ -259,8 +304,11 @@ class OrderScreen extends Component
 
         try {
             $order = app(OrderService::class)->place($this->employee(), $item, Actor::employee($this->employee()), $acceptExtra);
+            // Ticket mode: an earlier meal can take the ticket of a later one, which then costs 6 €.
+            $moved = $order->relationLoaded('repriced') ? $order->getRelation('repriced') : collect();
             $this->success(
                 'Objednané: '.$item->label().' – '.$item->name.' ('.Money::format($order->unit_price_cents).($order->price_type_id === PriceType::byCode(PriceType::DONATED)->id ? '' : ', dokupovaná strava').')'
+                .$moved->map(fn (Order $o) => '. '.$this->when($o).' '.$o->menuItem->label().' je teraz za '.Money::format($o->unit_price_cents))->join('').($moved->isNotEmpty() ? '.' : '')
             );
         } catch (ExtraConfirmationRequired $e) {
             $this->dialog = [
@@ -277,8 +325,11 @@ class OrderScreen extends Component
         }
     }
 
-    /** Price of one more meal in this slot, or null when no extra can be added (limit reached). */
-    private function extraPrice(CarbonImmutable $date, MealSlot $slot): ?int
+    /**
+     * Price label of one more meal in this slot ("6,00 €", or "1,50 € (lístok)" while
+     * tickets last), or null when nothing more can be ordered (daily extra cap reached).
+     */
+    private function morePrice(CarbonImmutable $date, MealSlot $slot): ?string
     {
         try {
             $quote = app(OrderService::class)->quote($this->employee(), $date, $slot);
@@ -286,7 +337,19 @@ class OrderScreen extends Component
             return null;
         }
 
-        return $quote->isExtra() ? $quote->unitPriceCents : null;
+        return match (true) {
+            $quote->isExtra() => Money::format($quote->unitPriceCents),
+            $quote->isTicketMode() => Money::format($quote->unitPriceCents).' (lístok)',
+            default => null,
+        };
+    }
+
+    /** "Obed Št 19. 11." */
+    private function when(Order $order): string
+    {
+        $order->loadMissing('mealSlot');
+
+        return $order->mealSlot->name.' '.SlovakDate::dayShort($order->date).' '.SlovakDate::dm($order->date);
     }
 
     private function attempt(callable $action): void

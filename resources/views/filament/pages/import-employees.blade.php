@@ -1,14 +1,14 @@
 <x-filament-panels::page>
     @php
         $labels = ['create' => 'nový', 'update' => 'zmena', 'unchanged' => 'bez zmeny'];
-        $fields = ['last_name' => 'priezvisko', 'first_name' => 'meno', 'department' => 'stredisko', 'is_active' => 'aktívny'];
+        $fields = ['last_name' => 'priezvisko', 'first_name' => 'meno', 'department' => 'stredisko', 'is_active' => 'aktívny', 'group' => 'skupina'];
         $fmt = fn ($v) => is_bool($v) ? ($v ? 'áno' : 'nie') : ($v ?? '–');
     @endphp
 
     <x-filament::section>
         <x-slot name="heading">1. Súbor</x-slot>
         <x-slot name="description">
-            XLSX alebo CSV so stĺpcami <code>osobne_cislo</code>, <code>priezvisko</code>, <code>meno</code>, <code>stredisko</code>, <code>aktivny</code> (voliteľný).
+            XLSX alebo CSV so stĺpcami <code>osobne_cislo</code>, <code>priezvisko</code>, <code>meno</code>, <code>stredisko</code>, <code>aktivny</code> (voliteľný), <code>skupina</code> (voliteľný – názov existujúcej skupiny stravníkov; zmena platí od 1. dňa budúceho mesiaca, prázdne = bez zmeny).
             Zamestnanci sa párujú podľa osobného čísla; nikto sa nemaže.
             <a href="{{ route('admin.template', 'zamestnanci') }}" class="font-semibold text-primary-600 underline">Stiahnuť šablónu</a>
         </x-slot>
