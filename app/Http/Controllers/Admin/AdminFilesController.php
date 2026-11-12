@@ -59,7 +59,7 @@ class AdminFilesController extends Controller
                 'ids' => $ids->implode(','),
                 'info' => $small ? null : $this->orderingInfo(),
                 'company' => app(Settings::class)->companyName(),
-                'appTitle' => app(Settings::class)->appTitle(),
+                'appName' => app(Settings::class)->appName(),
             ])
             ->header('Cache-Control', 'no-store, private');
     }

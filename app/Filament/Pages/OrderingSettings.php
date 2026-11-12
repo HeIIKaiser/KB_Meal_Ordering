@@ -35,6 +35,8 @@ class OrderingSettings extends Page
 
     public ?string $company = '';
 
+    public ?string $appName = '';
+
     public static function canAccess(): bool
     {
         return (bool) auth()->user()?->hasRole(Role::Admin);
@@ -45,6 +47,7 @@ class OrderingSettings extends Page
         $this->horizon = $settings->orderingHorizonDays();
         $this->maxExtra = $settings->maxExtraPerSlot() ?? '';
         $this->company = $settings->companyName() ?? '';
+        $this->appName = $settings->appName();
     }
 
     public function save(Settings $settings): void
@@ -55,15 +58,18 @@ class OrderingSettings extends Page
             'horizon' => ['required', 'integer', 'min:0', 'max:90'],
             'maxExtra' => ['nullable', 'integer', 'min:0', 'max:50'],
             'company' => ['nullable', 'string', 'max:60'],
+            'appName' => ['required', 'string', 'max:30'],
         ], [
             'horizon.*' => 'Zadajte počet dní 0 – 90.',
             'maxExtra.*' => 'Zadajte číslo 0 – 50 alebo nechajte prázdne (bez obmedzenia).',
             'company.*' => 'Názov firmy môže mať najviac 60 znakov.',
+            'appName.*' => 'Zadajte názov aplikácie (najviac 30 znakov).',
         ]);
 
         $settings->set(Settings::ORDERING_HORIZON_DAYS, (int) $data['horizon']);
         $settings->set(Settings::MAX_EXTRA_PER_SLOT, ($data['maxExtra'] ?? '') === '' ? null : (int) $data['maxExtra']);
         $settings->set(Settings::COMPANY_NAME, trim((string) ($data['company'] ?? ''))); // '' = deliberately no name
+        $settings->set(Settings::APP_NAME, trim($data['appName']));
 
         Notification::make()->title('Nastavenia uložené')->success()->send();
     }

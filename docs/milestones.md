@@ -232,3 +232,9 @@ Roman's spec: an alternative pricing rule per **employee group**. Daily mode is 
 - **Samples**: `docs/samples/zamestnanci_skupiny.csv`, `docs/samples/konecne_listky_2026-11.xlsx/.csv`.
 - **Deploy**: `bash deploy/update.sh` (one migration, safe on existing data).
 
+### Follow-up: neutral app name and icon (2026-11-13)
+
+- The home-screen name, header and login-sheet instructions use *Nastavenia → Objednávanie → Názov aplikácie* (existing
+  installations: „KBZ“, preset by a migration; otherwise `APP_NAME`). The icon is a neutral people pictogram
+  (`tools/make-icons.php`). Deploy: `bash deploy/update.sh` (one migration).
+

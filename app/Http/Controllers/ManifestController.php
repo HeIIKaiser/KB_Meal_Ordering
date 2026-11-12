@@ -5,15 +5,15 @@ namespace App\Http\Controllers;
 use App\Support\Settings;
 use Illuminate\Http\JsonResponse;
 
-/** PWA manifest; the installed app's name includes the organisation from the settings. */
+/** PWA manifest; the installed app's name comes from the settings (Názov aplikácie). */
 class ManifestController extends Controller
 {
     public function __invoke(Settings $settings): JsonResponse
     {
         return response()->json([
-            'name' => $settings->appTitle(),
-            'short_name' => 'Jedáleň',
-            'description' => 'Objednávanie obedov a večerí pre zamestnancov',
+            'name' => $settings->appName(),
+            'short_name' => $settings->appName(),
+            'description' => 'Aplikácia pre zamestnancov'.($settings->companyName() ? ' – '.$settings->companyName() : ''),
             'lang' => 'sk',
             'start_url' => '/',
             'scope' => '/',

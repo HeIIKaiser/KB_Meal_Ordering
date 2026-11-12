@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex">
-    <title>Prístup do aplikácie Jedáleň</title>
+    <title>Prístup do aplikácie {{ $appName }}</title>
     {{-- One A4 portrait page per employee: credentials + full instructions. Browser print. --}}
     <style>
         @page { size: A4 portrait; margin: 0; }
@@ -77,7 +77,7 @@
     @foreach ($slips as $s)
         <div class="page">
             <div class="brand">
-                <div class="app">Jedáleň</div>
+                <div class="app">{{ $appName }}</div>
                 <div class="sub">{{ $company ? $company.' – ' : '' }}objednávanie stravy pre zamestnancov<br>prístupové údaje (osobné, neodovzdávajte ďalej)</div>
             </div>
 
@@ -129,7 +129,7 @@
                         <ul>
                             <li><span class="os">Android (Chrome):</span> vpravo hore ponuka <em>⋮</em> → <em>Pridať na plochu</em> alebo <em>Inštalovať aplikáciu</em> → <em>Pridať</em>.</li>
                             <li><span class="os">iPhone (Safari):</span> dole tlačidlo <em>Zdieľať</em> (štvorček so šípkou) → <em>Pridať na plochu</em> → <em>Pridať</em>.</li>
-                            <li>Odteraz otvárajte aplikáciu ikonou <em>Jedáleň</em> ako bežnú aplikáciu.</li>
+                            <li>Odteraz otvárajte aplikáciu ikonou <em>{{ $appName }}</em> ako bežnú aplikáciu.</li>
                         </ul>
                     </section>
                     <section>

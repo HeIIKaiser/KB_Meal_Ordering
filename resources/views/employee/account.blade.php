@@ -40,7 +40,7 @@
         <ul class="list-disc space-y-1 pl-5 text-base">
             <li><strong>Android (Chrome):</strong> ponuka ⋮ → <em>Pridať na plochu</em> / <em>Inštalovať aplikáciu</em>.</li>
             <li><strong>iPhone (Safari):</strong> tlačidlo Zdieľať □↑ → <em>Pridať na plochu</em>.</li>
-            <li>Potom aplikáciu otvárajte ikonou <em>Jedáleň</em>.</li>
+            <li>Potom aplikáciu otvárajte ikonou <em>{{ app(\App\Support\Settings::class)->appName() }}</em>.</li>
         </ul>
     </div>
 

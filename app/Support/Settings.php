@@ -17,6 +17,9 @@ class Settings
     /** Organisation name shown on access sheets, login page, installed app and 2FA; '' = no name. */
     public const COMPANY_NAME = 'company_name';
 
+    /** Name of the installed app (home screen icon, header, login sheets); null = APP_NAME. */
+    public const APP_NAME = 'app_name';
+
     public const DEFAULTS = [
         self::ORDERING_HORIZON_DAYS => 14,
         self::MAX_EXTRA_PER_SLOT => null, // null = unlimited (Roman 2026-11-09: extras are unlimited at 6 € each)
@@ -55,6 +58,18 @@ class Settings
         $value = trim((string) ($this->get(self::COMPANY_NAME) ?? config('app.company')));
 
         return $value === '' ? null : $value;
+    }
+
+    /** Home-screen / header name of the employee app, e.g. "KBZ". */
+    public function appName(): string
+    {
+        $value = trim((string) $this->get(self::APP_NAME));
+        if ($value !== '') {
+            return $value;
+        }
+        $env = trim((string) config('app.name'));
+
+        return $env !== '' && $env !== 'Laravel' ? $env : 'Jedáleň';
     }
 
     /** "Jedáleň" or "Jedáleň <firma>" — the product name with the organisation, for titles. */

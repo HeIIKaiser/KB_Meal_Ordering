@@ -3,14 +3,15 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>{{ isset($title) ? $title.' – ' : '' }}Jedáleň</title>
+    @php $appName = app(\App\Support\Settings::class)->appName(); @endphp
+    <title>{{ isset($title) ? $title.' – ' : '' }}{{ $appName }}</title>
     <meta name="theme-color" content="#047857">
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="icon" href="/icons/icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-title" content="Jedáleň">
+    <meta name="apple-mobile-web-app-title" content="{{ $appName }}">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -19,7 +20,7 @@
 
     <header class="sticky top-0 z-30 bg-emerald-700 text-white shadow">
         <div class="mx-auto flex max-w-[1600px] items-center justify-between gap-3 px-4 py-3">
-            <a href="{{ route('home') }}" class="text-xl font-bold tracking-tight">Jedáleň</a>
+            <a href="{{ route('home') }}" class="text-xl font-bold tracking-tight">{{ $appName }}</a>
             @if ($me)
                 <nav class="hidden items-center gap-1 text-base font-semibold sm:flex" aria-label="Hlavná ponuka">
                     <a href="{{ route('home') }}" @class(['rounded-lg px-3 py-2', 'bg-emerald-900' => request()->routeIs('home')])>Objednávky</a>

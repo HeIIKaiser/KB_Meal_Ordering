@@ -3,7 +3,7 @@
  * Pages and Livewire requests always go to the network — ordering never works offline
  * and no personal data is cached. Only static, fingerprinted assets are cached.
  */
-const CACHE = 'jedalen-v1';
+const CACHE = 'jedalen-v2'; // bump when icons/offline page change
 const PRECACHE = ['/offline.html', '/icons/icon-192.png', '/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
