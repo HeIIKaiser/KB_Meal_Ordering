@@ -60,7 +60,7 @@ class Settings
         return $value === '' ? null : $value;
     }
 
-    /** Home-screen / header name of the employee app, e.g. "KB Zamestnanci". */
+    /** Home-screen / header name of the employee app, e.g. "KBZ". */
     public function appName(): string
     {
         $value = trim((string) $this->get(self::APP_NAME));

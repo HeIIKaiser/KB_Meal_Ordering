@@ -78,28 +78,28 @@ describe('app name (home screen)', function () {
         $manifest = $this->get('/manifest.webmanifest')->json();
         expect([$manifest['name'], $manifest['short_name']])->toBe(['Jedáleň', 'Jedáleň']);
 
-        app(Settings::class)->set(Settings::APP_NAME, 'KB Zamestnanci');
+        app(Settings::class)->set(Settings::APP_NAME, 'KBZ');
         $manifest = $this->get('/manifest.webmanifest')->json();
-        expect([$manifest['name'], $manifest['short_name']])->toBe(['KB Zamestnanci', 'KB Zamestnanci'])
-            ->and(brandingSlips())->toContain('<div class="app">KB Zamestnanci</div>')
-            ->toContain('ikonou <em>KB Zamestnanci</em>');
+        expect([$manifest['name'], $manifest['short_name']])->toBe(['KBZ', 'KBZ'])
+            ->and(brandingSlips())->toContain('<div class="app">KBZ</div>')
+            ->toContain('ikonou <em>KBZ</em>');
 
         $this->actingAs(employee(), 'employee')->get('/ucet')
-            ->assertSee('<meta name="apple-mobile-web-app-title" content="KB Zamestnanci">', false)
-            ->assertSee('ikonou <em>KB Zamestnanci</em>', false);
+            ->assertSee('<meta name="apple-mobile-web-app-title" content="KBZ">', false)
+            ->assertSee('ikonou <em>KBZ</em>', false);
     });
 
     it('is set in Nastavenia → Objednávanie and cannot be empty', function () {
         $this->actingAs(User::factory()->admin()->create());
 
         Livewire::test(OrderingSettings::class)->set('appName', '')->call('save')->assertHasErrors('appName');
-        Livewire::test(OrderingSettings::class)->set('appName', ' KB Zamestnanci ')->call('save')->assertHasNoErrors();
+        Livewire::test(OrderingSettings::class)->set('appName', ' KBZ ')->call('save')->assertHasNoErrors();
         app()->forgetScopedInstances();
 
-        expect(app(Settings::class)->appName())->toBe('KB Zamestnanci');
+        expect(app(Settings::class)->appName())->toBe('KBZ');
     });
 
-    it('presets "KB Zamestnanci" only on installations that already have employees', function () {
+    it('presets "KBZ" only on installations that already have employees', function () {
         $migration = require database_path('migrations/2026_11_13_000100_preset_app_name.php');
         config(['app.name' => 'Jedáleň']);
 
@@ -109,6 +109,6 @@ describe('app name (home screen)', function () {
         employee();
         $migration->up();
         app()->forgetScopedInstances();
-        expect(app(Settings::class)->appName())->toBe('KB Zamestnanci');
+        expect(app(Settings::class)->appName())->toBe('KBZ');
     });
 });

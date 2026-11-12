@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * The installed app used to be called "Jedáleň" with a food icon. Existing installations
- * (they have employees) get "KB Zamestnanci" (Roman, 2026-11-13); new installations use
+ * (they have employees) get "KBZ" (Roman, 2026-11-13); new installations use
  * APP_NAME until the admin sets "Názov aplikácie".
  */
 return new class extends Migration
@@ -16,7 +16,7 @@ return new class extends Migration
             return;
         }
 
-        DB::table('settings')->insert(['key' => 'app_name', 'value' => json_encode('KB Zamestnanci'), 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('settings')->insert(['key' => 'app_name', 'value' => json_encode('KBZ'), 'created_at' => now(), 'updated_at' => now()]);
     }
 
     public function down(): void

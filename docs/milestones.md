@@ -235,6 +235,6 @@ Roman's spec: an alternative pricing rule per **employee group**. Daily mode is 
 ### Follow-up: neutral app name and icon (2026-11-13)
 
 - The home-screen name, header and login-sheet instructions use *Nastavenia → Objednávanie → Názov aplikácie* (existing
-  installations: „KB Zamestnanci“, preset by a migration; otherwise `APP_NAME`). The icon is a neutral people pictogram
+  installations: „KBZ“, preset by a migration; otherwise `APP_NAME`). The icon is a neutral people pictogram
   (`tools/make-icons.php`). Deploy: `bash deploy/update.sh` (one migration).
 
