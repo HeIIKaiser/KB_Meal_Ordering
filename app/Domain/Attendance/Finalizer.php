@@ -10,6 +10,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PricingMode;
 use App\Models\AttendanceResult;
 use App\Models\Order;
+use App\Models\PriceType;
 use App\Models\TicketOverride;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -85,6 +86,9 @@ class Finalizer
                     'not_locked' => (bool) ($flags['not_locked'] ?? false),
                     'no_data' => (bool) ($flags['no_data'] ?? false),
                     'manual_override' => $override?->source === TicketOverride::SOURCE_MANUAL,
+                    // temps (estimate by orders): meals that the attendance moves to 6 € (docs/CATEGORIES.md §2)
+                    'orders_estimate' => (bool) $r['calendar']->ticketGroupFor($month)?->estimatesByOrders(),
+                    'to_extra' => collect($repriced->changes)->where('new_type', PriceType::byCode(PriceType::EXTRA)->id)->count(),
                 ],
                 'changed' => ($tickets && $estimate !== $after?->final_meals)
                     || $mandatoryBefore !== ($after?->mandatory_final ?? 0) || $centsBefore !== $centsAfter,

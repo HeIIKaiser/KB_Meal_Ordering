@@ -53,6 +53,7 @@ class MonthController extends Controller
             'next' => $month->addMonth()->format('Y-m'),
             'isCurrent' => $month->isSameMonth(LocalTime::today()),
             'tickets' => app(TicketAllocation::class)->summary($employee, $month->format('Y-m')),
+            'byOrders' => (app(TicketAllocation::class)->allocationWithSource($employee, $month->format('Y-m'))['source'] ?? null) === 'orders_estimate',
             'closed' => app(ClosedMonths::class)->isClosed($month->format('Y-m')),
             'ended' => $end->lessThan(LocalTime::today()),
         ]);

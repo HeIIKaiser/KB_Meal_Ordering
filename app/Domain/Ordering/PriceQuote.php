@@ -20,8 +20,14 @@ final readonly class PriceQuote
         return $this->ticketsMonth !== null;
     }
 
+    /** Needs the "this costs 6 €" confirmation (Dokupovaná strava). Fixed prices never do. */
     public function isExtra(): bool
     {
-        return ! $this->priceType->isDonated();
+        return $this->priceType->isExtra();
+    }
+
+    public function isFixed(): bool
+    {
+        return $this->priceType->isFixed();
     }
 }

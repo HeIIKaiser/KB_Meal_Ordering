@@ -19,11 +19,34 @@ class MealGroup extends Model
 {
     use LogsActivity;
 
-    protected $fillable = ['name', 'default_tickets', 'mandatory_per_day', 'is_active'];
+    public const ESTIMATE_PLAN = 'plan';
+
+    public const ESTIMATE_ORDERS = 'orders';
+
+    public const SETTLEMENT_PAYROLL = 'payroll';
+
+    public const SETTLEMENT_INVOICE = 'invoice';
+
+    protected $fillable = ['name', 'default_tickets', 'mandatory_per_day', 'estimate_source', 'settlement', 'max_per_slot', 'is_active'];
 
     protected function casts(): array
     {
-        return ['default_tickets' => 'integer', 'mandatory_per_day' => 'integer', 'is_active' => 'boolean'];
+        return ['default_tickets' => 'integer', 'mandatory_per_day' => 'integer', 'max_per_slot' => 'integer', 'is_active' => 'boolean'];
+    }
+
+    public function estimatesByOrders(): bool
+    {
+        return $this->estimate_source === self::ESTIMATE_ORDERS;
+    }
+
+    public function isInvoiced(): bool
+    {
+        return $this->settlement === self::SETTLEMENT_INVOICE;
+    }
+
+    public function fixedPrices(): HasMany
+    {
+        return $this->hasMany(FixedPrice::class);
     }
 
     public function modes(): HasMany
@@ -57,6 +80,6 @@ class MealGroup extends Model
 
     public function getActivitylogOptions(): LogOptions
     {
-        return LogOptions::defaults()->logOnly(['name', 'default_tickets', 'mandatory_per_day', 'is_active'])->logOnlyDirty()->dontSubmitEmptyLogs()->useLogName('tickets');
+        return LogOptions::defaults()->logOnly(['name', 'default_tickets', 'mandatory_per_day', 'estimate_source', 'settlement', 'max_per_slot', 'is_active'])->logOnlyDirty()->dontSubmitEmptyLogs()->useLogName('tickets');
     }
 }

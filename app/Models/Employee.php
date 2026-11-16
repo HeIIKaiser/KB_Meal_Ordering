@@ -25,6 +25,7 @@ class Employee extends Model implements AuthenticatableContract
     protected $fillable = [
         'osobne_cislo', 'first_name', 'last_name', 'department', 'is_active', 'user_id',
         'vema_cislo', 'max_meals_per_day',
+        'billing_name', 'ico', 'dic', 'billing_address', 'billing_email', 'billing_note',
     ];
 
     protected $hidden = ['pin_hash', 'pin_plain', 'remember_token'];
@@ -157,6 +158,11 @@ class Employee extends Model implements AuthenticatableContract
         return $this->hasMany(EmployeeGroupMembership::class)->orderBy('effective_from');
     }
 
+    public function fixedPrices(): HasMany
+    {
+        return $this->hasMany(FixedPrice::class);
+    }
+
     public function mandatoryMeals(): HasMany
     {
         return $this->hasMany(MandatoryMeal::class);
@@ -193,7 +199,7 @@ class Employee extends Model implements AuthenticatableContract
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['osobne_cislo', 'first_name', 'last_name', 'department', 'is_active', 'user_id', 'pin_changed_at', 'vema_cislo', 'max_meals_per_day'])
+            ->logOnly(['osobne_cislo', 'first_name', 'last_name', 'department', 'is_active', 'user_id', 'pin_changed_at', 'vema_cislo', 'max_meals_per_day', 'billing_name', 'ico', 'dic', 'billing_address', 'billing_email', 'billing_note'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->useLogName('employees');

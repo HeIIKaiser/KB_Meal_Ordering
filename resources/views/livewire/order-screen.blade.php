@@ -141,10 +141,10 @@
                                                     @foreach ($mine as $order)
                                                         <span @class([
                                                             'mt-1 inline-block whitespace-nowrap rounded-md px-2 py-0.5 text-sm font-bold lg:text-xs',
-                                                            'bg-emerald-700 text-white' => $order->priceType->isDonated(),
-                                                            'bg-amber-500 text-black' => ! $order->priceType->isDonated(),
+                                                            'bg-emerald-700 text-white' => ! $order->priceType->isExtra(),
+                                                            'bg-amber-500 text-black' => $order->priceType->isExtra(),
                                                         ])>
-                                                            {{ $order->priceType->isDonated() ? 'Objednané' : 'Dokupované' }} · {{ Money::format($order->unit_price_cents) }}
+                                                            {{ $order->priceType->isExtra() ? 'Dokupované' : 'Objednané' }} · {{ Money::format($order->unit_price_cents) }}
                                                         </span>
                                                     @endforeach
                                                 </span>

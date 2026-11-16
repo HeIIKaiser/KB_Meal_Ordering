@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Domain\Exports\Invoice\InvoiceData;
+use App\Domain\Exports\Invoice\InvoiceFormats;
 use App\Domain\Exports\MonthlyData;
 use App\Domain\Exports\MonthlyMatrixXlsx;
 use App\Domain\Exports\OrderListExport;
@@ -87,6 +89,27 @@ class ExportController extends Controller
 
         $path = $format->write($payroll);
         $this->audit('Export do miezd ('.$format->label().'): '.$data['mesiac'].($payroll->closed ? '' : ' – odhad'));
+
+        return $this->download($path, $format->fileName($data['mesiac']), $format->contentType());
+    }
+
+    /** „Fakturácia“: invoiced people only (self-employed); open month needs the „odhad“ confirmation. */
+    public function invoice(Request $request): BinaryFileResponse|RedirectResponse
+    {
+        $data = $request->validate([
+            'mesiac' => ['required', 'date_format:Y-m'],
+            'format' => ['required', 'in:'.implode(',', array_keys(InvoiceFormats::all()))],
+            'odhad' => ['nullable', 'boolean'],
+        ], ['mesiac.*' => 'Zadajte mesiac v tvare RRRR-MM.', 'format.*' => 'Neznámy formát.']);
+
+        $format = InvoiceFormats::get($data['format']);
+        $invoice = InvoiceData::for($data['mesiac']);
+        if (! $invoice->closed && ! $request->boolean('odhad')) {
+            return redirect(Exports::getUrl().'#fakturacia')->withInput()->with('invoice_estimate', ['mesiac' => $data['mesiac'], 'format' => $data['format']]);
+        }
+
+        $path = $format->write($invoice);
+        $this->audit('Export: '.$format->label().' '.$data['mesiac'].($invoice->closed ? '' : ' – odhad'));
 
         return $this->download($path, $format->fileName($data['mesiac']), $format->contentType());
     }

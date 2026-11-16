@@ -91,7 +91,8 @@ it('prints one A4 login sheet per employee with live cutoffs and prices', functi
 });
 
 it('renamed the price types (Zamestnanecká strava / Dokupovaná strava)', function () {
-    expect(PriceType::query()->orderBy('sort')->pluck('name')->all())->toBe(['Zamestnanecká strava', 'Dokupovaná strava']);
+    expect(PriceType::query()->standard()->orderBy('sort')->pluck('name')->all())->toBe(['Zamestnanecká strava', 'Dokupovaná strava'])
+        ->and(PriceType::byCode('fixed')->name)->toBe('Pevná cena');
 
     // the migration renames existing databases too
     PriceType::query()->where('code', 'donated')->update(['name' => 'Darované']);

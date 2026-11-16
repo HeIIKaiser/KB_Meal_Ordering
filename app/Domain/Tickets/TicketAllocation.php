@@ -17,17 +17,26 @@ use App\Models\TicketOverride;
  *   1. manual individual override
  *   2. final attendance result (after „Finalizovať mesiac“)
  *   3. override from the „Konečné lístky“ import
- *   4. live attendance estimate (nightly sync)
+ *   4. temps (estimate_source = orders): the number of their orders — docs/CATEGORIES.md §2;
+ *      otherwise the live attendance estimate (nightly sync)
  *   5. the group's count for that month
  *   6. the group's default
  * Tickets therefore exist for every month (also the next one) without any cron job.
  */
 class TicketAllocation
 {
+    /**
+     * Temps (group estimate_source = orders): while the month is open every order counts
+     * as a ticket at 1,50 €; attendance decides at finalisation. Set to false for the
+     * strict variant (6 € until attendance confirms the day) — docs/CATEGORIES.md §2.
+     */
+    public const ORDERS_ESTIMATE_AT_EMPLOYEE_PRICE = true;
+
     public const SOURCES = [
         'manual' => 'individuálne',
         'attendance_final' => 'dochádzka – konečné',
         'import' => 'import konečných lístkov',
+        'orders_estimate' => 'objednávky (odhad)',
         'attendance_estimate' => 'dochádzka – odhad',
         'group_month' => 'skupina (mesiac)',
         'group_default' => 'skupina (predvolené)',
@@ -55,6 +64,7 @@ class TicketAllocation
             $override?->source === TicketOverride::SOURCE_MANUAL => ['tickets' => $override->tickets, 'source' => 'manual'],
             $result?->final_meals !== null => ['tickets' => $result->final_meals, 'source' => 'attendance_final'],
             $override !== null => ['tickets' => $override->tickets, 'source' => 'import'],
+            $group->estimatesByOrders() => ['tickets' => self::ORDERS_ESTIMATE_AT_EMPLOYEE_PRICE ? $this->used($employee, $month) : 0, 'source' => 'orders_estimate'],
             $result?->estimate_meals !== null => ['tickets' => $result->estimate_meals, 'source' => 'attendance_estimate'],
             $saved !== null => ['tickets' => $saved, 'source' => 'group_month'],
             default => ['tickets' => $group->default_tickets, 'source' => 'group_default'],

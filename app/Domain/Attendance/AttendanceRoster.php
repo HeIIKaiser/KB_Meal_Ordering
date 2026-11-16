@@ -10,16 +10,19 @@ use App\Models\EmployeeGroupMembership;
 use App\Models\MealGroup;
 use Illuminate\Support\Collection;
 
-/** Employees whose meals depend on attendance in a month: any day in ticket or mandatory mode. */
+/** Employees whose meals depend on attendance in a month: any day in ticket or mandatory mode (never fixed). */
 class AttendanceRoster
 {
+    /** Modes whose meals depend on attendance. */
+    public const MODES = [PricingMode::Tickets, PricingMode::Mandatory];
+
     /**
      * @return Collection<int, array{employee: Employee, calendar: EmployeeCalendar, modes: list<PricingMode>}>
      */
     public function employees(string $month): Collection
     {
         $groupIds = MealGroup::query()->with('modes')->get()
-            ->filter(fn (MealGroup $g) => $g->modes->contains(fn ($m) => $m->mode !== PricingMode::Daily))
+            ->filter(fn (MealGroup $g) => $g->modes->contains(fn ($m) => in_array($m->mode, self::MODES, true)))
             ->pluck('id');
         if ($groupIds->isEmpty()) {
             return collect();
@@ -33,7 +36,7 @@ class AttendanceRoster
         return Employee::query()->whereIn('id', $employeeIds)->alphabetical()->get()
             ->map(function (Employee $e) use ($memberships, $month) {
                 $calendar = EmployeeCalendar::fromMemberships($e, $memberships[$e->id] ?? collect());
-                $modes = array_values(array_filter($calendar->modesIn($month), fn ($m) => $m !== PricingMode::Daily));
+                $modes = array_values(array_filter($calendar->modesIn($month), fn ($m) => in_array($m, self::MODES, true)));
 
                 return $modes ? ['employee' => $e, 'calendar' => $calendar, 'modes' => $modes] : null;
             })

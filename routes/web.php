@@ -52,4 +52,5 @@ Route::prefix('/admin/exporty')->middleware('staff:payroll,admin')->name('export
     Route::get('/mesiac', [ExportController::class, 'monthly'])->name('monthly');
     Route::get('/zoznam', [ExportController::class, 'list'])->name('list');
     Route::get('/mzdy', [ExportController::class, 'payroll'])->name('payroll');
+    Route::get('/fakturacia', [ExportController::class, 'invoice'])->name('invoice');
 });

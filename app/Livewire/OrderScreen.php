@@ -130,7 +130,7 @@ class OrderScreen extends Component
                     ! $onItem->priceType->isDonated() => 'Zrušiť objednávku ('.Money::format($onItem->unit_price_cents).')',
                     default => 'Zrušiť objednávku',
                 },
-                'extra_label' => $more !== null ? 'Dokúpiť ďalšie rovnaké jedlo za '.$more : null,
+                'extra_label' => $more !== null ? $more['verb'].' ďalšie rovnaké jedlo za '.$more['price'] : null,
             ];
 
             return;
@@ -148,7 +148,7 @@ class OrderScreen extends Component
                 'title' => 'Zmeniť objednávku?',
                 'text' => 'Máte objednané '.$switchable->menuItem->label().': '.$switchable->menuItem->name.'.',
                 'switch_label' => 'Zmeniť na '.$item->label().': '.$item->name,
-                'extra_label' => $more !== null ? 'Dokúpiť ďalšie jedlo za '.$more : null,
+                'extra_label' => $more !== null ? $more['verb'].' ďalšie jedlo za '.$more['price'] : null,
             ];
 
             return;
@@ -285,7 +285,10 @@ class OrderScreen extends Component
             if ($s === null) {
                 continue;
             }
-            if ($s['left'] > 0) {
+            if ($s['group']->estimatesByOrders() && app(TicketAllocation::class)->allocationWithSource($this->employee(), $month, $calendar)['source'] === 'orders_estimate') {
+                // temps: every order provisionally at the employee price, attendance decides at month end
+                $text = 'Cena sa potvrdí podľa dochádzky na konci mesiaca.';
+            } elseif ($s['left'] > 0) {
                 $text = 'Zostáva '.$s['left'].' z '.$s['allocated'].' '.($s['allocated'] === 1 ? 'lístka' : 'lístkov').' – '.Month::name($month);
             } else {
                 try {
@@ -312,7 +315,7 @@ class OrderScreen extends Component
             // Ticket mode: an earlier meal can take the ticket of a later one, which then costs 6 €.
             $moved = $order->relationLoaded('repriced') ? $order->getRelation('repriced') : collect();
             $this->success(
-                'Objednané: '.$item->label().' – '.$item->name.' ('.Money::format($order->unit_price_cents).($order->price_type_id === PriceType::byCode(PriceType::DONATED)->id ? '' : ', dokupovaná strava').')'
+                'Objednané: '.$item->label().' – '.$item->name.' ('.Money::format($order->unit_price_cents).($order->price_type_id === PriceType::byCode(PriceType::EXTRA)->id ? ', dokupovaná strava' : '').')'
                 .$moved->map(fn (Order $o) => '. '.$this->when($o).' '.$o->menuItem->label().' je teraz za '.Money::format($o->unit_price_cents))->join('').($moved->isNotEmpty() ? '.' : '')
             );
         } catch (ExtraConfirmationRequired $e) {
@@ -331,10 +334,13 @@ class OrderScreen extends Component
     }
 
     /**
-     * Price label of one more meal in this slot ("6,00 €", or "1,50 € (lístok)" while
-     * tickets last), or null when nothing more can be ordered (daily extra cap reached).
+     * Label of one more meal in this slot: "Dokúpiť … za 6,00 €", "… za 1,50 € (lístok)" while
+     * tickets last, "Objednať … za 5,00 €" at a fixed price; null when nothing more can be
+     * ordered (cap reached).
+     *
+     * @return array{verb: string, price: string}|null
      */
-    private function morePrice(CarbonImmutable $date, MealSlot $slot): ?string
+    private function morePrice(CarbonImmutable $date, MealSlot $slot): ?array
     {
         try {
             $quote = app(OrderService::class)->quote($this->employee(), $date, $slot);
@@ -343,8 +349,9 @@ class OrderScreen extends Component
         }
 
         return match (true) {
-            $quote->isExtra() => Money::format($quote->unitPriceCents),
-            $quote->isTicketMode() => Money::format($quote->unitPriceCents).' (lístok)',
+            $quote->isExtra() => ['verb' => 'Dokúpiť', 'price' => Money::format($quote->unitPriceCents)],
+            $quote->isFixed() => ['verb' => 'Objednať', 'price' => Money::format($quote->unitPriceCents)],
+            $quote->isTicketMode() => ['verb' => 'Dokúpiť', 'price' => Money::format($quote->unitPriceCents).' (lístok)'],
             default => null,
         };
     }

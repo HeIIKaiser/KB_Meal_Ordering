@@ -40,7 +40,7 @@
     <x-filament::section id="mzdy">
         <x-slot name="heading">Export do miezd</x-slot>
         <x-slot name="description">
-            Jeden riadok na zamestnanca so sumou na zrážku zo mzdy (objednávky + povinná strava). Rovnaké čísla ako hárok Súhrn.
+            Jeden riadok na zamestnanca so sumou na zrážku zo mzdy (objednávky + povinná strava). Rovnaké čísla ako hárok Súhrn. Zamestnanci s vysporiadaním faktúrou (SZČO) v ňom nie sú.
             Zamestnanci so sumou bez <strong>Vema čísla</strong> export zablokujú (doplníte ich v Zamestnanci).
             Pri <strong>otvorenom</strong> mesiaci sú sumy odhadom – po 10. dni nasledujúceho mesiaca: Dochádzka → Finalizovať → Uzavrieť → export.
         </x-slot>
@@ -76,11 +76,42 @@
         @endif
     </x-filament::section>
 
+    <x-filament::section id="fakturacia">
+        <x-slot name="heading">Fakturácia (SZČO)</x-slot>
+        <x-slot name="description">
+            Pre zamestnancov zo skupín s vysporiadaním <strong>faktúrou</strong> (napr. SZČO s pevnou cenou) – tí v exporte do miezd nie sú.
+            Hárok <strong>Súhrn</strong>: jeden riadok na osobu (fakturačné údaje, obedy / večere / ostatné, jednotková cena, suma);
+            hárok <strong>Detail</strong>: každé jedlo ako príloha k faktúre. Faktúry vystavuje účtovníctvo.
+        </x-slot>
+        @if ($est = session('invoice_estimate'))
+            <div class="mb-4 rounded-lg border border-warning-300 bg-warning-50 p-3 text-sm dark:bg-warning-950">
+                <p class="mb-2 font-semibold">Mesiac {{ \App\Domain\Tickets\Month::label($est['mesiac']) }} ešte nie je uzavretý – zoznam sa ešte môže zmeniť (<strong>odhad</strong>).</p>
+                <x-filament::button tag="a" color="warning" size="sm" :href="route('exports.invoice', [...$est, 'odhad' => 1])">Stiahnuť aj tak (odhad)</x-filament::button>
+            </div>
+        @endif
+        <form method="GET" action="{{ route('exports.invoice') }}" class="flex flex-wrap items-end gap-4">
+            <label class="grid gap-1 text-sm">
+                <span class="font-semibold">Mesiac</span>
+                <input type="month" name="mesiac" value="{{ $defaultMonth }}" required class="{{ $field }}">
+            </label>
+            <label class="grid gap-1 text-sm">
+                <span class="font-semibold">Formát</span>
+                <select name="format" class="{{ $field }}">
+                    @foreach ($invoiceFormats as $key => $f)<option value="{{ $key }}">{{ $f->label() }}</option>@endforeach
+                </select>
+            </label>
+            <x-filament::button type="submit" icon="heroicon-m-arrow-down-tray">Stiahnuť</x-filament::button>
+        </form>
+        @if (collect($invoiceFormats)->contains(fn ($f) => $f->isProvisional()))
+            <p class="mt-3 text-sm text-warning-700">Predbežný formát: stĺpce sa upravia podľa požiadaviek účtovníctva.</p>
+        @endif
+    </x-filament::section>
+
     <x-filament::section>
         <x-slot name="heading">Zoznam objednávok</x-slot>
         <x-slot name="description">
             Jeden riadok na objednávku (aj zrušené – stĺpec <code>stav</code>) za ľubovoľné obdobie, napr. na kontingenčnú tabuľku.
-            Stĺpce: datum, jedlo, osobne_cislo, priezvisko, meno, stredisko, menu_cislo, menu_nazov, typ, cena, stav, vytvorene, zrusene, vytvoril, rezim (denny / listky / povinna).
+            Stĺpce: datum, jedlo, osobne_cislo, priezvisko, meno, stredisko, menu_cislo, menu_nazov, typ, cena, stav, vytvorene, zrusene, vytvoril, rezim (denny / listky / povinna / pevna), vysporiadanie (mzdy / faktura).
             Povinná strava je v zozname ako riadky s <code>typ = povinna</code> (jeden riadok na jedlo).
         </x-slot>
 
