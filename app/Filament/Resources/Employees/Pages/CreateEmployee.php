@@ -13,6 +13,12 @@ class CreateEmployee extends CreateRecord
 {
     protected static string $resource = EmployeeResource::class;
 
+    /** Filament's "Vytvoriť :label" would read "Vytvoriť zamestnanec" (wrong case in Slovak). */
+    public function getTitle(): string
+    {
+        return 'Nový zamestnanec';
+    }
+
     protected function afterFill(): void
     {
         $this->data['group_from'] = LocalTime::today()->startOfMonth()->toDateString();

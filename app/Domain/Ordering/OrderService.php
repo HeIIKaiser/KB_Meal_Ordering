@@ -57,6 +57,7 @@ class OrderService
         private Repricer $repricer,
         private TicketAllocation $tickets,
         private ClosedMonths $closedMonths,
+        private FixedPriceResolver $fixedPrices,
     ) {}
 
     /** What the employee's next order in this slot/day would cost (marginal type + price). */
@@ -67,7 +68,10 @@ class OrderService
             return $this->ticketQuote($employee, $date, $calendar);
         }
         if ($calendar->modeOn($date) === PricingMode::Mandatory) {
-            return $this->mandatoryQuote($date);
+            return $this->mandatoryQuote($employee, $date, $slot, $calendar);
+        }
+        if ($calendar->modeOn($date) === PricingMode::Fixed) {
+            return $this->fixedQuote($employee, $date, $slot, $calendar);
         }
 
         return $this->nextQuote($this->activeCounts($employee, $date, $slot), $date, $slot);
@@ -100,7 +104,8 @@ class OrderService
             $mode = $calendar->modeOn($menu->date);
             $quote = match ($mode) {
                 PricingMode::Tickets => $this->ticketQuote($employee, $menu->date, $calendar),
-                PricingMode::Mandatory => $this->mandatoryQuote($menu->date),
+                PricingMode::Mandatory => $this->mandatoryQuote($employee, $menu->date, $slot, $calendar),
+                PricingMode::Fixed => $this->fixedQuote($employee, $menu->date, $slot, $calendar),
                 default => $this->nextQuote($this->activeCounts($employee, $menu->date, $slot), $menu->date, $slot),
             };
 
@@ -225,7 +230,7 @@ class OrderService
             return null;
         }
 
-        $laterTypeIds = PriceType::query()
+        $laterTypeIds = PriceType::query()->standard()
             ->where(fn ($q) => $q->where('sort', '>', $type->sort)->orWhere(fn ($q) => $q->where('sort', $type->sort)->where('id', '>', $type->id)))
             ->pluck('id');
 
@@ -283,6 +288,9 @@ class OrderService
             if ($order->pricing_mode === PricingMode::Mandatory) {
                 throw new OrderingException('V režime povinnej stravy sú objednávky z aplikácie vždy dokupovaná strava; povinná strava sa účtuje podľa dochádzky.', 'mandatory_mode');
             }
+            if ($order->pricing_mode === PricingMode::Fixed || $type->isFixed()) {
+                throw new OrderingException('Pevná cena sa nastavuje v časti Pevné ceny, nie úpravou objednávky.', 'fixed_mode');
+            }
 
             if ($type->isDonated() && $order->price_type_id !== $type->id
                 && $this->activeCounts($order->employee, $order->date, $order->mealSlot)->get($type->id, 0) >= $this->limitFor($type)) {
@@ -311,16 +319,37 @@ class OrderService
     private function ticketQuote(Employee $employee, DateTimeInterface|string $date, EmployeeCalendar $calendar): PriceQuote
     {
         $month = Month::of($date);
-        $allocated = $this->tickets->allocation($employee, $month, $calendar) ?? 0;
+        $allocation = $this->tickets->allocationWithSource($employee, $month, $calendar);
+        $allocated = $allocation['tickets'] ?? 0;
         $used = $this->tickets->used($employee, $month);
-        $type = PriceType::byCode($used < $allocated ? PriceType::DONATED : PriceType::EXTRA);
+        // Estimate by orders (temps): every order is provisionally at the employee price
+        // until attendance decides at finalisation (docs/CATEGORIES.md §2).
+        $provisional = ($allocation['source'] ?? null) === 'orders_estimate' && TicketAllocation::ORDERS_ESTIMATE_AT_EMPLOYEE_PRICE;
+        $type = PriceType::byCode($provisional || $used < $allocated ? PriceType::DONATED : PriceType::EXTRA);
 
         return new PriceQuote($type, $this->prices->amountFor($type, $date), ticketsMonth: $month, ticketsLeft: max(0, $allocated - $used));
     }
 
-    /** Mandatory mode: every meal ordered in the app is take-home food at the full price. */
-    private function mandatoryQuote(DateTimeInterface|string $date): PriceQuote
+    /** Fixed mode: the person's fixed price; optional group cap per meal and day; no confirmation. */
+    private function fixedQuote(Employee $employee, DateTimeInterface|string $date, MealSlot $slot, EmployeeCalendar $calendar): PriceQuote
     {
+        $cap = $calendar->groupOn($date)?->max_per_slot;
+        if ($cap !== null && $this->activeCounts($employee, $date, $slot)->sum() >= $cap) {
+            throw new OrderingException('Na '.$slot->accusative().' v tento deň už máte objednaný maximálny počet jedál.', 'limit_reached');
+        }
+
+        return new PriceQuote(PriceType::byCode(PriceType::FIXED), $this->fixedPrices->amount($employee, $date, $slot, $calendar));
+    }
+
+    /**
+     * Mandatory mode: every meal ordered in the app is take-home food at the full price —
+     * or at the person's fixed price if one is set (e.g. self-employed), without a dialog.
+     */
+    private function mandatoryQuote(Employee $employee, DateTimeInterface|string $date, MealSlot $slot, EmployeeCalendar $calendar): PriceQuote
+    {
+        if ($fixed = $this->fixedPrices->find($employee, $date, $slot, $calendar)) {
+            return new PriceQuote(PriceType::byCode(PriceType::FIXED), $fixed->amount_cents, mandatory: true);
+        }
         $type = PriceType::byCode(PriceType::EXTRA);
 
         return new PriceQuote($type, $this->prices->amountFor($type, $date), mandatory: true);
@@ -351,7 +380,7 @@ class OrderService
     /** @param Collection<int, int> $counts */
     private function nextQuote(Collection $counts, DateTimeInterface|string $date, MealSlot $slot): PriceQuote
     {
-        $types = PriceType::query()->orderBy('sort')->orderBy('id')->get();
+        $types = PriceType::query()->standard()->orderBy('sort')->orderBy('id')->get();
 
         foreach ($types as $type) {
             $limit = $this->limitFor($type);

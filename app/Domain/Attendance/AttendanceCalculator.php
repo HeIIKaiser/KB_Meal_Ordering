@@ -86,7 +86,7 @@ class AttendanceCalculator
     public function days(Employee $employee, string $month): Collection
     {
         return AttendanceDay::query()
-            ->where('osobne_cislo', Employee::attendanceNumber($employee->osobne_cislo))
+            ->where('osobne_cislo', $employee->attendanceKey())
             ->whereBetween('date', [Month::first($month)->toDateString(), Month::last($month)->toDateString()])
             ->get()
             ->keyBy(fn (AttendanceDay $d) => $d->date->toDateString());

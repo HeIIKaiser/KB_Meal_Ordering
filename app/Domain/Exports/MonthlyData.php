@@ -105,7 +105,7 @@ final class MonthlyData
 
         return new self(
             $month,
-            PriceType::query()->orderBy('sort')->orderBy('id')->get(),
+            PriceType::query()->standard()->orderBy('sort')->orderBy('id')->get(),
             MealSlot::query()->ordered()->get(),
             $data,
             app(ClosedMonths::class)->isClosed($month->format('Y-m')),
@@ -117,7 +117,7 @@ final class MonthlyData
      * of the month) per employee, batch-loaded.
      *
      * @param  Collection<int, Employee>  $employees
-     * @return array<int, array{group: ?string, mode: string, tickets: array{allocated: int, used: int, expired: int}|null, ticket_source: ?string}>
+     * @return array<int, array{settlement: string, group: ?string, mode: string, tickets: array{allocated: int, used: int, expired: int}|null, ticket_source: ?string}>
      */
     private static function tickets(Collection $employees, string $month): array
     {
@@ -142,6 +142,8 @@ final class MonthlyData
                 $tickets = ['allocated' => $allocated, 'used' => min($n, $allocated), 'expired' => max(0, $allocated - $n)];
             }
             $out[$e->id] = [
+                // invoice or payroll: by the group on the last day of the month (Roman, 2026-11-17)
+                'settlement' => $calendar->groupOn(Month::last($month))?->isInvoiced() ? 'faktura' : 'mzdy',
                 'group' => ($ticketGroup ?? $calendar->groupOn(Month::last($month)))?->name,
                 'mode' => count($modes) > 1 ? 'zmiesany' : $modes[0]->exportCode(),
                 'tickets' => $tickets,
@@ -169,6 +171,17 @@ final class MonthlyData
         }
 
         return $sum;
+    }
+
+    /** Fixed-price orders (self-employed): count and €. */
+    public static function fixedCount(array $entry, ?int $day = null): int
+    {
+        return self::count($entry, PriceType::byCode(PriceType::FIXED)->id, null, $day);
+    }
+
+    public static function fixedCents(array $entry): int
+    {
+        return self::cents($entry, PriceType::byCode(PriceType::FIXED)->id);
     }
 
     /** Automatic mandatory meals (whole month, or one day). */

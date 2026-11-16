@@ -32,7 +32,9 @@
                 <div class="text-sm opacity-80">Účtuje sa automaticky podľa dochádzky{{ $mandatoryFinal ? ' – konečný stav.' : ' – odhad podľa plánu smien a dochádzky.' }}</div>
             </div>
         @endif
-        @if ($tickets)
+        @if ($tickets && $byOrders)
+            <div class="mt-2 border-t border-white/30 pt-2 text-base font-semibold">Cena sa potvrdí podľa dochádzky na konci mesiaca.</div>
+        @elseif ($tickets)
             <div class="mt-2 border-t border-white/30 pt-2 text-base">
                 <span class="font-semibold">Lístky:</span>
                 pridelené {{ $tickets['allocated'] }} · použité {{ min($tickets['used'], $tickets['allocated']) }} ·
@@ -66,9 +68,9 @@
                         <span class="text-base">
                             <span class="font-semibold">{{ $o->mealSlot->name }}</span> –
                             {{ $o->menuItem->label() }}: {{ $o->menuItem->name }}
-                            @unless ($o->priceType->isDonated())
+                            @if ($o->priceType->isExtra())
                                 <span class="ml-1 rounded bg-amber-400 px-1.5 text-sm font-bold text-black">{{ $o->priceType->name }}</span>
-                            @endunless
+                            @endif
                         </span>
                         <span class="whitespace-nowrap text-base font-semibold">{{ Money::format($o->unit_price_cents) }}</span>
                     </li>

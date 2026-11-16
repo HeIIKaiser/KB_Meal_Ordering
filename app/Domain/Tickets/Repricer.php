@@ -2,6 +2,7 @@
 
 namespace App\Domain\Tickets;
 
+use App\Domain\Ordering\FixedPriceResolver;
 use App\Domain\Ordering\PriceResolver;
 use App\Enums\OrderStatus;
 use App\Enums\PricingMode;
@@ -45,6 +46,7 @@ class Repricer
     public function __construct(
         private PriceResolver $prices,
         private TicketAllocation $allocation,
+        private FixedPriceResolver $fixedPrices,
     ) {}
 
     public function reprice(Employee $employee, string $month, string $cause, ?Model $causer = null, ?EmployeeCalendar $calendar = null, ?string $reason = null): RepriceResult
@@ -81,10 +83,20 @@ class Repricer
             }
         }
 
-        // Mandatory mode: meals ordered in the app are take-home food at full price.
-        $orders->filter(fn (Order $o) => $modes[$o->id] === PricingMode::Mandatory)
-            ->each(function (Order $o) use (&$target, $extra) {
-                $target[$o->id] = [PricingMode::Mandatory, $extra];
+        // Fixed mode: snapshot price; only orders coming from another mode get the fixed price.
+        $fixedType = PriceType::byCode(PriceType::FIXED);
+        $orders->filter(fn (Order $o) => $modes[$o->id] === PricingMode::Fixed && $o->pricing_mode !== PricingMode::Fixed)
+            ->each(function (Order $o) use (&$target, $fixedType, $employee, $calendar) {
+                $target[$o->id] = [PricingMode::Fixed, $fixedType, $this->fixedPrices->amount($employee, $o->date, $o->mealSlot, $calendar)];
+            });
+
+        // Mandatory mode: take-home food at full price, or at the person's fixed price if set.
+        // Orders already in mandatory mode keep their snapshot; only orders coming from
+        // another mode are priced.
+        $orders->filter(fn (Order $o) => $modes[$o->id] === PricingMode::Mandatory && $o->pricing_mode !== PricingMode::Mandatory)
+            ->each(function (Order $o) use (&$target, $extra, $fixedType, $employee, $calendar) {
+                $fixed = $this->fixedPrices->find($employee, $o->date, $o->mealSlot, $calendar);
+                $target[$o->id] = $fixed ? [PricingMode::Mandatory, $fixedType, $fixed->amount_cents] : [PricingMode::Mandatory, $extra];
             });
 
         // Daily mode: re-type only slot-days that contain an order coming from another mode.
@@ -108,18 +120,19 @@ class Repricer
 
             return $o->pricing_mode !== $mode
                 || $o->price_type_id !== $type->id
-                || $o->unit_price_cents !== $this->price($type, $o->date->toDateString());
+                || $o->unit_price_cents !== ($target[$o->id][2] ?? $this->price($type, $o->date->toDateString()));
         })->sortBy(fn (Order $o) => $target[$o->id][1]->isDonated() ? 1 : 0);
 
         foreach ($changed as $o) {
             [$mode, $type] = $target[$o->id];
+            $cents = $target[$o->id][2] ?? $this->price($type, $o->date->toDateString());
             $old = ['pricing_mode' => $o->pricing_mode->value, 'price_type' => $o->priceType->code, 'unit_price_cents' => $o->unit_price_cents];
             $oldType = $o->price_type_id;
 
             $o->update([
                 'pricing_mode' => $mode,
                 'price_type_id' => $type->id,
-                'unit_price_cents' => $this->price($type, $o->date->toDateString()),
+                'unit_price_cents' => $cents,
             ]);
             $o->setRelation('priceType', $type);
 

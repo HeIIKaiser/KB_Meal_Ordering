@@ -17,12 +17,16 @@ enum PricingMode: string
      */
     case Mandatory = 'mandatory';
 
+    /** Pevná cena (self-employed): every order costs the person's fixed price; no tickets, no attendance. */
+    case Fixed = 'fixed';
+
     public function label(): string
     {
         return match ($this) {
             self::Daily => 'Denný (1 obed + 1 večera denne)',
             self::Tickets => 'Lístky (mesačný počet)',
             self::Mandatory => 'Povinná strava (podľa dochádzky)',
+            self::Fixed => 'Pevná cena',
         };
     }
 
@@ -33,6 +37,7 @@ enum PricingMode: string
             self::Daily => 'denny',
             self::Tickets => 'listky',
             self::Mandatory => 'povinna',
+            self::Fixed => 'pevna',
         };
     }
 }

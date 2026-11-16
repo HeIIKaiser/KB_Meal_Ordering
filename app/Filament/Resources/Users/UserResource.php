@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Users;
 
 use App\Enums\NavGroup;
 use App\Enums\Role;
+use App\Filament\Concerns\SentenceCaseLabels;
 use App\Filament\Resources\Users\Pages\ManageUsers;
 use App\Models\User;
 use BackedEnum;
@@ -26,6 +27,8 @@ use UnitEnum;
 /** Staff accounts for /admin (kitchen, payroll, admin). */
 class UserResource extends Resource
 {
+    use SentenceCaseLabels;
+
     protected static ?string $model = User::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedShieldCheck;

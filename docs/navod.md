@@ -258,6 +258,50 @@ servera (návod: `bridge/README.md`). Kým most nebeží, fungujú ručné nást
 **Nastavenia → Dochádzka – synchronizácia:** token pre most (zobrazí sa len raz; nový token zruší starý), povolené IP adresy
 a hranice pre 1 a 2 jedlá.
 
+### Brigádnici a študenti (odhad podľa objednávok)
+
+Brigádnici nemajú plán smien, preto by im odhad podľa plánu dal 0 lístkov. Pre ich skupinu (režim **Lístky**) nastavte
+v *Skupiny stravníkov* **Odhad počas mesiaca: podľa objednávok**:
+
+- Počas mesiaca je **každé objednané jedlo za 1,50 €** (zamestnanec vidí *„Cena sa potvrdí podľa dochádzky na konci mesiaca.“*).
+- Pri **finalizácii** rozhoduje dochádzka ako u ostatných: koľko jedál podľa odpracovaného času, toľko lístkov; posledné
+  jedlá nad tento počet budú za 6,00 €. Náhľad finalizácie takých brigádnikov zvýrazní (*brigádnik: 2 jedlá → 6 €*).
+- Brigádnik bez akejkoľvek dochádzky ostane pri počte objednávok (všetko 1,50 €) a v náhľade je označený *bez dochádzky* –
+  ak treba, nastavte mu počet ručne v *Lístky na mesiac*.
+
+### SZČO – pevná cena a fakturácia
+
+1. **Skupiny stravníkov → Vytvoriť**: režim **Pevná cena**, vysporiadanie **faktúra**, voliteľne *max. jedál na obed /
+   večeru za deň*.
+2. **Nastavenia → Pevné ceny → Nová pevná cena**: pre skupinu (predvolená cena) alebo pre jedného človeka, pre všetky jedlá
+   alebo len obed / večeru, s dátumom *Platí od* (dátum jedla). Platí: osobná cena pre jedlo → osobná cena → cena skupiny
+   pre jedlo → cena skupiny. Už objednané jedlá si ponechajú cenu, za ktorú boli objednané; cenu, ktorá už platí, nemožno
+   meniť – zadajte novú.
+3. V karte zamestnanca vyplňte **Fakturačné údaje** (názov, IČO, DIČ, adresa, e-mail, poznámka) – zobrazia sa, keď je
+   v skupine s fakturáciou. V karte vidíte aj pevnú cenu, ktorá mu práve platí.
+
+Pri objednávaní vidí zamestnanec svoju cenu, nemá lístky ani dokupovanú stravu; do dochádzky ani na stránku *Dochádzka* sa
+nezapočítava. **Mesačne:** *Objednávky → Exporty → Fakturácia (SZČO)* – hárok *Súhrn* (jeden riadok na osobu s fakturačnými
+údajmi, počtom obedov / večerí, cenou a sumou) a hárok *Detail* (každé jedlo, príloha k faktúre). Faktúry vystavuje
+účtovníctvo. Formát je **predbežný** – upraví sa podľa účtovníctva. Ľudia s fakturáciou **nie sú v exporte do Vemy**.
+O tom, či sa človek v mesiaci fakturuje, rozhoduje jeho skupina posledný deň mesiaca.
+
+**SZČO s povinnou stravou** (napr. SZČO v kuchyni): skupina v režime **Povinná strava** s vysporiadaním **faktúra**.
+Ak má skupina alebo človek **pevnú cenu** (*Pevné ceny*), povinná strava aj jedlá z aplikácie sa účtujú za ňu
+(povinná strava ako obed, bez dialógu o 6 €); bez pevnej ceny 1,50 € a jedlá z aplikácie 6,00 €. Fakturujú sa
+v exporte *Fakturácia* (povinná strava v stĺpci *ostatné*).
+
+**Číslo v dochádzke:** ak má niekto vo WebVisitore iné číslo ako osobné číslo v aplikácii (napr. SZČO s číslom
+z Pramenu), vyplňte v karte zamestnanca **Číslo v dochádzke (WebVisitor)** (alebo stĺpec `cislo_dochadzka` v importe).
+Dochádzka sa potom páruje podľa neho; prázdne = osobné číslo.
+
+### Zmena osobného čísla
+
+Osobné číslo sa dá zmeniť v karte zamestnanca (zmena sa zapíše do histórie). Objednávky a história ostanú – sú naviazané
+na zamestnanca, nie na číslo. **Import zamestnancov páruje podľa osobného čísla**: ak sa niekomu číslo zmenilo (napr. SZČO
+s číslom z Pramenu), zmeňte ho **najprv v karte**, až potom importujte súbor s novým číslom – inak import vytvorí nového
+človeka. Náhľad importu upozorní, ak má nové číslo rovnaké meno ako existujúci zamestnanec.
+
 ### Vema čísla
 
 Pri zamestnancovi je pole **Vema číslo** (osobné číslo vo Veme, môže sa líšiť od osobného čísla). V exporte je bez núl na
@@ -312,7 +356,8 @@ vhodné na kontingenčnú tabuľku alebo napojenie na iný systém.
 ### Export do miezd (Vema)
 
 Mesiac a formát → **Stiahnuť**. Jeden riadok na zamestnanca: `vema_cislo, priezvisko, meno, zamestnanecka_ks,
-dokupovana_ks, povinna_ks, suma_eur` (suma = objednávky + povinná strava, rovnaká ako v hárku Súhrn).
+dokupovana_ks, povinna_ks, suma_eur` (suma = objednávky + povinná strava, rovnaká ako v hárku Súhrn). Ľudia so
+skupinou s vysporiadaním faktúrou (SZČO) v ňom nie sú – pre nich je export *Fakturácia*.
 **Formát Vema je predbežný** – upraví sa podľa vzorového súboru, ktorý mzdy dnes do Vemy importujú.
 Pri otvorenom mesiaci sa najprv zobrazí upozornenie, že ide o **odhad**.
 
@@ -378,6 +423,8 @@ uzamknutia, nastavenia) vrátane dôvodu opravy. Detail záznamu ukáže hodnoty
   v aplikácii (so sebou), je za 6,00 €.
 - V časti **Môj mesiac** vidíte všetky objednávky a sumu za mesiac (pri lístkoch aj pridelené / použité / zostáva,
   pri povinnej strave jedlá podľa dochádzky).
+- **Brigádnici:** každé jedlo je počas mesiaca za 1,50 €; konečnú cenu potvrdí dochádzka na konci mesiaca.
+- **SZČO:** každé jedlo je za vašu pevnú cenu (vidíte ju pri objednaní).
   *Cena stravy je odhadom a po porovnaní s dochádzkou sa môže zmeniť* (napr. pri 8-hodinovej zmene patrí
   jedna zamestnanecká strava denne).
 

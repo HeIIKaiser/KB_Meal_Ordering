@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ClosedDays;
 
 use App\Enums\NavGroup;
+use App\Filament\Concerns\SentenceCaseLabels;
 use App\Filament\Resources\ClosedDays\Pages\ManageClosedDays;
 use App\Models\ClosedDay;
 use App\Models\MealSlot;
@@ -25,6 +26,8 @@ use UnitEnum;
 /** Days (or day + slot) without meals — holidays etc. */
 class ClosedDayResource extends Resource
 {
+    use SentenceCaseLabels;
+
     protected static ?string $model = ClosedDay::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendarDays;

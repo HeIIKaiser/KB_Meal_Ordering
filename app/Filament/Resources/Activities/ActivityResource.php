@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Activities;
 
 use App\Enums\NavGroup;
 use App\Enums\Role;
+use App\Filament\Concerns\SentenceCaseLabels;
 use App\Filament\Resources\Activities\Pages\ListActivities;
 use App\Models\Employee;
 use App\Models\MenuItem;
@@ -30,6 +31,8 @@ use UnitEnum;
 /** Read-only audit log (spatie/laravel-activitylog). Admin only. */
 class ActivityResource extends Resource
 {
+    use SentenceCaseLabels;
+
     protected static ?string $model = Activity::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedFingerPrint;

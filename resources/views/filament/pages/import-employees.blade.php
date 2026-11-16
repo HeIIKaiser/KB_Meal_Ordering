@@ -1,14 +1,15 @@
 <x-filament-panels::page>
     @php
         $labels = ['create' => 'nový', 'update' => 'zmena', 'unchanged' => 'bez zmeny'];
-        $fields = ['last_name' => 'priezvisko', 'first_name' => 'meno', 'department' => 'stredisko', 'is_active' => 'aktívny', 'group' => 'skupina', 'vema_cislo' => 'Vema č.', 'max_meals_per_day' => 'max. jedál/deň'];
+        $fields = ['last_name' => 'priezvisko', 'first_name' => 'meno', 'department' => 'stredisko', 'is_active' => 'aktívny', 'group' => 'skupina', 'vema_cislo' => 'Vema č.', 'attendance_cislo' => 'č. v dochádzke', 'max_meals_per_day' => 'max. jedál/deň', 'billing_name' => 'fakt. názov', 'ico' => 'IČO', 'dic' => 'DIČ', 'billing_address' => 'adresa', 'billing_email' => 'e-mail', 'billing_note' => 'fakt. poznámka'];
         $fmt = fn ($v) => is_bool($v) ? ($v ? 'áno' : 'nie') : ($v ?? '–');
     @endphp
 
     <x-filament::section>
         <x-slot name="heading">1. Súbor</x-slot>
         <x-slot name="description">
-            XLSX alebo CSV so stĺpcami <code>osobne_cislo</code>, <code>priezvisko</code>, <code>meno</code>, <code>stredisko</code>, <code>aktivny</code> (voliteľný), <code>skupina</code> (voliteľný – názov existujúcej skupiny stravníkov; zmena platí od 1. dňa budúceho mesiaca, prázdne = bez zmeny), <code>vema_cislo</code> a <code>max_jedal_za_den</code> (1, 2 alebo „-“ = bez obmedzenia; voliteľné).
+            XLSX alebo CSV so stĺpcami <code>osobne_cislo</code>, <code>priezvisko</code>, <code>meno</code>, <code>stredisko</code>, <code>aktivny</code> (voliteľný), <code>skupina</code> (voliteľný – názov existujúcej skupiny stravníkov; zmena platí od 1. dňa budúceho mesiaca, prázdne = bez zmeny), <code>vema_cislo</code>, <code>cislo_dochadzka</code> (ak sa číslo vo WebVisitore líši od osobného) a <code>max_jedal_za_den</code> (1, 2 alebo „-“ = bez obmedzenia; voliteľné), pre SZČO <code>fakturacny_nazov</code>, <code>ico</code>, <code>dic</code>, <code>adresa</code>, <code>email</code>, <code>fakturacna_poznamka</code>.
+            <strong>Párovanie je podľa osobného čísla</strong> – ak sa niekomu zmenilo, zmeňte ho najprv v karte zamestnanca, inak import vytvorí nového človeka.
             Zamestnanci sa párujú podľa osobného čísla; nikto sa nemaže.
             <a href="{{ route('admin.template', 'zamestnanci') }}" class="font-semibold text-primary-600 underline">Stiahnuť šablónu</a>
         </x-slot>
@@ -36,6 +37,17 @@
                 chýb: <strong @class(['text-danger-600' => count($preview['errors'])])>{{ count($preview['errors']) }}</strong>
                 (riadky s chybou sa preskočia)
             </x-slot>
+
+            @if ($preview['warnings'] ?? [])
+                <div class="mb-4 rounded-lg border border-warning-300 bg-warning-50 p-3 text-sm dark:bg-warning-950">
+                    <p class="mb-1 font-semibold">Upozornenia</p>
+                    <ul class="list-disc pl-5">
+                        @foreach ($preview['warnings'] as $w)
+                            <li>Riadok {{ $w['line'] }}: {{ $w['message'] }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
 
             @if ($preview['errors'])
                 <div class="mb-4 rounded-lg border border-danger-300 bg-danger-50 p-3 text-sm dark:bg-danger-950">

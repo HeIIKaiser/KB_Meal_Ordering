@@ -2,8 +2,11 @@
 
 namespace App\Domain\Exports;
 
+use App\Domain\Tickets\EmployeeCalendar;
+use App\Domain\Tickets\Month;
 use App\Enums\OrderStatus;
 use App\Enums\PricingMode;
+use App\Models\Employee;
 use App\Models\MandatoryMeal;
 use App\Models\Order;
 use App\Support\LocalTime;
@@ -25,10 +28,22 @@ class OrderListExport
 {
     public const COLUMNS = [
         'datum', 'jedlo', 'osobne_cislo', 'priezvisko', 'meno', 'stredisko', 'menu_cislo', 'menu_nazov',
-        'typ', 'cena', 'stav', 'vytvorene', 'zrusene', 'vytvoril', 'rezim',
+        'typ', 'cena', 'stav', 'vytvorene', 'zrusene', 'vytvoril', 'rezim', 'vysporiadanie',
     ];
 
     public const MAX_DAYS = 366;
+
+    /** @var array<string, string> "employeeId|YYYY-MM" → mzdy|faktura */
+    private array $settlements = [];
+
+    /** Invoice or payroll, by the employee's group on the last day of the meal's month. */
+    private function settlement(int $employeeId, \DateTimeInterface $date): string
+    {
+        $month = Month::of($date);
+
+        return $this->settlements[$employeeId.'|'.$month] ??= (EmployeeCalendar::for(Employee::query()->findOrFail($employeeId))
+            ->groupOn(Month::last($month))?->isInvoiced() ? 'faktura' : 'mzdy');
+    }
 
     public function xlsx(CarbonImmutable $from, CarbonImmutable $to): string
     {
@@ -38,7 +53,7 @@ class OrderListExport
         $sheet = $writer->getCurrentSheet();
         $sheet->setName('Objednávky');
         $sheet->setSheetView((new SheetView)->setFreezeRow(2));
-        foreach ([1 => 11, 2 => 9, 3 => 12, 4 => 16, 5 => 14, 6 => 16, 7 => 7, 8 => 36, 9 => 10, 10 => 9, 11 => 9, 12 => 18, 13 => 18, 14 => 16, 15 => 8] as $col => $w) {
+        foreach ([1 => 11, 2 => 9, 3 => 12, 4 => 16, 5 => 14, 6 => 16, 7 => 7, 8 => 36, 9 => 10, 10 => 9, 11 => 9, 12 => 18, 13 => 18, 14 => 16, 15 => 8, 16 => 12] as $col => $w) {
             $sheet->setColumnWidth($w, $col);
         }
 
@@ -64,6 +79,7 @@ class OrderListExport
                 $r['zrusene'] ? Cell::fromValue($r['zrusene'], $dateTime) : Cell::fromValue(''),
                 Cell::fromValue($r['vytvoril']),
                 Cell::fromValue($r['rezim']),
+                Cell::fromValue($r['vysporiadanie']),
             ]));
         }
 
@@ -83,7 +99,7 @@ class OrderListExport
             fputcsv($fh, [
                 $r['datum']->format('Y-m-d'), $r['jedlo'], $r['osobne_cislo'], $r['priezvisko'], $r['meno'], $r['stredisko'],
                 $r['menu_cislo'], $r['menu_nazov'], $r['typ'], number_format($r['cena_cents'] / 100, 2, ',', ''), $r['stav'],
-                $r['vytvorene']->format('Y-m-d H:i:s'), $r['zrusene']?->format('Y-m-d H:i:s') ?? '', $r['vytvoril'], $r['rezim'],
+                $r['vytvorene']->format('Y-m-d H:i:s'), $r['zrusene']?->format('Y-m-d H:i:s') ?? '', $r['vytvoril'], $r['rezim'], $r['vysporiadanie'],
             ], ';', '"', '');
         }
 
@@ -120,7 +136,7 @@ class OrderListExport
             ->select([
                 'orders.date', 'orders.unit_price_cents', 'orders.pricing_mode', 'orders.status', 'orders.created_at', 'orders.cancelled_at',
                 'meal_slots.code as slot_code', 'employees.osobne_cislo', 'employees.last_name', 'employees.first_name',
-                'employees.department', 'menu_items.number', 'menu_items.name as dish', 'price_types.code as type_code',
+                'employees.department', 'orders.employee_id', 'menu_items.number', 'menu_items.name as dish', 'price_types.code as type_code',
                 'users.name as created_by',
             ])
             ->cursor();
@@ -136,7 +152,7 @@ class OrderListExport
                 'menu_cislo' => (int) $o->number,
                 'menu_nazov' => $o->dish,
                 'typ' => match ($o->type_code) {
-                    'donated' => 'zamestnanecka', 'extra' => 'dokupovana', default => $o->type_code
+                    'donated' => 'zamestnanecka', 'extra' => 'dokupovana', 'fixed' => 'pevna', default => $o->type_code
                 },
                 'cena_cents' => (int) $o->unit_price_cents,
                 'stav' => $o->status === OrderStatus::Active->value ? 'aktivna' : 'zrusena',
@@ -144,6 +160,7 @@ class OrderListExport
                 'zrusene' => $o->cancelled_at ? LocalTime::toLocal(CarbonImmutable::parse($o->cancelled_at, 'UTC')) : null,
                 'vytvoril' => $o->created_by ?? 'sám',
                 'rezim' => PricingMode::from($o->pricing_mode)->exportCode(),
+                'vysporiadanie' => $this->settlement((int) $o->employee_id, LocalTime::date($o->date)),
             ];
         }
 
@@ -171,6 +188,7 @@ class OrderListExport
                     'zrusene' => null,
                     'vytvoril' => $m->source === MandatoryMeal::SOURCE_FINAL ? 'dochádzka (konečná)' : 'dochádzka (odhad)',
                     'rezim' => 'povinna',
+                    'vysporiadanie' => $this->settlement($m->employee_id, $m->date),
                 ];
             }
         }

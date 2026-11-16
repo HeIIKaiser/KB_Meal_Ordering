@@ -63,6 +63,7 @@
                                     @if ($r['flags']['not_locked'])<div class="text-warning-600">dochádzka neuzamknutá</div>@endif
                                     @if ($r['flags']['no_data'])<div class="text-danger-600">bez dochádzky</div>@endif
                                     @if ($r['flags']['manual_override'])<div>individuálny počet ponechaný</div>@endif
+                                    @if (($r['flags']['orders_estimate'] ?? false) && ($r['flags']['to_extra'] ?? 0))<div class="font-semibold text-danger-600">brigádnik: {{ $r['flags']['to_extra'] }} {{ $r['flags']['to_extra'] === 1 ? 'jedlo' : ($r['flags']['to_extra'] <= 4 ? 'jedlá' : 'jedál') }} → 6 €</div>@endif
                                 </td>
                             </tr>
                         @empty

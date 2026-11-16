@@ -120,7 +120,7 @@ class MonthlyMatrixXlsx
 
             // employee header row with day-of-week
             $cells = [
-                Cell::fromValue($e->fullNameReversed().' (osobné č. '.$e->osobne_cislo.')'.($entry['group'] ? ' – '.$entry['group'] : ''), $bold),
+                Cell::fromValue($e->fullNameReversed().' (osobné č. '.$e->osobne_cislo.')'.($entry['group'] ? ' – '.$entry['group'] : '').($entry['settlement'] === 'faktura' ? ' – faktúra' : ''), $bold),
                 Cell::fromValue($monthLabel, $bold),
             ];
             for ($d = 1; $d <= $days; $d++) {
@@ -137,6 +137,17 @@ class MonthlyMatrixXlsx
                 }
                 $cells[] = Cell::fromValue(MonthlyData::count($entry, $typeId, $slotId), $bold);
                 $cells[] = Cell::fromValue(MonthlyData::cents($entry, $typeId, $slotId) / 100, $money);
+                $writer->addRow(new Row($cells));
+            }
+
+            // fixed price (self-employed)
+            if (MonthlyData::fixedCount($entry) > 0) {
+                $cells = [Cell::fromValue('', $plain), Cell::fromValue('Pevná cena', $plain)];
+                for ($d = 1; $d <= $days; $d++) {
+                    $cells[] = Cell::fromValue(MonthlyData::fixedCount($entry, $d), $weekend[$d] ? $shade : $day);
+                }
+                $cells[] = Cell::fromValue(MonthlyData::fixedCount($entry), $bold);
+                $cells[] = Cell::fromValue(MonthlyData::fixedCents($entry) / 100, $money);
                 $writer->addRow(new Row($cells));
             }
 
@@ -190,7 +201,7 @@ class MonthlyMatrixXlsx
         $titles[] = 'Suma €';
         $numeric = count($titles);
         array_push($titles, 'Skupina', 'Režim', 'Lístky pridelené', 'Lístky použité', 'Lístky prepadnuté',
-            'Povinná strava ks', 'Povinná strava €', 'Zdroj lístkov', 'Vema číslo');
+            'Povinná strava ks', 'Povinná strava €', 'Zdroj lístkov', 'Vema číslo', 'Pevná cena ks', 'Pevná cena €', 'Vysporiadanie');
 
         $sheet->setColumnWidth(13, 1);
         $sheet->setColumnWidth(18, 2, 3, 4);
@@ -200,6 +211,8 @@ class MonthlyMatrixXlsx
         $totals = array_fill(0, count($titles), 0);
         $mandatoryTotal = 0;
         $mandatoryCents = 0;
+        $fixedTotal = 0;
+        $fixedCents = 0;
 
         foreach ($data->employees as $entry) {
             $e = $entry['employee'];
@@ -237,7 +250,12 @@ class MonthlyMatrixXlsx
                 Cell::fromValue($entry['mandatory_cents'] / 100, $money),
                 Cell::fromValue($entry['ticket_source'] ?? ''),
                 ($v = VemaNumbers::export($entry['employee']->vema_cislo)) === null ? Cell::fromValue('') : Cell::fromValue($v),
+                Cell::fromValue(MonthlyData::fixedCount($entry)),
+                Cell::fromValue(MonthlyData::fixedCents($entry) / 100, $money),
+                Cell::fromValue($entry['settlement']),
             );
+            $fixedTotal += MonthlyData::fixedCount($entry);
+            $fixedCents += MonthlyData::fixedCents($entry);
             $writer->addRow(new Row($cells));
         }
 
@@ -248,7 +266,8 @@ class MonthlyMatrixXlsx
             $cells[] = Cell::fromValue($isMoney ? $totals[$i] / 100 : $totals[$i], $isMoney ? $moneyBold : $bold);
         }
         array_push($cells, Cell::fromValue(''), Cell::fromValue(''), Cell::fromValue(''), Cell::fromValue(''), Cell::fromValue(''),
-            Cell::fromValue($mandatoryTotal, $bold), Cell::fromValue($mandatoryCents / 100, $moneyBold));
+            Cell::fromValue($mandatoryTotal, $bold), Cell::fromValue($mandatoryCents / 100, $moneyBold),
+            Cell::fromValue(''), Cell::fromValue(''), Cell::fromValue($fixedTotal, $bold), Cell::fromValue($fixedCents / 100, $moneyBold));
         $writer->addRow(new Row($cells));
 
         // Below the data (row 1 stays the header for imports)

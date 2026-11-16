@@ -3,27 +3,35 @@
 namespace App\Filament\Resources\Employees;
 
 use App\Domain\Employees\PinIssuer;
+use App\Domain\Ordering\FixedPriceResolver;
 use App\Domain\Ordering\OrderingException;
 use App\Domain\Tickets\EmployeeCalendar;
 use App\Domain\Tickets\MealGroupService;
 use App\Enums\NavGroup;
+use App\Enums\PricingMode;
+use App\Filament\Concerns\SentenceCaseLabels;
 use App\Filament\Resources\Employees\Pages\CreateEmployee;
 use App\Filament\Resources\Employees\Pages\EditEmployee;
 use App\Filament\Resources\Employees\Pages\ListEmployees;
+use App\Filament\Resources\FixedPrices\FixedPriceResource;
 use App\Filament\Resources\MealGroups\MealGroupResource;
 use App\Models\Employee;
 use App\Models\MealGroup;
+use App\Models\MealSlot;
 use App\Models\User;
 use App\Support\LocalTime;
+use App\Support\Money;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -34,10 +42,13 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\HtmlString;
 use UnitEnum;
 
 class EmployeeResource extends Resource
 {
+    use SentenceCaseLabels;
+
     protected static ?string $model = Employee::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUsers;
@@ -67,6 +78,13 @@ class EmployeeResource extends Resource
                 ->helperText('Osobné číslo v mzdovom systéme Vema (len číslice; v exporte bez núl na začiatku).')
                 ->regex('/^\d{1,16}$/')
                 ->validationMessages(['regex' => 'Vema číslo môže obsahovať len číslice.'])
+                ->unique(ignoreRecord: true)
+                ->maxLength(16),
+            TextInput::make('attendance_cislo')
+                ->label('Číslo v dochádzke (WebVisitor)')
+                ->helperText('Len ak sa líši od osobného čísla (napr. SZČO s číslom z Pramenu). Prázdne = osobné číslo.')
+                ->regex('/^\d{1,16}$/')
+                ->validationMessages(['regex' => 'Číslo v dochádzke môže obsahovať len číslice.'])
                 ->unique(ignoreRecord: true)
                 ->maxLength(16),
             TextInput::make('last_name')->label('Priezvisko')->required()->maxLength(100),
@@ -100,6 +118,24 @@ class EmployeeResource extends Resource
                 ->live()
                 ->visible(fn () => MealGroup::query()->exists())
                 ->helperText(fn (Get $get, ?Employee $record) => static::groupChangeHint($record, $get('meal_group_id'), $get('group_from'))),
+            Placeholder::make('fixed_price')
+                ->label('Pevná cena')
+                ->visible(fn (?Employee $record) => $record && EmployeeCalendar::for($record)->modeOn(LocalTime::today()) === PricingMode::Fixed)
+                ->content(fn (?Employee $record) => static::fixedPriceText($record)),
+            Section::make('Fakturačné údaje')
+                ->description('Pre skupiny s vysporiadaním faktúrou (SZČO). Vypisujú sa do exportu Fakturácia.')
+                ->visible(fn (Get $get, ?Employee $record) => ($get('meal_group_id') && MealGroup::query()->find($get('meal_group_id'))?->isInvoiced())
+                    || ($record && filled($record->billing_name.$record->ico.$record->dic.$record->billing_address.$record->billing_email)))
+                ->columns(2)
+                ->columnSpanFull()
+                ->schema([
+                    TextInput::make('billing_name')->label('Fakturačný názov')->maxLength(150),
+                    TextInput::make('billing_email')->label('E-mail pre faktúry')->email()->maxLength(150),
+                    TextInput::make('ico')->label('IČO')->regex('/^\d{6,8}$/')->validationMessages(['regex' => 'IČO má 6 až 8 číslic.'])->maxLength(8),
+                    TextInput::make('dic')->label('DIČ')->regex('/^\d{10}$/')->validationMessages(['regex' => 'DIČ má 10 číslic.'])->maxLength(10),
+                    TextInput::make('billing_address')->label('Adresa')->maxLength(255)->columnSpanFull(),
+                    TextInput::make('billing_note')->label('Poznámka k fakturácii')->maxLength(255)->columnSpanFull(),
+                ]),
             Select::make('user_id')
                 ->label('Prepojený účet správcu')
                 ->helperText('Len ak má zamestnanec aj prístup do správy (kuchyňa, mzdy, admin).')
@@ -187,6 +223,19 @@ class EmployeeResource extends Resource
                     ->action(fn (Collection $records) => static::issueAndPrint($records))
                     ->deselectRecordsAfterCompletion(),
             ]);
+    }
+
+    /** "Obed 5,00 € · Večera 5,00 € (osobná cena)" + link to Pevné ceny. */
+    public static function fixedPriceText(?Employee $record): HtmlString
+    {
+        $resolver = app(FixedPriceResolver::class);
+        $parts = MealSlot::query()->active()->ordered()->get()->map(function (MealSlot $slot) use ($record, $resolver) {
+            $p = $resolver->find($record, LocalTime::today(), $slot);
+
+            return $slot->name.' '.($p ? Money::format($p->amount_cents).($p->employee_id ? ' (osobná)' : '') : '– nie je nastavená');
+        })->join(' · ');
+
+        return new HtmlString(e($parts).' · <a class="font-semibold text-primary-600 underline" href="'.e(FixedPriceResource::getUrl()).'">Pevné ceny</a>');
     }
 
     /** @return array<int, string> active groups, plus the employee's current one even if inactive */

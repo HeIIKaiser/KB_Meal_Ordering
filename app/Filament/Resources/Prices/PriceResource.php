@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Prices;
 
 use App\Domain\Ordering\PriceResolver;
 use App\Enums\NavGroup;
+use App\Filament\Concerns\SentenceCaseLabels;
 use App\Filament\Resources\Prices\Pages\ManagePrices;
 use App\Models\Price;
 use App\Models\PriceType;
@@ -33,6 +34,8 @@ use UnitEnum;
  */
 class PriceResource extends Resource
 {
+    use SentenceCaseLabels;
+
     protected static ?string $model = Price::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCurrencyEuro;
@@ -52,7 +55,7 @@ class PriceResource extends Resource
         return $schema->components([
             Select::make('price_type_id')
                 ->label('Typ')
-                ->options(fn () => PriceType::query()->orderBy('sort')->pluck('name', 'id'))
+                ->options(fn () => PriceType::query()->standard()->orderBy('sort')->pluck('name', 'id'))
                 ->required()
                 ->disabledOn('edit'),
             TextInput::make('amount_cents')
@@ -89,13 +92,14 @@ class PriceResource extends Resource
         return $table
             ->modifyQueryUsing(fn ($query) => $query->with(['priceType']))
             ->defaultSort('valid_from', 'desc')
-            ->description(fn () => 'Aktuálne: '.PriceType::query()->orderBy('sort')->get()
+            ->modifyQueryUsing(fn ($query) => $query->whereIn('price_type_id', PriceType::query()->standard()->pluck('id')))
+            ->description(fn () => 'Aktuálne: '.PriceType::query()->standard()->orderBy('sort')->get()
                 ->map(fn (PriceType $t) => $t->name.' '.Money::format(app(PriceResolver::class)->current($t, LocalTime::today())?->amount_cents ?? 0))
                 ->join(' · '))
             ->columns([
                 TextColumn::make('priceType.name')->label('Typ'),
                 TextColumn::make('amount_cents')->label('Cena')->formatStateUsing(fn (int $state) => Money::format($state)),
-                TextColumn::make('valid_from')->label('Platí od')->date('j. n. Y')->sortable(),
+                TextColumn::make('valid_from')->label('Platí od')->date('j. n. Y', LocalTime::zone())->sortable(),
                 TextColumn::make('status')
                     ->label('Stav')
                     ->badge()
@@ -112,7 +116,7 @@ class PriceResource extends Resource
                 TextColumn::make('created_at')->label('Zadané')->dateTime('j. n. Y H:i', LocalTime::zone())->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                SelectFilter::make('price_type_id')->label('Typ')->relationship('priceType', 'name'),
+                SelectFilter::make('price_type_id')->label('Typ')->relationship('priceType', 'name', fn ($query) => $query->standard()),
             ])
             ->recordActions([
                 EditAction::make(),

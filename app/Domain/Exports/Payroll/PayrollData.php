@@ -7,7 +7,7 @@ use App\Models\PriceType;
 use Illuminate\Support\Collection;
 
 /**
- * Payroll numbers for a month, built from MonthlyData so they always equal the
+ * Payroll numbers for a month (payroll settlement only), built from MonthlyData so they always equal the
  * monthly matrix (same counts, same € incl. mandatory charges).
  */
 final class PayrollData
@@ -35,6 +35,9 @@ final class PayrollData
             ))
             ->filter(fn (PayrollRow $r) => $r->totalCents > 0)
             ->values();
+        // Invoiced people (self-employed) never go to payroll (docs/CATEGORIES.md §4).
+        $invoiced = $data->employees->filter(fn (array $e) => $e['settlement'] === 'faktura')->map(fn ($e) => $e['employee']->id)->all();
+        $rows = $rows->reject(fn (PayrollRow $r) => in_array($r->employee->id, $invoiced, true))->values();
 
         return new self($month, $data->closed, $rows);
     }

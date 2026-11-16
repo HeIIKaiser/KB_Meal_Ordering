@@ -272,3 +272,22 @@ Uzavrieť → Vema export.
 - **Still open**: the real Vema sample, to replace the provisional columns. Check `vis_monthatt.PERIOD` and the shift
   name column on the real data (the bridge logs both).
 
+### Temps and self-employed (2026-11-17)
+
+Spec `docs/CATEGORIES.md`.
+
+- **Brigádnici**: group setting *Odhad podľa objednávok*. Every order is 1,50 € during the month; attendance decides at
+  finalisation, and the preview flags meals moving to 6 €.
+- **SZČO**:
+  - pricing mode *Pevná cena* with *Nastavenia → Pevné ceny* (group or person, one meal or all, versioned by date),
+    snapshotted on the order, optional cap;
+  - group setting *Vysporiadanie: faktúra*: these people are not in the Vema export;
+  - new export *Fakturácia – predbežný formát* (Súhrn with billing details + Detail);
+  - billing details on the employee and in the import.
+- **Osobné číslo**: change it in the admin; the import warns about a new number with an existing name.
+- **Fixes**: „Platí od“ dates showed one day early on *Ceny*; headings in sentence case.
+- **Tests**: 375 green on MariaDB (2 MySQL-only skipped on SQLite).
+- **Deploy**: `bash deploy/update.sh` (one migration).
+- Follow-up: SZČO can also be in mandatory mode (*Povinná strava* + *faktúra*), charged at their fixed price when one is
+  set; new employee field *Číslo v dochádzke* for people whose WebVisitor number differs from osobné číslo.
+

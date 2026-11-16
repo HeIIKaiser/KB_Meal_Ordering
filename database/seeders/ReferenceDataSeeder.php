@@ -33,6 +33,9 @@ class ReferenceDataSeeder extends Seeder
             'name' => 'Dokupovaná strava', 'sort' => 20, 'per_slot_daily_limit' => null, // null = setting max_extra_per_slot
         ]);
 
+        // Fixed-price mode (self-employed); its prices live in fixed_prices, not in the price list.
+        PriceType::query()->firstOrCreate(['code' => PriceType::FIXED], ['name' => 'Pevná cena', 'sort' => 30, 'per_slot_daily_limit' => null]);
+
         if (! $donated->prices()->exists()) {
             Price::query()->create(['price_type_id' => $donated->id, 'amount_cents' => 150, 'valid_from' => '2000-01-01']);
         }

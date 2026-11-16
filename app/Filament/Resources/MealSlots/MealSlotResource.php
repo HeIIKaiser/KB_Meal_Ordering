@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\MealSlots;
 
 use App\Enums\NavGroup;
+use App\Filament\Concerns\SentenceCaseLabels;
 use App\Filament\Resources\MealSlots\Pages\ManageMealSlots;
 use App\Models\MealSlot;
 use BackedEnum;
@@ -22,6 +23,8 @@ use UnitEnum;
 /** Meal slots (Obed, Večera, …) with their automatic ordering cutoff. */
 class MealSlotResource extends Resource
 {
+    use SentenceCaseLabels;
+
     protected static ?string $model = MealSlot::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClock;
