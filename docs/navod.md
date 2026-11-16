@@ -286,6 +286,15 @@ nezapočítava. **Mesačne:** *Objednávky → Exporty → Fakturácia (SZČO)* 
 účtovníctvo. Formát je **predbežný** – upraví sa podľa účtovníctva. Ľudia s fakturáciou **nie sú v exporte do Vemy**.
 O tom, či sa človek v mesiaci fakturuje, rozhoduje jeho skupina posledný deň mesiaca.
 
+**SZČO s povinnou stravou** (napr. SZČO v kuchyni): skupina v režime **Povinná strava** s vysporiadaním **faktúra**.
+Ak má skupina alebo človek **pevnú cenu** (*Pevné ceny*), povinná strava aj jedlá z aplikácie sa účtujú za ňu
+(povinná strava ako obed, bez dialógu o 6 €); bez pevnej ceny 1,50 € a jedlá z aplikácie 6,00 €. Fakturujú sa
+v exporte *Fakturácia* (povinná strava v stĺpci *ostatné*).
+
+**Číslo v dochádzke:** ak má niekto vo WebVisitore iné číslo ako osobné číslo v aplikácii (napr. SZČO s číslom
+z Pramenu), vyplňte v karte zamestnanca **Číslo v dochádzke (WebVisitor)** (alebo stĺpec `cislo_dochadzka` v importe).
+Dochádzka sa potom páruje podľa neho; prázdne = osobné číslo.
+
 ### Zmena osobného čísla
 
 Osobné číslo sa dá zmeniť v karte zamestnanca (zmena sa zapíše do histórie). Objednávky a história ostanú – sú naviazané

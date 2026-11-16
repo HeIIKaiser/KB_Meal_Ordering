@@ -97,7 +97,7 @@ class AttendanceStatus extends Page
         $calculator = app(AttendanceCalculator::class);
         $rows = $roster->map(function ($r) use ($days, $results, $alloc, $calculator) {
             $e = $r['employee'];
-            $mine = ($days[Employee::attendanceNumber($e->osobne_cislo)] ?? collect())->keyBy(fn ($d) => $d->date->toDateString());
+            $mine = ($days[$e->attendanceKey()] ?? collect())->keyBy(fn ($d) => $d->date->toDateString());
             $res = $results[$e->id] ?? null;
 
             return [

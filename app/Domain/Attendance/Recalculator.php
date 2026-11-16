@@ -2,6 +2,7 @@
 
 namespace App\Domain\Attendance;
 
+use App\Domain\Ordering\FixedPriceResolver;
 use App\Domain\Ordering\PriceResolver;
 use App\Domain\Tickets\EmployeeCalendar;
 use App\Domain\Tickets\Month;
@@ -27,6 +28,7 @@ class Recalculator
         private Repricer $repricer,
         private PriceResolver $prices,
         private EmployeeMatcher $matcher,
+        private FixedPriceResolver $fixedPrices,
     ) {}
 
     /** Live estimate after a sync / the nightly recompute. A finalised month keeps its final values. */
@@ -49,7 +51,7 @@ class Recalculator
             ])->save();
 
             if (! $result->isFinal()) {
-                $this->replaceMandatory($employee, $month, $e->hasData ? $e->mandatory : [], MandatoryMeal::SOURCE_ESTIMATE);
+                $this->replaceMandatory($employee, $month, $e->hasData ? $e->mandatory : [], MandatoryMeal::SOURCE_ESTIMATE, $calendar);
             }
 
             return $this->repricer->reprice($employee, $month, 'attendance', $causer, $calendar);
@@ -85,7 +87,7 @@ class Recalculator
                 'finalized_at' => now(),
                 'finalized_by_user_id' => $by?->getKey(),
             ]);
-            $this->replaceMandatory($employee, $month, $final->mandatory, MandatoryMeal::SOURCE_FINAL);
+            $this->replaceMandatory($employee, $month, $final->mandatory, MandatoryMeal::SOURCE_FINAL, $calendar);
 
             return $this->repricer->reprice($employee, $month, 'attendance_final', $by, $calendar);
         });
@@ -101,7 +103,8 @@ class Recalculator
     }
 
     /** @param array<string, int> $perDay */
-    private function replaceMandatory(Employee $employee, string $month, array $perDay, string $source): void
+    /** Charged at the person's fixed price if one is set (e.g. self-employed), else the employee price. */
+    private function replaceMandatory(Employee $employee, string $month, array $perDay, string $source, EmployeeCalendar $calendar): void
     {
         MandatoryMeal::query()->where('employee_id', $employee->id)
             ->whereBetween('date', [Month::first($month)->toDateString(), Month::last($month)->toDateString()])
@@ -113,7 +116,7 @@ class Recalculator
                 'employee_id' => $employee->id,
                 'date' => $date,
                 'count' => $count,
-                'unit_price_cents' => $this->prices->amountFor($type, $date),
+                'unit_price_cents' => $this->fixedPrices->forMandatoryMeal($employee, $date, $calendar) ?? $this->prices->amountFor($type, $date),
                 'source' => $source,
             ]);
         }

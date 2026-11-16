@@ -288,4 +288,6 @@ Spec `docs/CATEGORIES.md`.
 - **Fixes**: „Platí od“ dates showed one day early on *Ceny*; headings in sentence case.
 - **Tests**: 375 green on MariaDB (2 MySQL-only skipped on SQLite).
 - **Deploy**: `bash deploy/update.sh` (one migration).
+- Follow-up: SZČO can also be in mandatory mode (*Povinná strava* + *faktúra*), charged at their fixed price when one is
+  set; new employee field *Číslo v dochádzke* for people whose WebVisitor number differs from osobné číslo.
 

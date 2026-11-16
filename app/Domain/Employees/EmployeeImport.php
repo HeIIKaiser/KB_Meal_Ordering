@@ -18,7 +18,7 @@ use Illuminate\Support\Str;
  *
  * Recognised columns (header names, diacritics/case ignored):
  *   osobne_cislo (required), priezvisko, meno, stredisko | oddelenie, aktivny (áno/nie, 1/0),
- *   vema_cislo (digits), max_jedal_za_den (1, 2 or "-" = no cap),
+ *   vema_cislo (digits), cislo_dochadzka (WebVisitor number if it differs), max_jedal_za_den (1, 2 or "-" = no cap),
  *   fakturacny_nazov, ico, dic, adresa, email, fakturacna_poznamka (billing, SZČO),
  * A NEW osobné číslo with the name of an existing employee gets a warning: if a number
  * changed, change it in the admin first — the import matches by osobné číslo.
@@ -35,6 +35,7 @@ class EmployeeImport
         'is_active' => ['aktivny', 'aktivna', 'active', 'is_active'],
         'group' => ['skupina', 'skupina_stravnikov', 'group'],
         'vema_cislo' => ['vema_cislo', 'vema', 'cislo_vema'],
+        'attendance_cislo' => ['cislo_dochadzka', 'dochadzka_cislo', 'cislo_v_dochadzke', 'attendance_cislo'],
         'max_meals_per_day' => ['max_jedal_za_den', 'max_jedal', 'max_meals_per_day'],
         'billing_name' => ['fakturacny_nazov', 'billing_name'],
         'ico' => ['ico'],
@@ -56,6 +57,7 @@ class EmployeeImport
     {
         $existing = Employee::query()->with('groupMemberships.group.modes')->get()->keyBy('osobne_cislo');
         $groups = MealGroup::query()->get()->keyBy(fn (MealGroup $g) => mb_strtolower(trim($g->name)));
+        $attendanceOwners = $existing->filter(fn (Employee $e) => $e->attendance_cislo !== null)->mapWithKeys(fn (Employee $e) => [$e->attendance_cislo => $e->osobne_cislo]);
         $byName = $existing->groupBy(fn (Employee $e) => $this->nameKey($e->last_name, $e->first_name));
         $warnings = [];
         $vemaOwners = $existing->filter(fn (Employee $e) => $e->vema_cislo !== null)->mapWithKeys(fn (Employee $e) => [$e->vema_cislo => $e->osobne_cislo]);
@@ -107,6 +109,15 @@ class EmployeeImport
                     $messages[] = "Vema číslo $vema už má zamestnanec $other.";
                 } else {
                     $data['vema_cislo'] = $vema;
+                }
+            }
+            if (($att = $this->clean($v['attendance_cislo'])) !== null) {
+                if (! preg_match('/^\d{1,16}$/', $att)) {
+                    $messages[] = 'Číslo v dochádzke môže obsahovať len číslice.';
+                } elseif (($other = $attendanceOwners[$att] ?? null) && $other !== $number) {
+                    $messages[] = "Číslo v dochádzke $att už má zamestnanec $other.";
+                } else {
+                    $data['attendance_cislo'] = $att;
                 }
             }
             $max = $this->clean($v['max_meals_per_day']);

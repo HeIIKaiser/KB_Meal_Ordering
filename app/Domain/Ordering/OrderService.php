@@ -68,7 +68,7 @@ class OrderService
             return $this->ticketQuote($employee, $date, $calendar);
         }
         if ($calendar->modeOn($date) === PricingMode::Mandatory) {
-            return $this->mandatoryQuote($date);
+            return $this->mandatoryQuote($employee, $date, $slot, $calendar);
         }
         if ($calendar->modeOn($date) === PricingMode::Fixed) {
             return $this->fixedQuote($employee, $date, $slot, $calendar);
@@ -104,7 +104,7 @@ class OrderService
             $mode = $calendar->modeOn($menu->date);
             $quote = match ($mode) {
                 PricingMode::Tickets => $this->ticketQuote($employee, $menu->date, $calendar),
-                PricingMode::Mandatory => $this->mandatoryQuote($menu->date),
+                PricingMode::Mandatory => $this->mandatoryQuote($employee, $menu->date, $slot, $calendar),
                 PricingMode::Fixed => $this->fixedQuote($employee, $menu->date, $slot, $calendar),
                 default => $this->nextQuote($this->activeCounts($employee, $menu->date, $slot), $menu->date, $slot),
             };
@@ -341,9 +341,15 @@ class OrderService
         return new PriceQuote(PriceType::byCode(PriceType::FIXED), $this->fixedPrices->amount($employee, $date, $slot, $calendar));
     }
 
-    /** Mandatory mode: every meal ordered in the app is take-home food at the full price. */
-    private function mandatoryQuote(DateTimeInterface|string $date): PriceQuote
+    /**
+     * Mandatory mode: every meal ordered in the app is take-home food at the full price —
+     * or at the person's fixed price if one is set (e.g. self-employed), without a dialog.
+     */
+    private function mandatoryQuote(Employee $employee, DateTimeInterface|string $date, MealSlot $slot, EmployeeCalendar $calendar): PriceQuote
     {
+        if ($fixed = $this->fixedPrices->find($employee, $date, $slot, $calendar)) {
+            return new PriceQuote(PriceType::byCode(PriceType::FIXED), $fixed->amount_cents, mandatory: true);
+        }
         $type = PriceType::byCode(PriceType::EXTRA);
 
         return new PriceQuote($type, $this->prices->amountFor($type, $date), mandatory: true);

@@ -39,6 +39,17 @@ class FixedPriceResolver
         return null;
     }
 
+    /**
+     * Price of an automatic mandatory meal (povinná strava) when the person/group has a
+     * fixed price: priced like a lunch (lunch price → all-meals price). Null = no fixed price.
+     */
+    public function forMandatoryMeal(Employee $employee, DateTimeInterface|string $date, ?EmployeeCalendar $calendar = null): ?int
+    {
+        $lunch = MealSlot::query()->where('code', MealSlot::LUNCH)->first();
+
+        return $lunch ? $this->find($employee, $date, $lunch, $calendar)?->amount_cents : null;
+    }
+
     public function amount(Employee $employee, DateTimeInterface|string $date, MealSlot $slot, ?EmployeeCalendar $calendar = null): int
     {
         return $this->find($employee, $date, $slot, $calendar)?->amount_cents

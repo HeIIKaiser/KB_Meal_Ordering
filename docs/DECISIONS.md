@@ -294,4 +294,11 @@ Spec: `docs/CATEGORIES.md`. Roman approved the plan, including answers 1–5 bel
 - **2026-11-17 — Temps (estimate by orders) and self-employed (fixed price, invoice)** (Roman's spec
   `docs/CATEGORIES.md`, plan approved with answers 1–5 as proposed). The Fakturácia format stays provisional until
   accounting says what they need.
+- **2026-11-17 — SZČO in mandatory mode; attendance number** (Roman). Pricing mode and settlement are independent, so
+  „SZČO – kuchyňa“ = *Povinná strava* + *faktúra*. If the person or group has a **fixed price**, automatic mandatory
+  meals are charged at it (priced like a lunch: lunch price → all-meals price), and app orders in mandatory mode get the
+  fixed price without the 6 € dialog; otherwise 1,50 € / 6,00 € as before. Orders already in mandatory mode keep their
+  snapshot; only orders coming from another mode are priced. New optional employee field `attendance_cislo` („Číslo
+  v dochádzke“, digits, unique; import column `cislo_dochadzka`): WebVisitor data is paired by it when set, otherwise by
+  osobné číslo. An attendance number equal to another person's osobné číslo is a conflict (neither is updated).
 

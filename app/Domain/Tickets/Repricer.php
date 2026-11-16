@@ -90,10 +90,13 @@ class Repricer
                 $target[$o->id] = [PricingMode::Fixed, $fixedType, $this->fixedPrices->amount($employee, $o->date, $o->mealSlot, $calendar)];
             });
 
-        // Mandatory mode: meals ordered in the app are take-home food at full price.
-        $orders->filter(fn (Order $o) => $modes[$o->id] === PricingMode::Mandatory)
-            ->each(function (Order $o) use (&$target, $extra) {
-                $target[$o->id] = [PricingMode::Mandatory, $extra];
+        // Mandatory mode: take-home food at full price, or at the person's fixed price if set.
+        // Orders already in mandatory mode keep their snapshot; only orders coming from
+        // another mode are priced.
+        $orders->filter(fn (Order $o) => $modes[$o->id] === PricingMode::Mandatory && $o->pricing_mode !== PricingMode::Mandatory)
+            ->each(function (Order $o) use (&$target, $extra, $fixedType, $employee, $calendar) {
+                $fixed = $this->fixedPrices->find($employee, $o->date, $o->mealSlot, $calendar);
+                $target[$o->id] = $fixed ? [PricingMode::Mandatory, $fixedType, $fixed->amount_cents] : [PricingMode::Mandatory, $extra];
             });
 
         // Daily mode: re-type only slot-days that contain an order coming from another mode.

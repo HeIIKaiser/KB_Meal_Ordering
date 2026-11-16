@@ -6,8 +6,8 @@ use App\Models\Employee;
 use Illuminate\Support\Collection;
 
 /**
- * Pairs WebVisitor personal numbers (ints) with app employees: osobné číslo without
- * leading zeros ("003" = 3). If two app employees normalise to the same number, the
+ * Pairs WebVisitor personal numbers (ints) with app employees: the employee's attendance
+ * number if set, else osobné číslo, without leading zeros ("003" = 3). If two app employees normalise to the same number, the
  * number is a conflict and neither is updated (listed in the admin).
  */
 class EmployeeMatcher
@@ -18,7 +18,7 @@ class EmployeeMatcher
     /** @return Collection<string, Collection<int, Employee>> */
     public function map(): Collection
     {
-        return $this->map ??= Employee::query()->get()->groupBy(fn (Employee $e) => Employee::attendanceNumber($e->osobne_cislo));
+        return $this->map ??= Employee::query()->get()->groupBy(fn (Employee $e) => $e->attendanceKey());
     }
 
     public function find(string $number): ?Employee
@@ -35,6 +35,6 @@ class EmployeeMatcher
 
     public function isConflictFor(Employee $employee): bool
     {
-        return $this->isConflict($employee->osobne_cislo);
+        return ($this->map()[$employee->attendanceKey()] ?? collect())->count() > 1;
     }
 }

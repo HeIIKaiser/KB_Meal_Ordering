@@ -24,7 +24,7 @@ class Employee extends Model implements AuthenticatableContract
 
     protected $fillable = [
         'osobne_cislo', 'first_name', 'last_name', 'department', 'is_active', 'user_id',
-        'vema_cislo', 'max_meals_per_day',
+        'vema_cislo', 'attendance_cislo', 'max_meals_per_day',
         'billing_name', 'ico', 'dic', 'billing_address', 'billing_email', 'billing_note',
     ];
 
@@ -176,6 +176,16 @@ class Employee extends Model implements AuthenticatableContract
         return $n === '' ? '0' : $n;
     }
 
+    /**
+     * The number this person has in WebVisitor: attendance_cislo if set (it differs from
+     * osobné číslo, e.g. self-employed with numbers from Pramen), else osobné číslo —
+     * both without leading zeros.
+     */
+    public function attendanceKey(): string
+    {
+        return self::attendanceNumber($this->attendance_cislo ?: $this->osobne_cislo);
+    }
+
     public function ticketOverrides(): HasMany
     {
         return $this->hasMany(TicketOverride::class);
@@ -199,7 +209,7 @@ class Employee extends Model implements AuthenticatableContract
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['osobne_cislo', 'first_name', 'last_name', 'department', 'is_active', 'user_id', 'pin_changed_at', 'vema_cislo', 'max_meals_per_day', 'billing_name', 'ico', 'dic', 'billing_address', 'billing_email', 'billing_note'])
+            ->logOnly(['osobne_cislo', 'first_name', 'last_name', 'department', 'is_active', 'user_id', 'pin_changed_at', 'vema_cislo', 'attendance_cislo', 'max_meals_per_day', 'billing_name', 'ico', 'dic', 'billing_address', 'billing_email', 'billing_note'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->useLogName('employees');

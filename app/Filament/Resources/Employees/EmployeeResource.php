@@ -80,6 +80,13 @@ class EmployeeResource extends Resource
                 ->validationMessages(['regex' => 'Vema číslo môže obsahovať len číslice.'])
                 ->unique(ignoreRecord: true)
                 ->maxLength(16),
+            TextInput::make('attendance_cislo')
+                ->label('Číslo v dochádzke (WebVisitor)')
+                ->helperText('Len ak sa líši od osobného čísla (napr. SZČO s číslom z Pramenu). Prázdne = osobné číslo.')
+                ->regex('/^\d{1,16}$/')
+                ->validationMessages(['regex' => 'Číslo v dochádzke môže obsahovať len číslice.'])
+                ->unique(ignoreRecord: true)
+                ->maxLength(16),
             TextInput::make('last_name')->label('Priezvisko')->required()->maxLength(100),
             TextInput::make('first_name')->label('Meno')->required()->maxLength(100),
             TextInput::make('department')
