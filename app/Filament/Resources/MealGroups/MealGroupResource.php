@@ -7,6 +7,7 @@ use App\Domain\Tickets\MealGroupService;
 use App\Domain\Tickets\RepriceResult;
 use App\Enums\NavGroup;
 use App\Enums\PricingMode;
+use App\Filament\Concerns\SentenceCaseLabels;
 use App\Filament\Resources\MealGroups\Pages\ManageMealGroups;
 use App\Models\EmployeeGroupMembership;
 use App\Models\MealGroup;
@@ -36,6 +37,8 @@ use UnitEnum;
 /** Skupiny stravníkov: pricing mode (daily | tickets) with a dated history, default tickets. */
 class MealGroupResource extends Resource
 {
+    use SentenceCaseLabels;
+
     protected static ?string $model = MealGroup::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;
@@ -62,6 +65,20 @@ class MealGroupResource extends Resource
                 ->label('Povinná strava: jedál za odpracovaný deň')
                 ->helperText('Len pre režim povinnej stravy: koľko jedál za zamestnaneckú cenu sa účtuje za každý odpracovaný deň (podľa dochádzky). Max. jedál za deň pri zamestnancovi to môže znížiť.')
                 ->integer()->minValue(1)->maxValue(3)->default(2)->required(),
+            Select::make('estimate_source')
+                ->label('Odhad počas mesiaca (režim lístkov)')
+                ->options(['plan' => 'podľa plánu smien (8 h, 12 h …)', 'orders' => 'podľa objednávok (brigádnici bez plánu)'])
+                ->default('plan')->required()
+                ->helperText('Podľa objednávok: každé jedlo je do konca mesiaca za 1,50 €; o konečnej cene rozhodne dochádzka pri finalizácii.'),
+            Select::make('settlement')
+                ->label('Vysporiadanie')
+                ->options(['payroll' => 'zrážka zo mzdy (export Vema)', 'invoice' => 'faktúra (SZČO – export Fakturácia)'])
+                ->default('payroll')->required(),
+            TextInput::make('max_per_slot')
+                ->label('Pevná cena: max. jedál na obed / večeru za deň')
+                ->integer()->minValue(1)->maxValue(10)->nullable()
+                ->placeholder('bez obmedzenia')
+                ->helperText('Len pre režim „Pevná cena“. Ceny sa zadávajú v časti Nastavenia → Pevné ceny.'),
             Toggle::make('is_active')->label('Aktívna')->helperText('Neaktívna skupina sa neponúka pri zamestnancoch.')->default(true),
             Select::make('initial_mode')
                 ->label('Režim')
@@ -87,12 +104,18 @@ class MealGroupResource extends Resource
                     ->color(fn (MealGroup $record) => match ($record->modeOn(LocalTime::today())) {
                         PricingMode::Tickets => 'warning',
                         PricingMode::Mandatory => 'danger',
+                        PricingMode::Fixed => 'info',
                         default => 'gray',
                     })
                     ->description(fn (MealGroup $record) => static::modeHistory($record)),
                 TextColumn::make('default_tickets')->label('Lístkov / mesiac')->numeric()
                     ->description(fn (MealGroup $record) => $record->modes->contains(fn ($m) => $m->mode === PricingMode::Mandatory)
                         ? 'povinná: '.$record->mandatory_per_day.' / deň' : null),
+                TextColumn::make('settlement')
+                    ->label('Vysporiadanie')
+                    ->formatStateUsing(fn (string $state) => $state === 'invoice' ? 'faktúra' : 'mzdy')
+                    ->badge()->color(fn (string $state) => $state === 'invoice' ? 'info' : 'gray')
+                    ->description(fn (MealGroup $record) => $record->estimatesByOrders() ? 'odhad podľa objednávok' : null),
                 TextColumn::make('members')
                     ->label('Zamestnancov dnes')
                     ->state(fn (MealGroup $record) => static::membersToday($record)),

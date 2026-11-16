@@ -210,6 +210,51 @@ Spec: `docs/ATTENDANCE.md` (v2). Roman approved the plan, including answers 1–
       only that class and its test change.
     - Missing Vema numbers block the export with a list. An open month needs an explicit „odhad“ confirmation.
 
+## Design decisions — temps and self-employed (2026-11-17)
+
+Spec: `docs/CATEGORIES.md`. Roman approved the plan, including answers 1–5 below.
+
+1. **Group settings.** `estimate_source` (`plan` | `orders`), `settlement` (`payroll` | `invoice`) and `max_per_slot`
+   (fixed-mode cap per meal and day). The defaults keep the previous behaviour.
+2. **Temps (`estimate_source = orders`).**
+   - New allocation source `orders_estimate`: tickets = the person's active ticket-mode orders in the month. It ranks
+     after manual, `attendance_final` and import overrides, and replaces the plan-based estimate and the group counts.
+   - Every order is quoted and priced at 1,50 € while open (Roman, answer 5). One constant,
+     `TicketAllocation::ORDERS_ESTIMATE_AT_EMPLOYEE_PRICE`, switches to the strict variant.
+   - At finalisation attendance decides (`attendance_final`), and the latest orders above it become 6 €. The preview
+     flags it („brigádnik: N jedál → 6 €“).
+   - A temp with no attendance at all keeps the order-based count and is flagged „bez dochádzky“ (Roman, answer 4).
+3. **Self-employed: `PricingMode::Fixed`.**
+   - Price type `fixed` „Pevná cena“, excluded from the price list, the daily/ticket typing and price-type corrections
+     (`PriceType::standard()`).
+   - Prices live in `fixed_prices`: group or person, all meals or one meal (Roman, answer 1), `valid_from` = meal date.
+   - Lookup order: person + meal → person → group + meal → group, latest valid version each. No price → the order is
+     refused.
+   - The price is snapshotted on the order. No confirmation dialog; the optional cap is per meal and day. Never
+     repriced, except orders that move into fixed mode through a group mode switch.
+   - Excluded from the attendance roster (no warnings, no finalisation rows).
+   - A new price may start today or in the past (so a new SZČO can order at once); existing orders keep their
+     snapshot. Versions already in effect can't be edited, as with *Ceny*.
+4. **Settlement for a month** = the group on the last day of the month (Roman, answer 2).
+   - Vema export: payroll only.
+   - New provisional export **„Fakturácia – predbežný formát“** behind `InvoiceFormat`; the layout is
+     `BillingXlsxFormat`.
+   - *Súhrn* sheet: billing details, `obedy_ks`, `vecere_ks`, `ostatne_ks` (other meals + mandatory meals, if any;
+     Roman, answer 3), unit prices, `suma_eur`. *Detail* sheet: one row per meal.
+   - Totals equal the monthly matrix.
+5. **Exports.** Súhrn appends *Pevná cena ks / €* and *Vysporiadanie* (`mzdy` / `faktura`); *Suma €* includes fixed
+   orders. The flat list appends `vysporiadanie` and uses `typ = pevna`. The matrix shows a *Pevná cena* row (only
+   when used) and „– faktúra“ after the name.
+6. **Employees.**
+   - Billing fields are optional; IČO is 6–8 digits and DIČ 10 digits. They show on the form for invoiced groups (or
+     when already filled) and are optional import columns.
+   - Osobné číslo stays editable (unique, audited). Orders, history and attendance pairing follow the employee id.
+   - The import warns (doesn't block) when a new number has an existing person's name.
+7. **Found along the way.**
+   - Filament's `date()` column showed `valid_from` one day early (UTC conversion of a local date), also on the
+     existing *Ceny* page. Both now pass the local time zone; a regression test covers it.
+   - Headings use Slovak sentence case (`SentenceCaseLabels`), e.g. „Pevné ceny“, not „Pevné Ceny“.
+
 ## Decisions by Roman
 
 - **2026-11-09 — Staff 2FA is optional.** Users can enable TOTP in their Filament profile; it is not enforced on first login and there are no prompts. (Brief §5 said "email + password + 2FA" — relaxed because most staff can't handle authenticator apps.)
@@ -246,4 +291,7 @@ Spec: `docs/ATTENDANCE.md` (v2). Roman approved the plan, including answers 1–
 - **2026-11-16 — Attendance from WebVisitor, mandatory meals, Vema export** (Roman's spec `docs/ATTENDANCE.md` v2,
   plan approved with answers 1–4 as proposed). The Vema format stays provisional until the sample file arrives; see
   "Design decisions — attendance" above.
+- **2026-11-17 — Temps (estimate by orders) and self-employed (fixed price, invoice)** (Roman's spec
+  `docs/CATEGORIES.md`, plan approved with answers 1–5 as proposed). The Fakturácia format stays provisional until
+  accounting says what they need.
 

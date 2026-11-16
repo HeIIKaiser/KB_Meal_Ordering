@@ -19,6 +19,9 @@ use Illuminate\Support\Str;
  * Recognised columns (header names, diacritics/case ignored):
  *   osobne_cislo (required), priezvisko, meno, stredisko | oddelenie, aktivny (áno/nie, 1/0),
  *   vema_cislo (digits), max_jedal_za_den (1, 2 or "-" = no cap),
+ *   fakturacny_nazov, ico, dic, adresa, email, fakturacna_poznamka (billing, SZČO),
+ * A NEW osobné číslo with the name of an existing employee gets a warning: if a number
+ * changed, change it in the admin first — the import matches by osobné číslo.
  *   skupina (name of an existing employee group; empty = no change). A group change of an
  *   existing employee applies from the 1st of next month; a new employee's from this month.
  */
@@ -33,6 +36,12 @@ class EmployeeImport
         'group' => ['skupina', 'skupina_stravnikov', 'group'],
         'vema_cislo' => ['vema_cislo', 'vema', 'cislo_vema'],
         'max_meals_per_day' => ['max_jedal_za_den', 'max_jedal', 'max_meals_per_day'],
+        'billing_name' => ['fakturacny_nazov', 'billing_name'],
+        'ico' => ['ico'],
+        'dic' => ['dic'],
+        'billing_address' => ['adresa', 'fakturacna_adresa', 'billing_address'],
+        'billing_email' => ['email', 'fakturacny_email', 'billing_email'],
+        'billing_note' => ['fakturacna_poznamka', 'billing_note'],
     ];
 
     public function __construct(
@@ -41,12 +50,14 @@ class EmployeeImport
     ) {}
 
     /**
-     * @return array{rows: list<array<string, mixed>>, errors: list<array{line: int, messages: list<string>}>, missing: list<array{id: int, name: string, osobne_cislo: string}>}
+     * @return array{rows: list<array<string, mixed>>, errors: list<array{line: int, messages: list<string>}>, missing: list<array{id: int, name: string, osobne_cislo: string}>, warnings: list<array{line: int, message: string}>}
      */
     public function preview(string $path, ?string $originalName = null): array
     {
         $existing = Employee::query()->with('groupMemberships.group.modes')->get()->keyBy('osobne_cislo');
         $groups = MealGroup::query()->get()->keyBy(fn (MealGroup $g) => mb_strtolower(trim($g->name)));
+        $byName = $existing->groupBy(fn (Employee $e) => $this->nameKey($e->last_name, $e->first_name));
+        $warnings = [];
         $vemaOwners = $existing->filter(fn (Employee $e) => $e->vema_cislo !== null)->mapWithKeys(fn (Employee $e) => [$e->vema_cislo => $e->osobne_cislo]);
         $thisMonth = LocalTime::today()->startOfMonth();
         $nextMonth = $thisMonth->addMonthNoOverflow();
@@ -109,6 +120,21 @@ class EmployeeImport
                 }
             }
 
+            foreach (['billing_name' => 150, 'billing_address' => 255, 'billing_note' => 255] as $f => $max) {
+                if (($val = $this->clean($v[$f])) !== null) {
+                    $data[$f] = mb_substr($val, 0, $max);
+                }
+            }
+            if (($ico = $this->clean($v['ico'])) !== null) {
+                preg_match('/^\d{6,8}$/', $ico) ? $data['ico'] = $ico : $messages[] = 'IČO má 6 až 8 číslic.';
+            }
+            if (($dic = $this->clean($v['dic'])) !== null) {
+                preg_match('/^\d{10}$/', $dic) ? $data['dic'] = $dic : $messages[] = 'DIČ má 10 číslic.';
+            }
+            if (($mail = $this->clean($v['billing_email'])) !== null) {
+                filter_var($mail, FILTER_VALIDATE_EMAIL) ? $data['billing_email'] = $mail : $messages[] = 'Neplatný e-mail pre faktúry.';
+            }
+
             $group = null;
             $groupName = $this->clean($v['group']);
             if ($groupName !== null && ! isset($groups[mb_strtolower($groupName)])) {
@@ -151,13 +177,18 @@ class EmployeeImport
                 'name' => trim(($data['last_name'] ?? $employee?->last_name).' '.($data['first_name'] ?? $employee?->first_name)),
                 'group' => $groupChange,
             ];
+
+            if (! $employee && ($same = $byName[$this->nameKey($data['last_name'] ?? '', $data['first_name'] ?? '')] ?? null)) {
+                $warnings[] = ['line' => $line, 'message' => "Nové osobné číslo $number, ale rovnaké meno má zamestnanec "
+                    .$same->map(fn ($e) => $e->osobne_cislo)->join(', ').'. Ak sa mu zmenilo osobné číslo, zmeňte ho najprv v karte zamestnanca – inak vznikne nový človek.'];
+            }
         }
 
         $missing = $existing->filter(fn (Employee $e) => $e->is_active && ! isset($seen[$e->osobne_cislo]))
             ->map(fn (Employee $e) => ['id' => $e->id, 'name' => $e->fullNameReversed(), 'osobne_cislo' => $e->osobne_cislo])
             ->sortBy('name')->values()->all();
 
-        return ['rows' => $rows, 'errors' => $errors, 'missing' => $missing];
+        return ['rows' => $rows, 'errors' => $errors, 'missing' => $missing, 'warnings' => $warnings];
     }
 
     /** @return array{created: int, updated: int, deactivated: int, created_ids: list<int>} New employees get a PIN automatically. */
@@ -212,6 +243,11 @@ class EmployeeImport
         }
 
         return $out;
+    }
+
+    private function nameKey(string $last, string $first): string
+    {
+        return Str::ascii(mb_strtolower(trim($last).' '.trim($first)));
     }
 
     private function clean(mixed $v): ?string

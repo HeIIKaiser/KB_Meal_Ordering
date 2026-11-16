@@ -7,6 +7,7 @@ use App\Domain\Ordering\OrderingException;
 use App\Domain\Ordering\OrderService;
 use App\Enums\NavGroup;
 use App\Enums\OrderStatus;
+use App\Filament\Concerns\SentenceCaseLabels;
 use App\Filament\Resources\Orders\Pages\ListOrders;
 use App\Models\Employee;
 use App\Models\MealSlot;
@@ -43,6 +44,8 @@ use UnitEnum;
  */
 class OrderResource extends Resource
 {
+    use SentenceCaseLabels;
+
     protected static ?string $model = Order::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedClipboardDocumentList;
@@ -239,7 +242,7 @@ class OrderResource extends Resource
             ->schema(fn (Order $record) => [
                 Select::make('price_type_id')
                     ->label('Typ')
-                    ->options(PriceType::query()->orderBy('sort')->whereKeyNot($record->price_type_id)->pluck('name', 'id'))
+                    ->options(PriceType::query()->standard()->orderBy('sort')->whereKeyNot($record->price_type_id)->pluck('name', 'id'))
                     ->required(),
                 TextInput::make('reason')->label('Dôvod')->required()->maxLength(255),
             ])

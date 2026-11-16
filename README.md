@@ -85,6 +85,8 @@ Rules live in one place: **`app/Domain/Ordering/OrderService.php`** — every or
 | `app/Domain/Employees/*` | Employee import, PIN issuing |
 | `app/Domain/Attendance/*` | Attendance from WebVisitor: meal rule, estimate/final (`AttendanceCalculator`), sync ingest (`AttendanceSync`), `Recalculator`, `Finalizer`; API in `routes/api.php` |
 | `bridge/` | **Attendance bridge** for DOCKER01 (standalone PHP + Docker): WebVisitor → app. See `bridge/README.md` |
+| `app/Domain/Exports/Invoice/*` | „Fakturácia“ export for invoiced people (SZČO); `BillingXlsxFormat` (provisional — the layout is in that class) |
+| `app/Domain/Ordering/FixedPriceResolver.php` | Fixed prices (pricing mode „Pevná cena“): person/group, meal, `valid_from` |
 | `app/Domain/Exports/Payroll/*` | Payroll export formats behind one interface; `VemaFormat` (provisional — the whole layout is in that class) |
 | `app/Domain/Tickets/*` | Ticket mode: employee groups and their mode/membership history (`EmployeeCalendar`), allocation, **`Repricer`** (the month's first N meals at the employee price), monthly counts, month-end import, closed months |
 | `app/Domain/Kitchen/*`, `resources/views/kitchen/*` | Kitchen daily overview data (shared by screen, print, PDF, XLSX); printable sheet |

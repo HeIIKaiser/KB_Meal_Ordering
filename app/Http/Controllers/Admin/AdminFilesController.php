@@ -83,7 +83,7 @@ class AdminFilesController extends Controller
                     default => $s->cutoff_days_before.' dni vopred',
                 })->all(),
             'horizon' => app(Settings::class)->orderingHorizonDays(),
-            'prices' => PriceType::query()->orderBy('sort')->get()
+            'prices' => PriceType::query()->standard()->orderBy('sort')->get()
                 ->map(fn ($t) => [$t, $resolver->current($t, $today)?->amount_cents])
                 ->filter(fn ($p) => $p[1] !== null)
                 ->map(fn ($p) => Money::format($p[1]).' – '.($p[0]->isDonated() ? 'prvý obed a prvá večera v daný deň ('.mb_strtolower($p[0]->name).')' : 'každé ďalšie jedlo v ten istý deň ('.mb_strtolower($p[0]->name).')'))
