@@ -42,13 +42,13 @@
 
             <x-filament::section>
                 <x-slot name="heading">Zamestnanci v režime lístkov ({{ $rows->count() }})</x-slot>
-                <x-slot name="description">Individuálny počet (napr. nástup alebo odchod počas mesiaca, dlhšia neprítomnosť). Prázdne = počet skupiny. Po uložení sa ceny objednávok v mesiaci hneď prepočítajú.</x-slot>
+                <x-slot name="description">Pridelené lístky sa berú v tomto poradí: individuálny počet → konečná dochádzka → import konečných lístkov → odhad z dochádzky → počet skupiny na mesiac → predvolený počet skupiny. Individuálny počet (napr. nástup alebo odchod počas mesiaca) má prednosť pred všetkým; prázdne = automaticky. Po uložení sa ceny objednávok v mesiaci hneď prepočítajú.</x-slot>
                 <div class="max-h-[32rem] overflow-auto">{{-- scrolls inside on small screens --}}
                     <table class="w-full text-left text-sm">
                         <thead class="sticky top-0 bg-white dark:bg-gray-900">
                             <tr class="border-b border-gray-200 dark:border-white/10">
                                 <th class="py-2">Zamestnanec</th><th class="py-2">Os. č.</th><th class="py-2">Skupina</th>
-                                <th class="py-2 text-right">Pridelené</th><th class="py-2 text-right">Použité</th><th class="py-2 text-right">{{ $isPast ? 'Prepadnuté' : 'Zostáva' }}</th>
+                                <th class="py-2 text-right">Pridelené</th><th class="py-2">Zdroj</th><th class="py-2 text-right">Použité</th><th class="py-2 text-right">{{ $isPast ? 'Prepadnuté' : 'Zostáva' }}</th>
                                 <th class="py-2 text-right">Individuálne</th>
                             </tr>
                         </thead>
@@ -58,7 +58,8 @@
                                     <td class="py-1.5">{{ $r['employee']->fullNameReversed() }}@unless ($r['employee']->is_active) <span class="text-gray-500">(neaktívny)</span>@endunless</td>
                                     <td class="py-1.5">{{ $r['employee']->osobne_cislo }}</td>
                                     <td class="py-1.5">{{ $r['group'] }}</td>
-                                    <td class="py-1.5 text-right">{{ $r['allocated'] }}@if ($r['source'] === 'import') <span class="text-xs text-gray-500" title="z importu konečných lístkov">(import)</span>@endif</td>
+                                    <td class="py-1.5 text-right">{{ $r['allocated'] }}</td>
+                                    <td class="py-1.5 text-xs text-gray-600">{{ $sources[$r['source']] }}</td>
                                     <td class="py-1.5 text-right">{{ $r['used'] }}</td>
                                     <td @class(['py-1.5 text-right', 'font-semibold text-danger-600' => $r['left'] < 0])>{{ $r['left'] < 0 ? 'o '.abs($r['left']).' viac (6 €)' : $r['left'] }}</td>
                                     <td class="py-1.5 text-right"><input type="number" min="0" max="999" wire:model="overrides.{{ $r['employee']->id }}" @disabled(! $editable) placeholder="skupina" class="{{ $field }}" aria-label="Individuálny počet pre {{ $r['employee']->fullNameReversed() }}"></td>

@@ -133,7 +133,8 @@ describe('monthly XLSX', function () {
 
         $s = $sheets['Súhrn'];
         expect($s[0])->toBe(['Osobné číslo', 'Priezvisko', 'Meno', 'Stredisko', 'Zamestnanecká strava ks', 'Dokupovaná strava ks', 'Zamestnanecká strava €', 'Dokupovaná strava €', 'Suma €',
-            'Skupina', 'Režim', 'Lístky pridelené', 'Lístky použité', 'Lístky prepadnuté'])
+            'Skupina', 'Režim', 'Lístky pridelené', 'Lístky použité', 'Lístky prepadnuté',
+            'Povinná strava ks', 'Povinná strava €', 'Zdroj lístkov', 'Vema číslo'])
             ->and(array_slice(collect($s)->first(fn ($r) => $r[0] === '0123'), 0, 11))->toBe(['0123', 'Novák', 'Ján', 'Kuchyňa', 3, 1, 5, 6, 11, '', 'denny'])
             ->and(array_slice(collect($s)->first(fn ($r) => $r[0] === 'Spolu'), 0, 9))->toBe(['Spolu', '', '', '', 5, 1, 8.5, 6, 14.5])
             ->and(collect($s)->last())->toBe(['Cena stravy je odhadom a po porovnaní s dochádzkou sa môže zmeniť.']);

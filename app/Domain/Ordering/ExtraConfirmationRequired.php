@@ -15,6 +15,7 @@ class ExtraConfirmationRequired extends OrderingException
     {
         parent::__construct(
             ($quote->isTicketMode() ? 'Lístky na '.Month::name($quote->ticketsMonth).' sú minuté. ' : '')
+            .($quote->mandatory ? 'Povinná strava sa účtuje automaticky podľa dochádzky; jedlo z aplikácie je navyše. ' : '')
             .'Toto jedlo bude za '.Money::format($quote->unitPriceCents).'.',
             'extra_confirmation_required',
         );

@@ -178,19 +178,18 @@ class TicketMonth extends Page
             ->whereBetween('date', [Month::first($this->month)->toDateString(), Month::last($this->month)->toDateString()])
             ->selectRaw('employee_id, COUNT(*) as n')->groupBy('employee_id')->pluck('n', 'employee_id');
 
-        $rows = $employees->map(function ($r) use ($saved, $overrides, $used) {
-            $group = $r['group'];
-            $override = $overrides[$r['employee']->id] ?? null;
-            $allocated = $override?->tickets ?? $saved[$group->id] ?? $group->default_tickets;
+        $allocation = app(TicketAllocation::class);
+        $rows = $employees->map(function ($r) use ($used, $allocation) {
+            $a = $allocation->allocationWithSource($r['employee'], $this->month, $r['calendar']);
             $n = (int) ($used[$r['employee']->id] ?? 0);
 
             return [
                 'employee' => $r['employee'],
-                'group' => $group->name,
-                'allocated' => $allocated,
+                'group' => $r['group']->name,
+                'allocated' => $a['tickets'],
                 'used' => $n,
-                'left' => $allocated - $n,
-                'source' => $override?->source,
+                'left' => $a['tickets'] - $n,
+                'source' => $a['source'],
             ];
         });
 
@@ -204,6 +203,7 @@ class TicketMonth extends Page
             'closed' => $closed,
             'editable' => $this->canEdit(),
             'isPast' => Month::last($this->month)->isPast(),
+            'sources' => TicketAllocation::SOURCES,
         ];
     }
 

@@ -268,14 +268,19 @@ class OrderScreen extends Component
     {
         $calendar = EmployeeCalendar::for($this->employee());
         $dayMonth = [];
+        $months = [];
         foreach ($days as $day) {
-            if ($calendar->modeOn($day) === PricingMode::Tickets) {
+            $mode = $calendar->modeOn($day);
+            if ($mode === PricingMode::Tickets) {
                 $dayMonth[$day->toDateString()] = Month::of($day);
+            } elseif ($mode === PricingMode::Mandatory) {
+                // Same chip machinery: one note per month, shown for the mandatory-mode days.
+                $dayMonth[$day->toDateString()] = $key = Month::of($day).'|povinna';
+                $months[$key] = ['text' => 'Povinná strava sa účtuje automaticky podľa dochádzky.', 'empty' => false];
             }
         }
 
-        $months = [];
-        foreach (array_unique($dayMonth) as $month) {
+        foreach (array_unique(array_filter($dayMonth, fn ($m) => ! str_contains($m, '|'))) as $month) {
             $s = app(TicketAllocation::class)->summary($this->employee(), $month, $calendar);
             if ($s === null) {
                 continue;

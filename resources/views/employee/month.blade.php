@@ -18,13 +18,19 @@
             <span class="text-3xl font-bold">{{ Money::format($totalCents) }}</span>
         </div>
         <div class="mt-1 text-base opacity-90">
-            {{ $orders->count() }} {{ $orders->count() === 1 ? 'jedlo' : ($orders->count() >= 2 && $orders->count() <= 4 ? 'jedlá' : 'jedál') }}
+            {{ $orders->count() }} {{ $orders->count() === 1 ? 'jedlo' : ($orders->count() >= 2 && $orders->count() <= 4 ? 'jedlá' : 'jedál') }} z aplikácie
             @foreach ($byType as $name => $t)
                 · {{ $name }}: {{ $t['count'] }} ks ({{ Money::format($t['cents']) }})
             @endforeach
         </div>
         @if ($isCurrent)
             <div class="mt-1 text-sm opacity-80">Vrátane objednávok na zvyšok mesiaca.</div>
+        @endif
+        @if ($mandatoryCount)
+            <div class="mt-2 border-t border-white/30 pt-2 text-base">
+                <span class="font-semibold">Povinná strava:</span> {{ $mandatoryCount }} jedál ({{ Money::format($mandatoryCents) }})
+                <div class="text-sm opacity-80">Účtuje sa automaticky podľa dochádzky{{ $mandatoryFinal ? ' – konečný stav.' : ' – odhad podľa plánu smien a dochádzky.' }}</div>
+            </div>
         @endif
         @if ($tickets)
             <div class="mt-2 border-t border-white/30 pt-2 text-base">
@@ -44,11 +50,17 @@
         </div>
     </div>
 
-    @forelse ($byDay as $ymd => $dayOrders)
-        @php $d = $dayOrders->first()->date; @endphp
+    @forelse ($dates as $ymd)
+        @php $dayOrders = $byDay[$ymd] ?? collect(); $m = $mandatory[$ymd] ?? null; $d = \App\Support\LocalTime::date($ymd); @endphp
         <div class="mb-2 rounded-2xl bg-white p-3 shadow-sm">
             <div class="mb-1 text-base font-bold"><span class="capitalize">{{ SlovakDate::day($d) }}</span> {{ SlovakDate::dm($d) }}</div>
             <ul class="divide-y divide-stone-100">
+                @if ($m)
+                    <li class="flex items-start justify-between gap-3 py-1.5">
+                        <span class="text-base"><span class="font-semibold">Povinná strava</span> × {{ $m->count }} <span class="text-sm text-stone-500">(podľa dochádzky)</span></span>
+                        <span class="whitespace-nowrap text-base font-semibold">{{ Money::format($m->count * $m->unit_price_cents) }}</span>
+                    </li>
+                @endif
                 @foreach ($dayOrders as $o)
                     <li class="flex items-start justify-between gap-3 py-1.5">
                         <span class="text-base">

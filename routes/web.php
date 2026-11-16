@@ -51,4 +51,5 @@ Route::prefix('/admin/jedalny-listok')->middleware('staff:kitchen,admin,payroll'
 Route::prefix('/admin/exporty')->middleware('staff:payroll,admin')->name('exports.')->group(function () {
     Route::get('/mesiac', [ExportController::class, 'monthly'])->name('monthly');
     Route::get('/zoznam', [ExportController::class, 'list'])->name('list');
+    Route::get('/mzdy', [ExportController::class, 'payroll'])->name('payroll');
 });

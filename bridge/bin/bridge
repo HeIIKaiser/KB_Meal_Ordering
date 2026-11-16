@@ -1,0 +1,38 @@
+#!/usr/bin/env php
+<?php
+
+// Attendance bridge: WebVisitor (read-only) → Jedáleň app. Usage:
+//   php bin/bridge run                  nightly sync + poll for "Synchronizovať teraz" (default)
+//   php bin/bridge sync [YYYY-MM …]     sync now (default: previous + current month)
+//   php bin/bridge check                check DB schema and app connection
+
+spl_autoload_register(function (string $class) {
+    if (str_starts_with($class, 'Bridge\\')) {
+        require __DIR__.'/../src/'.substr($class, 7).'.php';
+    }
+});
+
+use Bridge\AppClient;
+use Bridge\Bridge;
+use Bridge\Config;
+use Bridge\SchemaCheck;
+
+$config = Config::fromEnv();
+$bridge = new Bridge($config, new AppClient($config));
+$command = $argv[1] ?? 'run';
+
+switch ($command) {
+    case 'run':
+        $bridge->run();
+    case 'sync':
+        $months = array_slice($argv, 2) ?: Bridge::defaultMonths(new DateTimeImmutable);
+        exit($bridge->sync($months) ? 0 : 1);
+    case 'check':
+        $problems = SchemaCheck::problems($config->pdo(), $config->shiftNameColumn);
+        Bridge::log($problems ? 'Schema problems: '.implode(' ', $problems) : 'Schema OK');
+        Bridge::log('App: '.json_encode((new AppClient($config))->pending()));
+        exit($problems ? 1 : 0);
+    default:
+        fwrite(STDERR, "Unknown command $command (run | sync [YYYY-MM …] | check)\n");
+        exit(2);
+}

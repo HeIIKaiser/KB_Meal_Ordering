@@ -130,7 +130,7 @@ describe('exports', function () {
         orderAll($daily, [$i['2026-11-10']]);
 
         $s = sheets(app(MonthlyMatrixXlsx::class)->write(MonthlyData::for('2026-11')))['Súhrn'];
-        $row = fn ($n) => array_slice(collect($s)->first(fn ($r) => $r[0] === $n), 9);
+        $row = fn ($n) => array_slice(collect($s)->first(fn ($r) => $r[0] === $n), 9, 5);
 
         expect($row('0900'))->toBe(['12 h', 'listky', 20, 2, 18])
             ->and($row('0901'))->toBe(['8 h', 'zmiesany', 3, 2, 1])

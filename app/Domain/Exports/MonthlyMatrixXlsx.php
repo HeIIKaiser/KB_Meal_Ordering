@@ -2,6 +2,7 @@
 
 namespace App\Domain\Exports;
 
+use App\Domain\Employees\VemaNumbers;
 use App\Support\LocalTime;
 use App\Support\SlovakDate;
 use OpenSpout\Common\Entity\Cell;
@@ -88,7 +89,7 @@ class MonthlyMatrixXlsx
         $writer->addRow(Row::fromValues(['Stravovanie – '.$monthLabel], (new Style)->setFontBold()->setFontSize(14)));
         $writer->addRow(Row::fromValues([
             'Vytvorené '.LocalTime::now()->format('j. n. Y H:i'),
-            'Počty jedál podľa dní; suma podľa uložených cien (denný režim: v čase objednania, režim lístkov: podľa počtu lístkov). Iba platné (nezrušené) objednávky.',
+            'Počty jedál podľa dní; suma podľa uložených cien (denný režim: v čase objednania, režim lístkov: podľa počtu lístkov). Iba platné (nezrušené) objednávky; povinná strava podľa dochádzky.',
         ]));
         $writer->addRow(Row::fromValues([$data->note()], (new Style)->setFontBold()->setFontColor($data->closed ? '065F46' : 'B91C1C')));
         $writer->addRow(Row::fromValues([]));
@@ -139,13 +140,24 @@ class MonthlyMatrixXlsx
                 $writer->addRow(new Row($cells));
             }
 
+            // mandatory mode: automatic charges from attendance
+            if ($entry['mandatory'] !== []) {
+                $cells = [Cell::fromValue('', $plain), Cell::fromValue('Povinná strava', $plain)];
+                for ($d = 1; $d <= $days; $d++) {
+                    $cells[] = Cell::fromValue(MonthlyData::mandatoryCount($entry, $d), $weekend[$d] ? $shade : $day);
+                }
+                $cells[] = Cell::fromValue(MonthlyData::mandatoryCount($entry), $bold);
+                $cells[] = Cell::fromValue($entry['mandatory_cents'] / 100, $money);
+                $writer->addRow(new Row($cells));
+            }
+
             // per-employee total
             $cells = [Cell::fromValue('', $plain), Cell::fromValue('Spolu', $bold)];
             for ($d = 1; $d <= $days; $d++) {
-                $cells[] = Cell::fromValue(MonthlyData::count($entry, null, null, $d), $weekend[$d] ? $shadeBold : $dayBold);
+                $cells[] = Cell::fromValue(MonthlyData::count($entry, null, null, $d) + MonthlyData::mandatoryCount($entry, $d), $weekend[$d] ? $shadeBold : $dayBold);
             }
-            $cells[] = Cell::fromValue(MonthlyData::count($entry), $bold);
-            $cells[] = Cell::fromValue(MonthlyData::cents($entry) / 100, $moneyBold);
+            $cells[] = Cell::fromValue(MonthlyData::count($entry) + MonthlyData::mandatoryCount($entry), $bold);
+            $cells[] = Cell::fromValue(MonthlyData::totalCents($entry) / 100, $moneyBold);
             $writer->addRow(new Row($cells));
 
             if ($t = $entry['tickets']) {
@@ -177,7 +189,8 @@ class MonthlyMatrixXlsx
         }
         $titles[] = 'Suma €';
         $numeric = count($titles);
-        array_push($titles, 'Skupina', 'Režim', 'Lístky pridelené', 'Lístky použité', 'Lístky prepadnuté');
+        array_push($titles, 'Skupina', 'Režim', 'Lístky pridelené', 'Lístky použité', 'Lístky prepadnuté',
+            'Povinná strava ks', 'Povinná strava €', 'Zdroj lístkov', 'Vema číslo');
 
         $sheet->setColumnWidth(13, 1);
         $sheet->setColumnWidth(18, 2, 3, 4);
@@ -185,6 +198,8 @@ class MonthlyMatrixXlsx
         $writer->addRow(Row::fromValues($titles, $header));
 
         $totals = array_fill(0, count($titles), 0);
+        $mandatoryTotal = 0;
+        $mandatoryCents = 0;
 
         foreach ($data->employees as $entry) {
             $e = $entry['employee'];
@@ -205,16 +220,23 @@ class MonthlyMatrixXlsx
                 $totals[$i++] += $c;
                 $cells[] = Cell::fromValue($c / 100, $money);
             }
-            $c = MonthlyData::cents($entry);
+            $c = MonthlyData::totalCents($entry); // orders + povinná strava
             $totals[$i] += $c;
             $cells[] = Cell::fromValue($c / 100, $money);
             $t = $entry['tickets'];
+            $mandatoryN = MonthlyData::mandatoryCount($entry);
+            $mandatoryTotal += $mandatoryN;
+            $mandatoryCents += $entry['mandatory_cents'];
             array_push($cells,
                 Cell::fromValue((string) $entry['group']),
                 Cell::fromValue($entry['mode']),
                 $t ? Cell::fromValue($t['allocated']) : Cell::fromValue(''),
                 $t ? Cell::fromValue($t['used']) : Cell::fromValue(''),
                 $t ? Cell::fromValue($t['expired']) : Cell::fromValue(''),
+                Cell::fromValue($mandatoryN),
+                Cell::fromValue($entry['mandatory_cents'] / 100, $money),
+                Cell::fromValue($entry['ticket_source'] ?? ''),
+                ($v = VemaNumbers::export($entry['employee']->vema_cislo)) === null ? Cell::fromValue('') : Cell::fromValue($v),
             );
             $writer->addRow(new Row($cells));
         }
@@ -225,6 +247,8 @@ class MonthlyMatrixXlsx
             $isMoney = $i >= 4 + $types;
             $cells[] = Cell::fromValue($isMoney ? $totals[$i] / 100 : $totals[$i], $isMoney ? $moneyBold : $bold);
         }
+        array_push($cells, Cell::fromValue(''), Cell::fromValue(''), Cell::fromValue(''), Cell::fromValue(''), Cell::fromValue(''),
+            Cell::fromValue($mandatoryTotal, $bold), Cell::fromValue($mandatoryCents / 100, $moneyBold));
         $writer->addRow(new Row($cells));
 
         // Below the data (row 1 stays the header for imports)

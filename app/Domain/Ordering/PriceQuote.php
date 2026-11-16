@@ -12,6 +12,7 @@ final readonly class PriceQuote
         public int $unitPriceCents,
         public ?string $ticketsMonth = null,  // set in ticket mode ("YYYY-MM")
         public ?int $ticketsLeft = null,
+        public bool $mandatory = false,      // mandatory mode (povinná strava)
     ) {}
 
     public function isTicketMode(): bool

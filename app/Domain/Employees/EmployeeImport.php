@@ -18,6 +18,7 @@ use Illuminate\Support\Str;
  *
  * Recognised columns (header names, diacritics/case ignored):
  *   osobne_cislo (required), priezvisko, meno, stredisko | oddelenie, aktivny (áno/nie, 1/0),
+ *   vema_cislo (digits), max_jedal_za_den (1, 2 or "-" = no cap),
  *   skupina (name of an existing employee group; empty = no change). A group change of an
  *   existing employee applies from the 1st of next month; a new employee's from this month.
  */
@@ -30,6 +31,8 @@ class EmployeeImport
         'department' => ['stredisko', 'oddelenie', 'department', 'nazov_strediska'],
         'is_active' => ['aktivny', 'aktivna', 'active', 'is_active'],
         'group' => ['skupina', 'skupina_stravnikov', 'group'],
+        'vema_cislo' => ['vema_cislo', 'vema', 'cislo_vema'],
+        'max_meals_per_day' => ['max_jedal_za_den', 'max_jedal', 'max_meals_per_day'],
     ];
 
     public function __construct(
@@ -44,6 +47,7 @@ class EmployeeImport
     {
         $existing = Employee::query()->with('groupMemberships.group.modes')->get()->keyBy('osobne_cislo');
         $groups = MealGroup::query()->get()->keyBy(fn (MealGroup $g) => mb_strtolower(trim($g->name)));
+        $vemaOwners = $existing->filter(fn (Employee $e) => $e->vema_cislo !== null)->mapWithKeys(fn (Employee $e) => [$e->vema_cislo => $e->osobne_cislo]);
         $thisMonth = LocalTime::today()->startOfMonth();
         $nextMonth = $thisMonth->addMonthNoOverflow();
         $rows = [];
@@ -84,6 +88,27 @@ class EmployeeImport
                 $data['is_active'] = true;
             }
 
+            $vema = $this->clean($v['vema_cislo']);
+            if ($vema !== null) {
+                if (! preg_match('/^\d{1,16}$/', $vema)) {
+                    $messages[] = 'Vema číslo môže obsahovať len číslice.';
+                } elseif (($other = $vemaOwners[$vema] ?? null) && $other !== $number) {
+                    $messages[] = "Vema číslo $vema už má zamestnanec $other.";
+                } else {
+                    $data['vema_cislo'] = $vema;
+                }
+            }
+            $max = $this->clean($v['max_meals_per_day']);
+            if ($max !== null) {
+                if (in_array($max, ['-', 'bez', 'bez obmedzenia'], true)) {
+                    $data['max_meals_per_day'] = null;
+                } elseif (in_array($max, ['1', '2'], true)) {
+                    $data['max_meals_per_day'] = (int) $max;
+                } else {
+                    $messages[] = 'Max. jedál za deň musí byť 1, 2 alebo „-“ (bez obmedzenia).';
+                }
+            }
+
             $group = null;
             $groupName = $this->clean($v['group']);
             if ($groupName !== null && ! isset($groups[mb_strtolower($groupName)])) {
@@ -101,7 +126,7 @@ class EmployeeImport
             $changes = [];
             if ($employee) {
                 foreach ($data as $field => $value) {
-                    if ($employee->{$field} !== $value) {
+                    if ($employee->{$field} !== $value && ! ($value === null && $employee->{$field} === null)) {
                         $changes[$field] = ['old' => $employee->{$field}, 'new' => $value];
                     }
                 }

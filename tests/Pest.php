@@ -13,6 +13,7 @@ use Illuminate\Support\Collection;
 use Tests\TestCase;
 
 require_once __DIR__.'/Feature/Tickets/helpers.php';
+require_once __DIR__.'/Feature/Attendance/helpers.php';
 
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)

@@ -19,11 +19,11 @@ class MealGroup extends Model
 {
     use LogsActivity;
 
-    protected $fillable = ['name', 'default_tickets', 'is_active'];
+    protected $fillable = ['name', 'default_tickets', 'mandatory_per_day', 'is_active'];
 
     protected function casts(): array
     {
-        return ['default_tickets' => 'integer', 'is_active' => 'boolean'];
+        return ['default_tickets' => 'integer', 'mandatory_per_day' => 'integer', 'is_active' => 'boolean'];
     }
 
     public function modes(): HasMany
@@ -57,6 +57,6 @@ class MealGroup extends Model
 
     public function getActivitylogOptions(): LogOptions
     {
-        return LogOptions::defaults()->logOnly(['name', 'default_tickets', 'is_active'])->logOnlyDirty()->dontSubmitEmptyLogs()->useLogName('tickets');
+        return LogOptions::defaults()->logOnly(['name', 'default_tickets', 'mandatory_per_day', 'is_active'])->logOnlyDirty()->dontSubmitEmptyLogs()->useLogName('tickets');
     }
 }

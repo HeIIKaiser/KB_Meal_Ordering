@@ -25,6 +25,7 @@ describe('routes', function () {
 
                 return $mw->contains(fn ($m) => str_starts_with($m, 'auth:')
                     || str_starts_with($m, 'staff:')
+                    || $m === 'attendance.token' // bridge API: bearer token (tests/Feature/Attendance/SyncApiTest.php)
                     || str_contains($m, 'Filament\\Http\\Middleware\\Authenticate')
                     || $m === 'filament.actions');
             })

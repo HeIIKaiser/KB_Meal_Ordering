@@ -4,6 +4,7 @@ namespace App\Domain\Tickets;
 
 use App\Enums\OrderStatus;
 use App\Enums\PricingMode;
+use App\Models\AttendanceResult;
 use App\Models\Employee;
 use App\Models\MealGroup;
 use App\Models\Order;
@@ -11,23 +12,53 @@ use App\Models\TicketMonthCount;
 use App\Models\TicketOverride;
 
 /**
- * How many tickets an employee has in a month:
- *   individual override → the group's count for that month → the group's default.
+ * How many tickets an employee has in a month — the first available value wins
+ * (docs/ATTENDANCE.md §5.3):
+ *   1. manual individual override
+ *   2. final attendance result (after „Finalizovať mesiac“)
+ *   3. override from the „Konečné lístky“ import
+ *   4. live attendance estimate (nightly sync)
+ *   5. the group's count for that month
+ *   6. the group's default
  * Tickets therefore exist for every month (also the next one) without any cron job.
  */
 class TicketAllocation
 {
+    public const SOURCES = [
+        'manual' => 'individuálne',
+        'attendance_final' => 'dochádzka – konečné',
+        'import' => 'import konečných lístkov',
+        'attendance_estimate' => 'dochádzka – odhad',
+        'group_month' => 'skupina (mesiac)',
+        'group_default' => 'skupina (predvolené)',
+    ];
+
     /** Null when the employee has no ticket-mode day in that month. */
     public function allocation(Employee $employee, string $month, ?EmployeeCalendar $calendar = null): ?int
+    {
+        return $this->allocationWithSource($employee, $month, $calendar)['tickets'] ?? null;
+    }
+
+    /** @return array{tickets: int, source: string}|null */
+    public function allocationWithSource(Employee $employee, string $month, ?EmployeeCalendar $calendar = null): ?array
     {
         $group = ($calendar ?? EmployeeCalendar::for($employee))->ticketGroupFor($month);
         if (! $group) {
             return null;
         }
 
-        $override = TicketOverride::query()->where('employee_id', $employee->id)->where('month', $month)->value('tickets');
+        $override = TicketOverride::query()->where('employee_id', $employee->id)->where('month', $month)->first();
+        $result = AttendanceResult::query()->where('employee_id', $employee->id)->where('month', $month)->first();
+        $saved = TicketMonthCount::query()->where('meal_group_id', $group->id)->where('month', $month)->value('tickets');
 
-        return $override ?? $this->groupCount($group, $month);
+        return match (true) {
+            $override?->source === TicketOverride::SOURCE_MANUAL => ['tickets' => $override->tickets, 'source' => 'manual'],
+            $result?->final_meals !== null => ['tickets' => $result->final_meals, 'source' => 'attendance_final'],
+            $override !== null => ['tickets' => $override->tickets, 'source' => 'import'],
+            $result?->estimate_meals !== null => ['tickets' => $result->estimate_meals, 'source' => 'attendance_estimate'],
+            $saved !== null => ['tickets' => $saved, 'source' => 'group_month'],
+            default => ['tickets' => $group->default_tickets, 'source' => 'group_default'],
+        };
     }
 
     /** The group's count for the month, else its default. */

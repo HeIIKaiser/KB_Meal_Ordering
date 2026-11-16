@@ -4,6 +4,7 @@ namespace App\Domain\Exports;
 
 use App\Enums\OrderStatus;
 use App\Enums\PricingMode;
+use App\Models\MandatoryMeal;
 use App\Models\Order;
 use App\Support\LocalTime;
 use Carbon\CarbonImmutable;
@@ -144,6 +145,34 @@ class OrderListExport
                 'vytvoril' => $o->created_by ?? 'sám',
                 'rezim' => PricingMode::from($o->pricing_mode)->exportCode(),
             ];
+        }
+
+        // Mandatory mode: automatic charges, one row per meal so the list adds up (typ/rezim = povinna).
+        $mandatory = MandatoryMeal::query()
+            ->with('employee')
+            ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
+            ->orderBy('date')->orderBy('employee_id')
+            ->get();
+        foreach ($mandatory as $m) {
+            for ($i = 0; $i < $m->count; $i++) {
+                yield [
+                    'datum' => $m->date,
+                    'jedlo' => '',
+                    'osobne_cislo' => (string) $m->employee->osobne_cislo,
+                    'priezvisko' => $m->employee->last_name,
+                    'meno' => $m->employee->first_name,
+                    'stredisko' => (string) $m->employee->department,
+                    'menu_cislo' => '',
+                    'menu_nazov' => 'Povinná strava',
+                    'typ' => 'povinna',
+                    'cena_cents' => $m->unit_price_cents,
+                    'stav' => 'aktivna',
+                    'vytvorene' => LocalTime::toLocal($m->updated_at),
+                    'zrusene' => null,
+                    'vytvoril' => $m->source === MandatoryMeal::SOURCE_FINAL ? 'dochádzka (konečná)' : 'dochádzka (odhad)',
+                    'rezim' => 'povinna',
+                ];
+            }
         }
     }
 }
