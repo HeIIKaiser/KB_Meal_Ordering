@@ -17,6 +17,21 @@ class Settings
     /** Organisation name shown on access sheets, login page, installed app and 2FA; '' = no name. */
     public const COMPANY_NAME = 'company_name';
 
+    /** Attendance (docs/ATTENDANCE.md §5): more than this many seconds of work = 1 meal … */
+    public const ATTENDANCE_ONE_MEAL_SECONDS = 'attendance_one_meal_seconds';
+
+    /** … this many seconds or more = 2 meals. */
+    public const ATTENDANCE_TWO_MEALS_SECONDS = 'attendance_two_meals_seconds';
+
+    /** SHA-256 of the bridge's bearer token (the token itself is shown once). */
+    public const ATTENDANCE_TOKEN_HASH = 'attendance_token_hash';
+
+    /** Optional comma-separated IP allowlist for the sync API. */
+    public const ATTENDANCE_IP_ALLOWLIST = 'attendance_ip_allowlist';
+
+    /** {"at": ISO time, "months": [...]} – "Synchronizovať teraz" pressed in the admin. */
+    public const ATTENDANCE_SYNC_REQUEST = 'attendance_sync_request';
+
     /** Name of the installed app (home screen icon, header, login sheets); null = APP_NAME. */
     public const APP_NAME = 'app_name';
 
@@ -24,6 +39,8 @@ class Settings
         self::ORDERING_HORIZON_DAYS => 14,
         self::MAX_EXTRA_PER_SLOT => null, // null = unlimited (Roman 2026-11-09: extras are unlimited at 6 € each)
         self::COMPANY_NAME => null,
+        self::ATTENDANCE_ONE_MEAL_SECONDS => 4 * 3600,
+        self::ATTENDANCE_TWO_MEALS_SECONDS => 10 * 3600,
     ];
 
     /** @var array<string, mixed>|null */

@@ -24,6 +24,7 @@ class Employee extends Model implements AuthenticatableContract
 
     protected $fillable = [
         'osobne_cislo', 'first_name', 'last_name', 'department', 'is_active', 'user_id',
+        'vema_cislo', 'max_meals_per_day',
     ];
 
     protected $hidden = ['pin_hash', 'pin_plain', 'remember_token'];
@@ -43,6 +44,7 @@ class Employee extends Model implements AuthenticatableContract
             'slip_printed_at' => 'datetime',
             'pin_plain' => 'encrypted',
             'last_login_at' => 'datetime',
+            'max_meals_per_day' => 'integer',
         ];
     }
 
@@ -155,6 +157,19 @@ class Employee extends Model implements AuthenticatableContract
         return $this->hasMany(EmployeeGroupMembership::class)->orderBy('effective_from');
     }
 
+    public function mandatoryMeals(): HasMany
+    {
+        return $this->hasMany(MandatoryMeal::class);
+    }
+
+    /** Osobné číslo as WebVisitor sends it (PERSONALNUMBER is an int: "003" → "3"). */
+    public static function attendanceNumber(string $osobneCislo): string
+    {
+        $n = ltrim(trim($osobneCislo), '0');
+
+        return $n === '' ? '0' : $n;
+    }
+
     public function ticketOverrides(): HasMany
     {
         return $this->hasMany(TicketOverride::class);
@@ -178,7 +193,7 @@ class Employee extends Model implements AuthenticatableContract
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['osobne_cislo', 'first_name', 'last_name', 'department', 'is_active', 'user_id', 'pin_changed_at'])
+            ->logOnly(['osobne_cislo', 'first_name', 'last_name', 'department', 'is_active', 'user_id', 'pin_changed_at', 'vema_cislo', 'max_meals_per_day'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->useLogName('employees');

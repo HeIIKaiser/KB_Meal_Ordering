@@ -60,12 +60,18 @@ final class EmployeeCalendar
      */
     public function ticketGroupFor(string $month): ?MealGroup
     {
+        return $this->groupForModeIn($month, PricingMode::Tickets);
+    }
+
+    /** The employee's group on the last day of the month that is in $mode; null = no such day. */
+    public function groupForModeIn(string $month, PricingMode $mode): ?MealGroup
+    {
         if ($this->memberships->isEmpty()) {
             return null;
         }
 
         for ($day = Month::last($month), $first = Month::first($month); $day >= $first; $day = $day->subDay()) {
-            if ($this->modeOn($day) === PricingMode::Tickets) {
+            if ($this->modeOn($day) === $mode) {
                 return $this->groupOn($day);
             }
         }

@@ -11,11 +11,18 @@ enum PricingMode: string
     /** A monthly number of tickets at the employee price, no daily limits, the rest at full price. */
     case Tickets = 'tickets';
 
+    /**
+     * Povinná strava: N meals per worked day are charged automatically at the employee
+     * price (from attendance); meals ordered in the app are take-home food at full price.
+     */
+    case Mandatory = 'mandatory';
+
     public function label(): string
     {
         return match ($this) {
             self::Daily => 'Denný (1 obed + 1 večera denne)',
             self::Tickets => 'Lístky (mesačný počet)',
+            self::Mandatory => 'Povinná strava (podľa dochádzky)',
         };
     }
 
@@ -25,6 +32,7 @@ enum PricingMode: string
         return match ($this) {
             self::Daily => 'denny',
             self::Tickets => 'listky',
+            self::Mandatory => 'povinna',
         };
     }
 }

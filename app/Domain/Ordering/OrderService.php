@@ -66,6 +66,9 @@ class OrderService
         if ($calendar->modeOn($date) === PricingMode::Tickets) {
             return $this->ticketQuote($employee, $date, $calendar);
         }
+        if ($calendar->modeOn($date) === PricingMode::Mandatory) {
+            return $this->mandatoryQuote($date);
+        }
 
         return $this->nextQuote($this->activeCounts($employee, $date, $slot), $date, $slot);
     }
@@ -95,9 +98,11 @@ class OrderService
 
             $calendar = EmployeeCalendar::for($employee);
             $mode = $calendar->modeOn($menu->date);
-            $quote = $mode === PricingMode::Tickets
-                ? $this->ticketQuote($employee, $menu->date, $calendar)
-                : $this->nextQuote($this->activeCounts($employee, $menu->date, $slot), $menu->date, $slot);
+            $quote = match ($mode) {
+                PricingMode::Tickets => $this->ticketQuote($employee, $menu->date, $calendar),
+                PricingMode::Mandatory => $this->mandatoryQuote($menu->date),
+                default => $this->nextQuote($this->activeCounts($employee, $menu->date, $slot), $menu->date, $slot),
+            };
 
             if ($quote->isExtra() && ! $acceptExtra) {
                 throw new ExtraConfirmationRequired($quote);
@@ -196,8 +201,10 @@ class OrderService
                 $promoted = $repriced->isEmpty() ? null : Order::query()->with(['menuItem', 'priceType'])->find($repriced->orderIds()[0]);
                 $order->setRelation('promoted', $promoted?->priceType->isDonated() ? $promoted : null);
                 $order->setRelation('repriced', $this->otherChanges($repriced, $order));
-            } else {
+            } elseif ($order->pricing_mode === PricingMode::Daily) {
                 $order->setRelation('promoted', $this->promoteAfterCancel($order, $actor));
+            } else {
+                $order->setRelation('promoted', null);
             }
 
             return $order;
@@ -273,6 +280,9 @@ class OrderService
             if ($order->pricing_mode === PricingMode::Tickets) {
                 throw new OrderingException('V režime lístkov sa typ ceny určuje automaticky podľa počtu lístkov. Upravte počet lístkov zamestnanca v časti Lístky na mesiac.', 'ticket_mode');
             }
+            if ($order->pricing_mode === PricingMode::Mandatory) {
+                throw new OrderingException('V režime povinnej stravy sú objednávky z aplikácie vždy dokupovaná strava; povinná strava sa účtuje podľa dochádzky.', 'mandatory_mode');
+            }
 
             if ($type->isDonated() && $order->price_type_id !== $type->id
                 && $this->activeCounts($order->employee, $order->date, $order->mealSlot)->get($type->id, 0) >= $this->limitFor($type)) {
@@ -306,6 +316,14 @@ class OrderService
         $type = PriceType::byCode($used < $allocated ? PriceType::DONATED : PriceType::EXTRA);
 
         return new PriceQuote($type, $this->prices->amountFor($type, $date), ticketsMonth: $month, ticketsLeft: max(0, $allocated - $used));
+    }
+
+    /** Mandatory mode: every meal ordered in the app is take-home food at the full price. */
+    private function mandatoryQuote(DateTimeInterface|string $date): PriceQuote
+    {
+        $type = PriceType::byCode(PriceType::EXTRA);
+
+        return new PriceQuote($type, $this->prices->amountFor($type, $date), mandatory: true);
     }
 
     /** Changes of a repricing run on orders other than $order, with their dish loaded (for messages). */

@@ -35,6 +35,8 @@ class Repricer
         'month_import' => 'konečné lístky (import)',
         'mode_switch' => 'zmena režimu skupiny',
         'group_change' => 'zmena skupiny zamestnanca',
+        'attendance' => 'dochádzka',
+        'attendance_final' => 'konečná dochádzka',
     ];
 
     /** @var array<string, int> */
@@ -79,7 +81,13 @@ class Repricer
             }
         }
 
-        // Daily mode: re-type only slot-days that contain an order coming from ticket mode.
+        // Mandatory mode: meals ordered in the app are take-home food at full price.
+        $orders->filter(fn (Order $o) => $modes[$o->id] === PricingMode::Mandatory)
+            ->each(function (Order $o) use (&$target, $extra) {
+                $target[$o->id] = [PricingMode::Mandatory, $extra];
+            });
+
+        // Daily mode: re-type only slot-days that contain an order coming from another mode.
         $orders->filter(fn (Order $o) => $modes[$o->id] === PricingMode::Daily)
             ->groupBy(fn (Order $o) => $o->date->toDateString().'|'.$o->meal_slot_id)
             ->each(function (Collection $slotDay) use (&$target, $donated, $extra) {
