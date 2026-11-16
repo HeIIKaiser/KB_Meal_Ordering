@@ -10,7 +10,7 @@ Zamestnanci objednávajú na hlavnej adrese (bez `/admin`) osobným číslom a P
 | Rola | Môže |
 |---|---|
 | **Kuchyňa** | denný prehľad, tlač, uzamknutie/odomknutie, jedálny lístok (týždeň, import), prezerať objednávky a uzavreté dni |
-| **Mzdy** | prezerať objednávky, denný prehľad, ceny, skupiny stravníkov, lístky na mesiac a stav mesiaca; exporty pre mzdy |
+| **Mzdy** | prezerať objednávky, denný prehľad, ceny, skupiny stravníkov, lístky na mesiac, dochádzku a stav mesiaca; exporty pre mzdy (aj Vema) |
 | **Administrátor** | všetko: zamestnanci, skupiny a lístky, uzavretie mesiaca, PINy, ceny, uzávierky, nastavenia, opravy objednávok, správcovia, história zmien |
 
 Jeden človek môže mať viac rolí.
@@ -201,6 +201,70 @@ Pri prechode skupiny na lístky v polovici mesiaca nastavte počet na zvyšok me
    objednávky, lístky ani typy cien – pre nikoho, ani v dennom režime. Exporty potom namiesto upozornenia na odhad
    uvádzajú *„Mesiac uzavretý – konečné ceny.“* **Otvoriť mesiac** sa dá s povinným dôvodom (zapíše sa do histórie zmien).
 
+## Dochádzka a mesačná uzávierka (administrátor)
+
+Lístky (a povinná strava) sa počas mesiaca riadia **plánom smien a skutočnou dochádzkou** z WebVisitora.
+Most (bridge) na serveri DOCKER01 ich **každú noc** posiela do aplikácie – nikto nič neprepisuje ani nenahráva.
+
+**Mesačná rutina:**
+
+1. **Počas mesiaca: nič.** Zamestnanci vidia odhad lístkov (*Zostáva 7 z 20 lístkov*), ktorý sa každú noc spresní.
+2. **Po 10. dni nasledujúceho mesiaca** (keď vedúci dokončia opravy dochádzky):
+   - **Objednávky → Dochádzka → Finalizovať mesiac** → **Synchronizovať teraz** a počkať (do 5 minút), alebo
+     *Pokračovať s poslednými dátami*;
+   - **Náhľad**: len zamestnanci, ktorým sa niečo mení oproti odhadu (*Zobraziť všetkých* ukáže všetkých):
+     lístky odhad → konečné, povinná strava, koľko jedál mení cenu, € pred → po a upozornenia
+     (nevyplnené plánované dni, neuzamknutá dochádzka, ponechaný individuálny počet, bez dochádzky);
+   - **Uložiť** → **Uzavrieť mesiac**;
+   - **Objednávky → Exporty → Export do miezd** (*Formát Vema – predbežný*) → súbor pre Vemu.
+
+**Ako sa počítajú jedlá z dochádzky** (čas *Celkom*, bez automatického odpočtu obeda):
+
+| Odpracované za deň | Jedál |
+|---|---|
+| 0 alebo len neprítomnosť (dovolenka, PN, …) | 0 |
+| viac ako 4:00 a menej ako 10:00 | 1 |
+| 10:00 a viac | 2 |
+
+Hranice sa dajú zmeniť v *Nastavenia → Dochádzka – synchronizácia*. Pri zamestnancovi sa dá nastaviť **Max. jedál za deň**
+(napr. 1 = len obedy účtovať).
+
+- **Počas mesiaca (odhad):** budúci deň = podľa plánu smeny; minulý deň s dochádzkou = skutočnosť; minulý plánovaný deň,
+  ktorý ešte nie je vyplnený = podľa plánu (chýbajúce údaje lístky nezoberú); práca navyše v deň voľna = skutočnosť.
+- **Pri finalizácii:** len skutočná dochádzka. Nevyplnený plánovaný deň = 0 a je označený – overte ho s oddelením.
+
+**Poradie, odkiaľ sa berie počet lístkov** (stĺpec *Zdroj* v *Lístky na mesiac*): individuálny počet → konečná dochádzka
+→ import konečných lístkov → odhad z dochádzky → počet skupiny na mesiac → predvolený počet skupiny.
+Individuálny počet má prednosť vždy; po finalizácii sa import konečných lístkov už nepoužije.
+
+### Povinná strava (napr. kuchyňa)
+
+Skupina v režime **Povinná strava**: za každý odpracovaný deň sa automaticky účtuje **N jedál** za zamestnaneckú cenu
+(N je nastavenie skupiny, predvolene 2; max. jedál za deň pri zamestnancovi ho môže znížiť), či zje alebo nie. Dni voľna
+sa neúčtujú. Tieto jedlá sa neobjednávajú a nie sú v zozname pre kuchyňu. Čo si objednajú v aplikácii (jedlo so sebou),
+je vždy dokupovaná strava za 6,00 €.
+
+### Stránka Dochádzka
+
+**Objednávky → Dochádzka** (mesiac): posledná synchronizácia a prípadná chyba mosta, *uzamknuté u X z Y zamestnancov*,
+**nepárované osobné čísla** z WebVisitora, zamestnanci v režime lístkov / povinnej stravy **bez dochádzky** (platí pre nich
+počet skupiny), **nevyplnené plánované dni** a pre každého lístky (odhad, konečné, ktoré platia) a povinnú stravu.
+Ak sa dochádzka zmení **po uzavretí mesiaca**, ceny sa nezmenia – zobrazí sa upozornenie *Dochádzka sa zmenila po uzavretí*
+s rozdielmi; mesiac potom môžete otvoriť (s dôvodom) a znova finalizovať, alebo to vyrovnať v ďalšom mesiaci.
+
+Na nástenke je **posledná synchronizácia** – ak je červená (viac ako 36 h), most na DOCKER01 nebeží; povedzte to správcovi
+servera (návod: `bridge/README.md`). Kým most nebeží, fungujú ručné nástroje (individuálny počet, import konečných lístkov).
+
+**Nastavenia → Dochádzka – synchronizácia:** token pre most (zobrazí sa len raz; nový token zruší starý), povolené IP adresy
+a hranice pre 1 a 2 jedlá.
+
+### Vema čísla
+
+Pri zamestnancovi je pole **Vema číslo** (osobné číslo vo Veme, môže sa líšiť od osobného čísla). V exporte je bez núl na
+začiatku. Tlačidlo **Doplniť Vema čísla** v zozname zamestnancov ho jednorazovo doplní z osobného čísla (003 → 3) všetkým,
+ktorí ho ešte nemajú. Zamestnanec so sumou bez Vema čísla export zablokuje (zobrazí sa zoznam). Import zamestnancov
+pozná stĺpce `vema_cislo` a `max_jedal_za_den` (1, 2 alebo `-` = bez obmedzenia).
+
 ## Objednávky
 
 **Objednávky → Všetky objednávky** — filtre vpravo hore (obdobie, jedlo, typ, stav, zamestnanec), vyhľadávanie podľa mena alebo osobného čísla.
@@ -244,6 +308,13 @@ objednávok** pridá aj tých, ktorí nejedli ani raz (s nulami).
 Zvoľte obdobie (max. 1 rok) a formát **Excel** alebo **CSV** → **Stiahnuť**. Jeden riadok na objednávku,
 aj zrušené (stĺpec `stav`), s osobným číslom, strediskom, menu, typom, cenou, časom vytvorenia/zrušenia a režimom (`rezim`) —
 vhodné na kontingenčnú tabuľku alebo napojenie na iný systém.
+
+### Export do miezd (Vema)
+
+Mesiac a formát → **Stiahnuť**. Jeden riadok na zamestnanca: `vema_cislo, priezvisko, meno, zamestnanecka_ks,
+dokupovana_ks, povinna_ks, suma_eur` (suma = objednávky + povinná strava, rovnaká ako v hárku Súhrn).
+**Formát Vema je predbežný** – upraví sa podľa vzorového súboru, ktorý mzdy dnes do Vemy importujú.
+Pri otvorenom mesiaci sa najprv zobrazí upozornenie, že ide o **odhad**.
 
 Každé stiahnutie exportu sa zapíše do *Histórie zmien*.
 
@@ -303,7 +374,10 @@ uzamknutia, nastavenia) vrátane dôvodu opravy. Detail záznamu ukáže hodnoty
 - **Ak ste v skupine s lístkami:** máte na mesiac určitý počet lístkov. Každé jedlo (aj viac v jeden deň) je za lístok
   za 1,50 €, kým lístky nemíňate; potom 6,00 €. Hore pri dňoch vidíte *„Zostáva 7 z 20 lístkov – november“*.
   Nevyužité lístky na konci mesiaca prepadnú. Ak zrušíte jedlo, lístok sa vráti.
-- V časti **Môj mesiac** vidíte všetky objednávky a sumu za mesiac (pri lístkoch aj pridelené / použité / zostáva).
+- **Povinná strava** (napr. kuchyňa): jedlá za odpracované dni sa účtujú automaticky podľa dochádzky; čo si objednáte
+  v aplikácii (so sebou), je za 6,00 €.
+- V časti **Môj mesiac** vidíte všetky objednávky a sumu za mesiac (pri lístkoch aj pridelené / použité / zostáva,
+  pri povinnej strave jedlá podľa dochádzky).
   *Cena stravy je odhadom a po porovnaní s dochádzkou sa môže zmeniť* (napr. pri 8-hodinovej zmene patrí
   jedna zamestnanecká strava denne).
 

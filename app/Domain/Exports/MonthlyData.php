@@ -5,15 +5,15 @@ namespace App\Domain\Exports;
 use App\Domain\Tickets\ClosedMonths;
 use App\Domain\Tickets\EmployeeCalendar;
 use App\Domain\Tickets\Month;
+use App\Domain\Tickets\TicketAllocation;
 use App\Enums\OrderStatus;
 use App\Enums\PricingMode;
 use App\Models\Employee;
 use App\Models\EmployeeGroupMembership;
+use App\Models\MandatoryMeal;
 use App\Models\MealSlot;
 use App\Models\Order;
 use App\Models\PriceType;
-use App\Models\TicketMonthCount;
-use App\Models\TicketOverride;
 use App\Support\LocalTime;
 use App\Support\Money;
 use Carbon\CarbonImmutable;
@@ -21,7 +21,8 @@ use Illuminate\Support\Collection;
 
 /**
  * Per-employee monthly numbers for payroll / attendance matching: counts per
- * day × price type (× slot) and € sums from each order's snapshot price.
+ * day × price type (× slot) and € sums from each order's stored price, plus the
+ * automatic mandatory charges (povinná strava) per day.
  * Active orders only. One grouped query for the whole month.
  *
  * Layout-independent — the XLSX layout lives in MonthlyMatrixXlsx.
@@ -70,8 +71,11 @@ final class MonthlyData
             ->toBase()
             ->get();
 
+        // Mandatory mode: automatic charges from attendance (not orders), per day.
+        $mandatory = MandatoryMeal::query()->whereBetween('date', [$from, $to])->get()->groupBy('employee_id');
+
         $employees = Employee::query()
-            ->where(fn ($q) => $q->whereIn('id', $rows->pluck('employee_id')->unique())
+            ->where(fn ($q) => $q->whereIn('id', $rows->pluck('employee_id')->merge($mandatory->keys())->unique())
                 ->when($includeWithoutOrders, fn ($q) => $q->orWhere('is_active', true)))
             ->alphabetical()
             ->get();
@@ -79,7 +83,7 @@ final class MonthlyData
         $byEmployee = $rows->groupBy('employee_id');
         $tickets = self::tickets($employees, $month->format('Y-m'));
 
-        $data = $employees->map(function (Employee $e) use ($byEmployee, $tickets) {
+        $data = $employees->map(function (Employee $e) use ($byEmployee, $tickets, $mandatory) {
             $counts = [];
             $cents = [];
             foreach ($byEmployee[$e->id] ?? [] as $r) {
@@ -89,7 +93,14 @@ final class MonthlyData
                 $cents[$key] = ($cents[$key] ?? 0) + (int) $r->cents;
             }
 
-            return ['employee' => $e, 'counts' => $counts, 'cents' => $cents, ...$tickets[$e->id]];
+            $m = [];
+            $mCents = 0;
+            foreach ($mandatory[$e->id] ?? [] as $row) {
+                $m[(int) $row->date->format('j')] = $row->count;
+                $mCents += $row->count * $row->unit_price_cents;
+            }
+
+            return ['employee' => $e, 'counts' => $counts, 'cents' => $cents, 'mandatory' => $m, 'mandatory_cents' => $mCents, ...$tickets[$e->id]];
         })->values();
 
         return new self(
@@ -106,13 +117,12 @@ final class MonthlyData
      * of the month) per employee, batch-loaded.
      *
      * @param  Collection<int, Employee>  $employees
-     * @return array<int, array{group: ?string, mode: string, tickets: array{allocated: int, used: int, expired: int}|null}>
+     * @return array<int, array{group: ?string, mode: string, tickets: array{allocated: int, used: int, expired: int}|null, ticket_source: ?string}>
      */
     private static function tickets(Collection $employees, string $month): array
     {
         $memberships = EmployeeGroupMembership::query()->whereIn('employee_id', $employees->pluck('id'))->with('group.modes')->get()->groupBy('employee_id');
-        $overrides = TicketOverride::query()->where('month', $month)->pluck('tickets', 'employee_id');
-        $groupCounts = TicketMonthCount::query()->where('month', $month)->pluck('tickets', 'meal_group_id');
+        $allocation = app(TicketAllocation::class);
         $used = Order::query()
             ->where('status', OrderStatus::Active->value)
             ->where('pricing_mode', PricingMode::Tickets->value)
@@ -125,8 +135,9 @@ final class MonthlyData
             $modes = $calendar->memberships()->isEmpty() ? [PricingMode::Daily] : $calendar->modesIn($month);
             $ticketGroup = $calendar->ticketGroupFor($month);
             $tickets = null;
+            $source = null;
             if ($ticketGroup) {
-                $allocated = (int) ($overrides[$e->id] ?? $groupCounts[$ticketGroup->id] ?? $ticketGroup->default_tickets);
+                ['tickets' => $allocated, 'source' => $source] = $allocation->allocationWithSource($e, $month, $calendar);
                 $n = (int) ($used[$e->id] ?? 0);
                 $tickets = ['allocated' => $allocated, 'used' => min($n, $allocated), 'expired' => max(0, $allocated - $n)];
             }
@@ -134,6 +145,7 @@ final class MonthlyData
                 'group' => ($ticketGroup ?? $calendar->groupOn(Month::last($month)))?->name,
                 'mode' => count($modes) > 1 ? 'zmiesany' : $modes[0]->exportCode(),
                 'tickets' => $tickets,
+                'ticket_source' => $source,
             ];
         }
 
@@ -157,6 +169,23 @@ final class MonthlyData
         }
 
         return $sum;
+    }
+
+    /** Automatic mandatory meals (whole month, or one day). */
+    public static function mandatoryCount(array $entry, ?int $day = null): int
+    {
+        return $day === null ? array_sum($entry['mandatory']) : ($entry['mandatory'][$day] ?? 0);
+    }
+
+    /** Everything the employee pays: orders + mandatory charges. */
+    public static function totalCents(array $entry): int
+    {
+        return self::cents($entry) + $entry['mandatory_cents'];
+    }
+
+    public function hasMandatory(): bool
+    {
+        return $this->employees->contains(fn ($e) => $e['mandatory'] !== []);
     }
 
     public static function cents(array $entry, ?int $typeId = null, ?int $slotId = null): int

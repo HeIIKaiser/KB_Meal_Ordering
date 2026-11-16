@@ -83,6 +83,9 @@ Rules live in one place: **`app/Domain/Ordering/OrderService.php`** — every or
 | `app/Domain/Ordering/PriceResolver.php`, `SlotLockService.php` | Versioned prices; manual lock/unlock |
 | `app/Domain/Menus/*` | Menu writer (plan → affected employees → apply), menu import (weekly + long format, allergens) |
 | `app/Domain/Employees/*` | Employee import, PIN issuing |
+| `app/Domain/Attendance/*` | Attendance from WebVisitor: meal rule, estimate/final (`AttendanceCalculator`), sync ingest (`AttendanceSync`), `Recalculator`, `Finalizer`; API in `routes/api.php` |
+| `bridge/` | **Attendance bridge** for DOCKER01 (standalone PHP + Docker): WebVisitor → app. See `bridge/README.md` |
+| `app/Domain/Exports/Payroll/*` | Payroll export formats behind one interface; `VemaFormat` (provisional — the whole layout is in that class) |
 | `app/Domain/Tickets/*` | Ticket mode: employee groups and their mode/membership history (`EmployeeCalendar`), allocation, **`Repricer`** (the month's first N meals at the employee price), monthly counts, month-end import, closed months |
 | `app/Domain/Kitchen/*`, `resources/views/kitchen/*` | Kitchen daily overview data (shared by screen, print, PDF, XLSX); printable sheet |
 | `app/Domain/Exports/*` | Payroll exports: `MonthlyData` (numbers), **`MonthlyMatrixXlsx` (whole monthly layout)**, `OrderListExport` |
@@ -254,6 +257,14 @@ Scheduled tasks (all run inside the cron process, no `exec`/`proc_open` needed):
 |---|---|
 | Heartbeat (proves the cron runs; checked by `app:hosting-check`) | every minute |
 | Database backup + 30-day rotation | daily 02:30 Europe/Bratislava |
+| Attendance estimate refresh for open months (`docs/ATTENDANCE.md` §5.1) | daily 03:30 Europe/Bratislava |
+
+### Attendance bridge (DOCKER01)
+
+The app never connects into the company network. The small bridge in [`bridge/`](bridge/README.md) runs in Docker on
+DOCKER01, reads WebVisitor read-only and pushes each month to `POST /api/attendance-sync` (bearer token from
+*Nastavenia → Dochádzka – synchronizácia*). `public/.htaccess` already forwards the `Authorization` header to PHP.
+If the bridge is down, the app keeps the last data and the manual ticket tools still work.
 
 Ordering cutoffs do **not** depend on cron.
 

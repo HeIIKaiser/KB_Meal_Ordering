@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Domain\Exports\Payroll\PayrollFormats;
 use App\Domain\Tickets\ClosedMonths;
 use App\Domain\Tickets\Month;
 use App\Enums\NavGroup;
@@ -46,6 +47,7 @@ class Exports extends Page
             'defaultMonth' => ($today->day <= 10 ? $prev : $today)->format('Y-m'),
             'from' => $prev->startOfMonth()->toDateString(),
             'to' => $prev->endOfMonth()->toDateString(),
+            'payrollFormats' => PayrollFormats::all(),
             'months' => collect(range(3, 0))->map(function ($i) use ($today) {
                 $m = $today->startOfMonth()->subMonthsNoOverflow($i)->format('Y-m');
 

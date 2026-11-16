@@ -5,8 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Domain\Exports\MonthlyData;
 use App\Domain\Exports\MonthlyMatrixXlsx;
 use App\Domain\Exports\OrderListExport;
+use App\Domain\Exports\Payroll\PayrollData;
+use App\Domain\Exports\Payroll\PayrollFormats;
+use App\Filament\Pages\Exports;
 use App\Http\Controllers\Controller;
 use App\Support\LocalTime;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -56,6 +60,35 @@ class ExportController extends Controller
             OrderListExport::fileName($from, $to, $data['format']),
             $data['format'] === 'csv' ? 'text/csv; charset=UTF-8' : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         );
+    }
+
+    /**
+     * Payroll export in a pluggable format (Vema first). Missing Vema numbers block it;
+     * an open month needs an explicit „odhad“ confirmation.
+     */
+    public function payroll(Request $request): BinaryFileResponse|RedirectResponse
+    {
+        $data = $request->validate([
+            'mesiac' => ['required', 'date_format:Y-m'],
+            'format' => ['required', 'in:'.implode(',', array_keys(PayrollFormats::all()))],
+            'odhad' => ['nullable', 'boolean'],
+        ], ['mesiac.*' => 'Zadajte mesiac v tvare RRRR-MM.', 'format.*' => 'Neznámy formát.']);
+
+        $format = PayrollFormats::get($data['format']);
+        $payroll = PayrollData::for($data['mesiac']);
+        $back = redirect(Exports::getUrl().'#mzdy')->withInput();
+
+        if ($problems = $format->validate($payroll)) {
+            return $back->with('payroll_errors', $problems);
+        }
+        if (! $payroll->closed && ! $request->boolean('odhad')) {
+            return $back->with('payroll_estimate', ['mesiac' => $data['mesiac'], 'format' => $data['format']]);
+        }
+
+        $path = $format->write($payroll);
+        $this->audit('Export do miezd ('.$format->label().'): '.$data['mesiac'].($payroll->closed ? '' : ' – odhad'));
+
+        return $this->download($path, $format->fileName($data['mesiac']), $format->contentType());
     }
 
     private function download(string $path, string $name, string $type): BinaryFileResponse

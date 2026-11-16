@@ -238,3 +238,37 @@ Roman's spec: an alternative pricing rule per **employee group**. Daily mode is 
   installations: „KBZ“, preset by a migration; otherwise `APP_NAME`). The icon is a neutral people pictogram
   (`tools/make-icons.php`). Deploy: `bash deploy/update.sh` (one migration).
 
+### Attendance from WebVisitor, mandatory meals, Vema export (2026-11-16)
+
+Spec `docs/ATTENDANCE.md` (v2). Monthly routine: nothing during the month → after the 10th: Synchronizovať → Finalizovať →
+Uzavrieť → Vema export.
+
+- **Bridge (`bridge/`)**
+  - PHP CLI in Docker on DOCKER01 that reads WebVisitor (read-only) and pushes it out to the app, every night and on
+    request.
+  - Schema check before each sync, no names sent.
+  - Image built and run end-to-end here against a local WebVisitor-shaped fixture.
+- **App**
+  - Sync API with a hashed token, rate limit, gzip and HTTPS.
+  - Per-day meal rule; live estimate and final values.
+  - Ticket allocation chain with the attendance sources.
+  - Mandatory mode (povinná strava) with automatic per-day charges.
+  - Closed months: changes after closing are only reported.
+- **Admin**
+  - *Dochádzka* (status), *Finalizovať mesiac* (preview → save → close), *Dochádzka – synchronizácia* (token,
+    allowlist, thresholds).
+  - Dashboard widget for the last sync.
+  - Groups in mandatory mode; Vema number and max meals per day on employees (form, list, filter, import,
+    *Doplniť Vema čísla*).
+- **Exports**
+  - Payroll export interface with **Formát Vema – predbežný**.
+  - Mandatory meals in the matrix, Súhrn (plus ticket source and Vema number) and the flat list.
+- **Tests**: 349 green on MariaDB (347 on SQLite, where the 2 MySQL-only tests are skipped), including the bridge
+  fixture tests on both databases.
+- **Deploy**:
+  1. `bash deploy/update.sh` (one migration).
+  2. Generate the token in *Nastavenia → Dochádzka – synchronizácia*.
+  3. Install the bridge on DOCKER01 (`bridge/README.md`).
+- **Still open**: the real Vema sample, to replace the provisional columns. Check `vis_monthatt.PERIOD` and the shift
+  name column on the real data (the bridge logs both).
+

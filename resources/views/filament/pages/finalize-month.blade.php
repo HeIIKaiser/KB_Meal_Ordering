@@ -46,19 +46,19 @@
             <div class="max-h-[32rem] overflow-auto">
                 <table class="w-full text-left text-sm">
                     <thead class="sticky top-0 bg-white dark:bg-gray-900"><tr class="border-b">
-                        <th class="py-2">Zamestnanec</th><th class="py-2 text-right">Lístky odhad → konečné</th><th class="py-2 text-right">Povinná strava</th>
-                        <th class="py-2 text-right">Jedál z app.</th><th class="py-2 text-right">Zmena ceny</th><th class="py-2 text-right">€ pred → po</th><th class="py-2">Upozornenia</th>
+                        <th class="px-2 py-2">Zamestnanec</th><th class="px-2 py-2 text-right">Lístky odhad → konečné</th><th class="px-2 py-2 text-right">Povinná strava</th>
+                        <th class="px-2 py-2 text-right">Jedál z app.</th><th class="px-2 py-2 text-right">Zmena ceny</th><th class="px-2 py-2 text-right">€ pred → po</th><th class="px-2 py-2">Upozornenia</th>
                     </tr></thead>
                     <tbody>
                         @forelse ($rows as $r)
                             <tr class="border-b border-gray-100 align-top dark:border-white/5">
-                                <td class="py-1.5">{{ $r['name'] }} <span class="text-gray-500">({{ $r['osobne_cislo'] }})</span></td>
-                                <td class="py-1.5 text-right">@if ($r['tickets']){{ $r['tickets'][0] ?? '–' }} → <strong>{{ $r['tickets'][1] ?? '–' }}</strong>@if ($r['allocation'] && $r['allocation']['source'] !== 'attendance_final')<br><span class="text-xs text-gray-500">platí {{ $r['allocation']['tickets'] }} (ručne)</span>@endif @else – @endif</td>
-                                <td class="py-1.5 text-right">@if ($r['mandatory']){{ $r['mandatory'][0] }} → <strong>{{ $r['mandatory'][1] }}</strong>@else – @endif</td>
-                                <td class="py-1.5 text-right">{{ $r['used'] }}</td>
-                                <td class="py-1.5 text-right">{{ $r['repriced'] ?: '–' }}</td>
-                                <td class="py-1.5 text-right">{{ $money($r['cents'][0]) }} → <strong>{{ $money($r['cents'][1]) }}</strong></td>
-                                <td class="py-1.5 text-xs">
+                                <td class="px-2 py-1.5">{{ $r['name'] }} <span class="text-gray-500">({{ $r['osobne_cislo'] }})</span></td>
+                                <td class="px-2 py-1.5 text-right">@if ($r['tickets']){{ $r['tickets'][0] ?? '–' }} → <strong>{{ $r['tickets'][1] ?? '–' }}</strong>@if ($r['allocation'] && $r['allocation']['source'] !== 'attendance_final')<br><span class="text-xs text-gray-500">platí {{ $r['allocation']['tickets'] }} (ručne)</span>@endif @else – @endif</td>
+                                <td class="px-2 py-1.5 text-right">@if ($r['mandatory']){{ $r['mandatory'][0] }} → <strong>{{ $r['mandatory'][1] }}</strong>@else – @endif</td>
+                                <td class="px-2 py-1.5 text-right">{{ $r['used'] }}</td>
+                                <td class="px-2 py-1.5 text-right">{{ $r['repriced'] ?: '–' }}</td>
+                                <td class="px-2 py-1.5 text-right">{{ $money($r['cents'][0]) }} → <strong>{{ $money($r['cents'][1]) }}</strong></td>
+                                <td class="px-2 py-1.5 text-xs">
                                     @if ($r['flags']['unfilled'])<div class="text-warning-600">nevyplnené: {{ collect($r['flags']['unfilled'])->map($dm)->join(', ') }}</div>@endif
                                     @if ($r['flags']['not_locked'])<div class="text-warning-600">dochádzka neuzamknutá</div>@endif
                                     @if ($r['flags']['no_data'])<div class="text-danger-600">bez dochádzky</div>@endif

@@ -42,13 +42,13 @@
             <x-slot name="heading"><span class="text-danger-600">Dochádzka sa zmenila po uzavretí</span></x-slot>
             <x-slot name="description">Ceny sa nezmenili. Ak treba, mesiac znova otvorte (Lístky na mesiac → Otvoriť mesiac, s dôvodom) a finalizujte, alebo to vyrovnajte v ďalšom mesiaci. Prijaté {{ $fmt($late->received_at) }}.</x-slot>
             <table class="w-full text-left text-sm">
-                <thead><tr class="border-b"><th class="py-1">Zamestnanec</th><th class="py-1">Lístky</th><th class="py-1">Povinná strava</th><th class="py-1 text-right">Rozdiel €</th></tr></thead>
+                <thead><tr class="border-b"><th class="px-2 py-1">Zamestnanec</th><th class="px-2 py-1">Lístky</th><th class="px-2 py-1">Povinná strava</th><th class="px-2 py-1 text-right">Rozdiel €</th></tr></thead>
                 <tbody>
                     @foreach ($late->late_changes as $c)
-                        <tr class="border-b border-gray-100"><td class="py-1">{{ $c['name'] }} ({{ $c['osobne_cislo'] }})</td>
-                            <td class="py-1">{{ $c['tickets'][0] ?? '–' }} → {{ $c['tickets'][1] ?? '–' }}</td>
-                            <td class="py-1">{{ $c['mandatory'][0] ?? '–' }} → {{ $c['mandatory'][1] ?? '–' }}</td>
-                            <td class="py-1 text-right">{{ ($c['cents'] > 0 ? '+' : '').\App\Support\Money::format($c['cents']) }}</td></tr>
+                        <tr class="border-b border-gray-100"><td class="px-2 py-1">{{ $c['name'] }} ({{ $c['osobne_cislo'] }})</td>
+                            <td class="px-2 py-1">{{ $c['tickets'][0] ?? '–' }} → {{ $c['tickets'][1] ?? '–' }}</td>
+                            <td class="px-2 py-1">{{ $c['mandatory'][0] ?? '–' }} → {{ $c['mandatory'][1] ?? '–' }}</td>
+                            <td class="px-2 py-1 text-right">{{ ($c['cents'] > 0 ? '+' : '').\App\Support\Money::format($c['cents']) }}</td></tr>
                     @endforeach
                 </tbody>
             </table>
@@ -86,21 +86,21 @@
             <div class="max-h-[32rem] overflow-auto">
                 <table class="w-full text-left text-sm">
                     <thead class="sticky top-0 bg-white dark:bg-gray-900"><tr class="border-b">
-                        <th class="py-2">Zamestnanec</th><th class="py-2">Režim</th>
-                        <th class="py-2 text-right">Lístky odhad</th><th class="py-2 text-right">Lístky konečné</th><th class="py-2">Platí</th>
-                        <th class="py-2 text-right">Povinná odhad</th><th class="py-2 text-right">Povinná konečná</th><th class="py-2">Dochádzka</th>
+                        <th class="px-2 py-2">Zamestnanec</th><th class="px-2 py-2">Režim</th>
+                        <th class="px-2 py-2 text-right">Lístky odhad</th><th class="px-2 py-2 text-right">Lístky konečné</th><th class="px-2 py-2">Platí</th>
+                        <th class="px-2 py-2 text-right">Povinná odhad</th><th class="px-2 py-2 text-right">Povinná konečná</th><th class="px-2 py-2">Dochádzka</th>
                     </tr></thead>
                     <tbody>
                         @foreach ($rows as $r)
                             <tr class="border-b border-gray-100 dark:border-white/5">
-                                <td class="py-1.5">{{ $r['employee']->fullNameReversed() }} <span class="text-gray-500">({{ $r['employee']->osobne_cislo }})</span></td>
-                                <td class="py-1.5">{{ $r['modes'] }}</td>
-                                <td class="py-1.5 text-right">{{ $r['result']?->estimate_meals ?? '–' }}</td>
-                                <td class="py-1.5 text-right">{{ $r['result']?->final_meals ?? '–' }}</td>
-                                <td class="py-1.5">@if ($r['allocation']){{ $r['allocation']['tickets'] }} <span class="text-xs text-gray-500">({{ $sources[$r['allocation']['source']] }})</span>@else – @endif</td>
-                                <td class="py-1.5 text-right">{{ $r['result']?->mandatory_estimate ?? '–' }}</td>
-                                <td class="py-1.5 text-right">{{ $r['result']?->mandatory_final ?? '–' }}</td>
-                                <td class="py-1.5">{{ ! $r['has_data'] ? 'chýba' : ($r['locked'] ? 'uzamknutá' : 'otvorená') }}</td>
+                                <td class="px-2 py-1.5">{{ $r['employee']->fullNameReversed() }} <span class="text-gray-500">({{ $r['employee']->osobne_cislo }})</span></td>
+                                <td class="px-2 py-1.5">{{ $r['modes'] }}</td>
+                                <td class="px-2 py-1.5 text-right">{{ $r['result']?->estimate_meals ?? '–' }}</td>
+                                <td class="px-2 py-1.5 text-right">{{ $r['result']?->final_meals ?? '–' }}</td>
+                                <td class="px-2 py-1.5">@if ($r['allocation']){{ $r['allocation']['tickets'] }} <span class="text-xs text-gray-500">({{ $sources[$r['allocation']['source']] }})</span>@else – @endif</td>
+                                <td class="px-2 py-1.5 text-right">{{ $r['result']?->mandatory_estimate ?? '–' }}</td>
+                                <td class="px-2 py-1.5 text-right">{{ $r['result']?->mandatory_final ?? '–' }}</td>
+                                <td class="px-2 py-1.5">{{ ! $r['has_data'] ? 'chýba' : ($r['locked'] ? 'uzamknutá' : 'otvorená') }}</td>
                             </tr>
                         @endforeach
                     </tbody>

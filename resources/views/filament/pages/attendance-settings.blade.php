@@ -3,7 +3,7 @@
         <x-slot name="heading">Token pre most (bridge) na DOCKER01</x-slot>
         <x-slot name="description">
             Most v sieti firmy číta dochádzku z WebVisitora a posiela ju sem na <code>{{ $url }}</code>. Aplikácia sa do siete firmy nikdy nepripája.
-            Token sa uloží len v zašifrovanej podobe – po vygenerovaní ho skopírujte do <code>bridge/.env</code> (<code>SYNC_TOKEN=</code>). Nový token okamžite zruší starý.
+            Samotný token sa neukladá (len jeho odtlačok) – po vygenerovaní ho hneď skopírujte do <code>bridge/.env</code> (<code>SYNC_TOKEN=</code>). Nový token okamžite zruší starý.
         </x-slot>
 
         @if ($newToken)

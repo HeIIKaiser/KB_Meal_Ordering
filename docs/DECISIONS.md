@@ -138,6 +138,78 @@ the default; nothing changes until an admin creates a group in ticket mode.
 13. **Navigation.** *Ľudia → Skupiny stravníkov* (admin edits, payroll reads); *Objednávky → Lístky na mesiac* (payroll
     reads, admin edits, close/reopen); *Objednávky → Konečné lístky (import)* (admin).
 
+## Design decisions — attendance from WebVisitor (2026-11-16)
+
+Spec: `docs/ATTENDANCE.md` (v2). Roman approved the plan, including answers 1–4 below.
+
+1. **Data model.**
+   - `attendance_days`: mirror of the synced days, no names, replaced month by month.
+   - `attendance_results`: per employee and month: estimate and final tickets / mandatory meals, plus flags.
+   - `mandatory_meals`: automatic charges per day, source `estimate` | `final`. They are not orders, so the kitchen
+     never sees them.
+   - `attendance_syncs`: log of data and status calls, unmatched numbers, late changes.
+   - New columns: `employees.vema_cislo`, `employees.max_meals_per_day`, `meal_groups.mandatory_per_day`.
+   - `PricingMode::Mandatory`. The mode columns were widened to 16 characters because "mandatory" is 9.
+2. **Matching.**
+   - WebVisitor `PERSONALNUMBER` is an int, so the app matches osobné číslo without leading zeros ("003" = 3).
+   - Two app employees with the same normalised number are a conflict: neither is updated, and the number is listed as
+     unmatched.
+   - Duplicate entries of one person in a payload are merged like two employments.
+3. **Day rule.** Worked time ≤ 4:00 → 0 meals, more than 4:00 → 1, 10:00 or more → 2, using `totalWork` („Celkom“).
+   The thresholds are settings. The employee cap is applied after the rule, also to mandatory N.
+   - **Estimate:** today counts as a future day (its data is still incomplete), so it uses the plan.
+   - **Final:** a planned past day with nothing filled in is 0 and flagged.
+4. **Mandatory mode.**
+   - N meals per day with at least one meal by the rule, priced at the Zamestnanecká strava price of that date.
+   - App orders: `pricing_mode = mandatory`, always Dokupovaná strava with the extra confirmation. Admin price-type
+     corrections are refused.
+5. **Allocation chain:** manual override → `attendance_final` → import override → `attendance_estimate` → group month
+   count → group default. *Lístky na mesiac* shows the source. After finalisation, a *Konečné lístky* import no longer
+   applies to that month; manual overrides still do (Roman, answer 4).
+6. **Sync API** (`routes/api.php`):
+   - bearer token stored as SHA-256 and shown once; rotating it invalidates the old one at once;
+   - HTTPS required in production, 30 requests/min, optional IP/CIDR allowlist, gzip accepted, 30 MB limit;
+   - one month per request, idempotent replace;
+   - `pending` is computed from the request time and the months received since, so there is no flag to clear.
+7. **Recompute.**
+   - An open month is recomputed per affected employee in the usual transaction and employee lock, then repriced.
+     Affected = everyone in ticket/mandatory mode that month, plus anyone matched in the data, plus anyone with a result.
+   - A nightly app job (03:30) refreshes the estimate of open months from the mirror, because the past/future boundary
+     moves daily even when the bridge is down.
+   - A finalised month that is reopened and synced again keeps its final values until it is finalised again.
+8. **Closed month.** The mirror is still updated, but results, charges and prices are not changed. The differences are
+   computed exactly by simulating a finalisation in a rolled-back transaction, stored on the sync log and shown as
+   „Dochádzka sa zmenila po uzavretí“.
+9. **Finalisation of someone without any attendance** stores nothing final, so the fallbacks (import, group count)
+   keep applying. The preview flags them „bez dochádzky“.
+10. **Bridge.**
+    - Standalone PHP 8.3 CLI, no Composer, in Docker on DOCKER01.
+    - Nightly at 02:00 and once at container start (previous + current month); polls `pending` every 5 minutes.
+    - Schema check before every sync. The shift-name column of `vis_workinterval` is assumed to be `NAME`
+      (configurable with `WV_SHIFT_NAME_COLUMN`).
+    - `planned_seconds` = PLANEND − PLANSTART when FUND > 0 (FUND if the plan times are missing). Employments of a
+      person are summed per date. The month is locked only if all of the person's employments are locked.
+    - **`vis_monthatt.PERIOD`:** both `YYYYMM` and a date are accepted (matched by digits), and the bridge logs which
+      format it found. To be made strict once seen on real data (Roman, answer 1).
+11. **Vema number (Roman, answer 2).** Digits only, unique, stored as text, exported as a number without leading zeros.
+    A one-off action *Doplniť Vema čísla* fills it from osobné číslo (003 → 3) where it is empty. It never overwrites,
+    and skips non-numeric or already used values.
+12. **Exports.**
+    - Súhrn: columns *Povinná strava ks / €*, *Zdroj lístkov* and *Vema číslo* are appended at the end, so existing
+      positions stay the same. **Suma € now includes the mandatory charges.**
+    - Matrix: a *Povinná strava* row per day; the employee total includes it.
+    - Flat list: mandatory charges are **one row per meal** with `typ = povinna`, `rezim = povinna` (Roman, answer 3),
+      appended after the orders.
+13. **Payroll export — Vema format is PROVISIONAL.**
+    - Formats sit behind `App\Domain\Exports\Payroll\PayrollFormat` and are registered in `PayrollFormats`.
+    - `VemaFormat` is labelled **„Formát Vema – predbežný“** in the UI.
+    - Columns `vema_cislo, priezvisko, meno, zamestnanecka_ks, dokupovana_ks, povinna_ks, suma_eur`; XLSX, one row
+      per employee with an amount, sorted by Vema number.
+    - Its whole layout is `VemaFormat::columns()` and `write()`. When Roman sends the sample (today payroll imports the
+      „ZS – podklady pre vyúčtovanie“ XLSX exported from Pramen, with personal numbers as plain numbers, 003 → 3),
+      only that class and its test change.
+    - Missing Vema numbers block the export with a list. An open month needs an explicit „odhad“ confirmation.
+
 ## Decisions by Roman
 
 - **2026-11-09 — Staff 2FA is optional.** Users can enable TOTP in their Filament profile; it is not enforced on first login and there are no prompts. (Brief §5 said "email + password + 2FA" — relaxed because most staff can't handle authenticator apps.)
@@ -171,4 +243,7 @@ the default; nothing changes until an admin creates a group in ticket mode.
   pictogram instead of plate + cutlery, so the app can grow beyond meal ordering. The name is also used in the app header
   and in the instructions on the access sheets. Already installed icons update when the phone refreshes the manifest
   or when the app is added to the home screen again; the service-worker cache version was bumped.
+- **2026-11-16 — Attendance from WebVisitor, mandatory meals, Vema export** (Roman's spec `docs/ATTENDANCE.md` v2,
+  plan approved with answers 1–4 as proposed). The Vema format stays provisional until the sample file arrives; see
+  "Design decisions — attendance" above.
 

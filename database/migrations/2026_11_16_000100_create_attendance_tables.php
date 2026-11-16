@@ -16,6 +16,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // "mandatory" needs more than the 8 characters of the ticket-mode columns.
+        Schema::table('meal_group_modes', fn (Blueprint $table) => $table->string('mode', 16)->change());
+        Schema::table('orders', fn (Blueprint $table) => $table->string('pricing_mode', 16)->default('daily')->change());
+
         Schema::table('meal_groups', function (Blueprint $table) {
             $table->unsignedTinyInteger('mandatory_per_day')->default(2)->after('default_tickets');
         });
