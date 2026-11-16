@@ -255,6 +255,57 @@ Spec: `docs/CATEGORIES.md`. Roman approved the plan, including answers 1–5 bel
      existing *Ceny* page. Both now pass the local time zone; a regression test covers it.
    - Headings use Slovak sentence case (`SentenceCaseLabels`), e.g. „Pevné ceny“, not „Pevné Ceny“.
 
+## Design decisions — daisyUI on the employee side (2026-11-17)
+
+Roman approved the plan, with answers 1–2 below.
+
+1. **Scope.**
+   - daisyUI 5 (devDependency) is enabled with `@plugin "daisyui"` in `resources/css/app.css`. Only
+     `layouts/employee.blade.php` loads that file, so the Filament admin (`theme.css`, unchanged), kitchen/print views,
+     access slips and error pages are unaffected.
+   - No daisyUI JS, no CDN, no web fonts; the CSP is unchanged.
+   - `include:` limits daisyUI to the components the employee screens use. Without it, Tailwind's scan of all views
+     pulled in unused components through common words like "menu" or "table".
+2. **One light theme `kbz`** in `app.css`, colours in hex (not oklch) for old phones. Light tints are pre-mixed hex
+   tokens (`primary-soft`, `success-soft`, …) instead of `bg-primary/10` or daisyUI `*-soft`: without `color-mix()`
+   (Chrome < 111, Safari < 16.2) those fall back to the full colour behind dark text.
+3. **WCAG AA, all measured:**
+
+   | Pair | Ratio |
+   |---|---|
+   | text on card / page | 17.5 / 16.0 |
+   | secondary text (stone-700) | 10.3 / 9.4 |
+   | white on primary #047857 (header, buttons, „Objednané“) | 5.5 |
+   | white on #065f46 (active nav, success message) | 7.7 |
+   | black on accent #fbbf24 (6 € buttons, „Lístky minuté“) | 12.6 |
+   | black on warning #f59e0b („Dokupované“) | 9.8 |
+   | white on error #b91c1c | 6.5 |
+   | primary links on white / page | 5.5 / 5.0 |
+   | „otvorené do …“ badge | 4.9 |
+   | „uzamknuté“ badge | 9.0 |
+   | error message | 5.7 |
+   | today's tab | 6.2 |
+   | ordered card | 15.2 |
+   | soup box | 16.1 |
+
+   Small white text with opacity on the green *Môj mesiac* card (< 4.5) is now at full opacity. daisyUI dims inactive
+   tabs to 50 %; the day buttons keep full-contrast text.
+4. **Components.**
+   - `btn` (all tap targets ≥ 48 px; measured: inputs 56, login button 64, dialog buttons 56, week arrows 48, day tabs
+     69, bottom nav 68).
+   - `card`; `badge`; `tabs tabs-box` for the week strip (same Alpine bindings and `aria-selected`); `stat` for the
+     ticket bar (whole sentence in one line, wording unchanged — answer 2).
+   - `toast` + `alert` for feedback; `fieldset` / `input` for login and PIN change.
+   - Confirmations use a native `<dialog class="modal">`, rendered when `$dialog` is set and opened by Alpine
+     (`x-init="$el.showModal()"`). Esc calls `closeDialog` as before; clicking outside does nothing (as before).
+   - The desktop subgrid (`.week-grid` / `.week-day` / `.week-slot`) is unchanged; the slot card stays a block on phones.
+5. **Offline page** (`public/offline.html`, cached by the service worker, can't load the hashed CSS): the same look in
+   inline CSS with the theme colours (answer 1). The service-worker cache was bumped to `jedalen-v3`.
+6. **Size:** `app.css` 29.1 → 58.8 KB raw, **6.4 → 11.2 KB gzip**. The admin theme is unchanged (71.4 KB gzip).
+7. **Known limit on old browsers.** daisyUI's own hover/pressed shading, input borders and the disabled-button colour
+   use `color-mix()`; their fallbacks are the stronger full colour. A button disabled during a Livewire request
+   (a fraction of a second) can look dark there.
+
 ## Decisions by Roman
 
 - **2026-11-09 — Staff 2FA is optional.** Users can enable TOTP in their Filament profile; it is not enforced on first login and there are no prompts. (Brief §5 said "email + password + 2FA" — relaxed because most staff can't handle authenticator apps.)
@@ -301,4 +352,6 @@ Spec: `docs/CATEGORIES.md`. Roman approved the plan, including answers 1–5 bel
   snapshot; only orders coming from another mode are priced. New optional employee field `attendance_cislo` („Číslo
   v dochádzke“, digits, unique; import column `cislo_dochadzka`): WebVisitor data is paired by it when set, otherwise by
   osobné číslo. An attendance number equal to another person's osobné číslo is a conflict (neither is updated).
+- **2026-11-17 — daisyUI for the employee side** (Roman, plan approved with answers 1–2). Admin, kitchen/print and
+  access slips unchanged. See "Design decisions — daisyUI on the employee side".
 
