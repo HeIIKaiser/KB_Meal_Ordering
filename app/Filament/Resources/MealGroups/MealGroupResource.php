@@ -58,6 +58,10 @@ class MealGroupResource extends Resource
                 ->label('Lístkov na mesiac (predvolené)')
                 ->helperText('Použije sa, kým na stránke Lístky na mesiac nenastavíte počet pre konkrétny mesiac. Pri dennom režime sa nepoužíva.')
                 ->integer()->minValue(0)->maxValue(999)->default(0)->required(),
+            TextInput::make('mandatory_per_day')
+                ->label('Povinná strava: jedál za odpracovaný deň')
+                ->helperText('Len pre režim povinnej stravy: koľko jedál za zamestnaneckú cenu sa účtuje za každý odpracovaný deň (podľa dochádzky). Max. jedál za deň pri zamestnancovi to môže znížiť.')
+                ->integer()->minValue(1)->maxValue(3)->default(2)->required(),
             Toggle::make('is_active')->label('Aktívna')->helperText('Neaktívna skupina sa neponúka pri zamestnancoch.')->default(true),
             Select::make('initial_mode')
                 ->label('Režim')
@@ -80,9 +84,15 @@ class MealGroupResource extends Resource
                     ->label('Režim dnes')
                     ->state(fn (MealGroup $record) => $record->modeOn(LocalTime::today())->label())
                     ->badge()
-                    ->color(fn (MealGroup $record) => $record->modeOn(LocalTime::today()) === PricingMode::Tickets ? 'warning' : 'gray')
+                    ->color(fn (MealGroup $record) => match ($record->modeOn(LocalTime::today())) {
+                        PricingMode::Tickets => 'warning',
+                        PricingMode::Mandatory => 'danger',
+                        default => 'gray',
+                    })
                     ->description(fn (MealGroup $record) => static::modeHistory($record)),
-                TextColumn::make('default_tickets')->label('Lístkov / mesiac')->numeric(),
+                TextColumn::make('default_tickets')->label('Lístkov / mesiac')->numeric()
+                    ->description(fn (MealGroup $record) => $record->modes->contains(fn ($m) => $m->mode === PricingMode::Mandatory)
+                        ? 'povinná: '.$record->mandatory_per_day.' / deň' : null),
                 TextColumn::make('members')
                     ->label('Zamestnancov dnes')
                     ->state(fn (MealGroup $record) => static::membersToday($record)),

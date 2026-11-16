@@ -65,11 +65,21 @@ class Recalculator
             $estimate = $this->entitlementFor($employee, $month, false, $calendar);
             $final = $this->entitlementFor($employee, $month, true, $calendar);
 
+            if (! $final->hasData) {
+                // No attendance at all for this person: nothing final is stored, so the
+                // fallbacks (import, group count) keep applying; the preview flags it.
+                AttendanceResult::query()->updateOrCreate(['employee_id' => $employee->id, 'month' => $month], [
+                    'flags' => $final->flags(), 'computed_at' => now(),
+                ]);
+
+                return $this->repricer->reprice($employee, $month, 'attendance_final', $by, $calendar);
+            }
+
             AttendanceResult::query()->updateOrCreate(['employee_id' => $employee->id, 'month' => $month], [
                 'estimate_meals' => $estimate->tickets,
                 'mandatory_estimate' => $estimate->mandatoryTotal(),
                 'final_meals' => $final->tickets,
-                'mandatory_final' => $final->mandatoryTotal(),
+                'mandatory_final' => $final->mandatoryTotal() ?? 0,
                 'flags' => $final->flags(),
                 'computed_at' => now(),
                 'finalized_at' => now(),

@@ -31,12 +31,24 @@ class MonthController extends Controller
             ->sortBy(fn ($o) => [$o->date->toDateString(), $o->mealSlot->sort, $o->priceType->sort])
             ->values();
 
+        // Mandatory mode: automatic charges from attendance (not orders), per day.
+        $mandatory = $employee->mandatoryMeals()
+            ->whereBetween('date', [$month->toDateString(), $end->toDateString()])
+            ->orderBy('date')->get()->keyBy(fn ($m) => $m->date->toDateString());
+        $byDay = $orders->groupBy(fn ($o) => $o->date->toDateString());
+        $dates = $byDay->keys()->merge($mandatory->keys())->unique()->sort()->values();
+
         return view('employee.month', [
             'month' => $month,
             'orders' => $orders,
-            'byDay' => $orders->groupBy(fn ($o) => $o->date->toDateString()),
+            'byDay' => $byDay,
+            'dates' => $dates,
+            'mandatory' => $mandatory,
+            'mandatoryCount' => $mandatory->sum('count'),
+            'mandatoryCents' => $mandatory->sum(fn ($m) => $m->count * $m->unit_price_cents),
+            'mandatoryFinal' => $mandatory->isNotEmpty() && $mandatory->every(fn ($m) => $m->source === 'final'),
             'byType' => $orders->groupBy(fn ($o) => $o->priceType->name)->map(fn ($g) => ['count' => $g->count(), 'cents' => $g->sum('unit_price_cents')]),
-            'totalCents' => $orders->sum('unit_price_cents'),
+            'totalCents' => $orders->sum('unit_price_cents') + $mandatory->sum(fn ($m) => $m->count * $m->unit_price_cents),
             'prev' => $month->subMonth()->format('Y-m'),
             'next' => $month->addMonth()->format('Y-m'),
             'isCurrent' => $month->isSameMonth(LocalTime::today()),

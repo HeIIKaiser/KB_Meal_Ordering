@@ -62,12 +62,24 @@ class EmployeeResource extends Resource
                 ->required()
                 ->maxLength(32)
                 ->unique(ignoreRecord: true),
+            TextInput::make('vema_cislo')
+                ->label('Vema číslo')
+                ->helperText('Osobné číslo v mzdovom systéme Vema (len číslice; v exporte bez núl na začiatku).')
+                ->regex('/^\d{1,16}$/')
+                ->validationMessages(['regex' => 'Vema číslo môže obsahovať len číslice.'])
+                ->unique(ignoreRecord: true)
+                ->maxLength(16),
             TextInput::make('last_name')->label('Priezvisko')->required()->maxLength(100),
             TextInput::make('first_name')->label('Meno')->required()->maxLength(100),
             TextInput::make('department')
                 ->label('Stredisko')
                 ->maxLength(100)
                 ->datalist(fn () => Employee::query()->whereNotNull('department')->distinct()->orderBy('department')->pluck('department')->all()),
+            Select::make('max_meals_per_day')
+                ->label('Max. jedál za deň (dochádzka)')
+                ->options([1 => '1 – len obedy účtovať', 2 => '2'])
+                ->placeholder('bez obmedzenia')
+                ->helperText('Platí pre lístky a povinnú stravu podľa dochádzky (odhad aj konečný výpočet).'),
             Toggle::make('is_active')
                 ->label('Aktívny')
                 ->helperText('Neaktívny zamestnanec sa nemôže prihlásiť. Jeho objednávky zostávajú v histórii.')
@@ -111,6 +123,7 @@ class EmployeeResource extends Resource
                     ->searchable(['last_name', 'first_name'])
                     ->sortable(['last_name', 'first_name']),
                 TextColumn::make('department')->label('Stredisko')->searchable()->sortable()->toggleable(),
+                TextColumn::make('vema_cislo')->label('Vema č.')->searchable()->placeholder('–')->toggleable(),
                 TextColumn::make('meal_group')
                     ->label('Skupina')
                     ->state(fn (Employee $record) => EmployeeCalendar::fromMemberships($record, $record->groupMemberships)->today()?->name)
@@ -135,6 +148,9 @@ class EmployeeResource extends Resource
             ])
             ->filters([
                 TernaryFilter::make('is_active')->label('Aktívny')->default(true),
+                Filter::make('no_vema')
+                    ->label('Bez Vema čísla')
+                    ->query(fn ($query) => $query->whereNull('vema_cislo')),
                 Filter::make('not_printed')
                     ->label('Lístok ešte nevytlačený')
                     ->query(fn ($query) => $query->whereNull('slip_printed_at')),
