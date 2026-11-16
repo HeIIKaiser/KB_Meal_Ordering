@@ -291,3 +291,13 @@ Spec `docs/CATEGORIES.md`.
 - Follow-up: SZČO can also be in mandatory mode (*Povinná strava* + *faktúra*), charged at their fixed price when one is
   set; new employee field *Číslo v dochádzke* for people whose WebVisitor number differs from osobné číslo.
 
+### daisyUI on the employee side (2026-11-17)
+
+- daisyUI 5 with one light theme `kbz` (colours in one place in `resources/css/app.css`, WCAG AA measured) for login,
+  ordering, *Môj mesiac*, account and the offline page.
+- Same texts, wire/Alpine behaviour and confirmations; tap targets ≥ 48 px; desktop week rows still aligned.
+- Native `<dialog>` for confirmations (no daisyUI JS).
+- `app.css` 6.4 → 11.2 KB gzip; admin theme unchanged.
+- Before/after screenshots at 360 / 1280 px are attached to the PR conversation.
+- Deploy: `bash deploy/update.sh` (assets only; no migration).
+

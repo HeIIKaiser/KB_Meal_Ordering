@@ -6,10 +6,16 @@
     <meta name="theme-color" content="#047857">
     <title>Ste offline</title>
     <style>
-        body { font-family: system-ui, sans-serif; background: #f5f5f4; color: #1c1917; margin: 0; display: grid; place-items: center; min-height: 100vh; text-align: center; padding: 1.5rem; box-sizing: border-box; }
-        h1 { font-size: 1.6rem; margin: 0 0 .5rem; }
-        p { font-size: 1.15rem; margin: 0 0 1.5rem; }
-        button { font: inherit; font-size: 1.2rem; font-weight: 700; background: #047857; color: #fff; border: 0; border-radius: .75rem; padding: 1rem 2rem; }
+        /* Matches the employee app's "kbz" theme (daisyUI card/btn look) without the built CSS:
+           this page is cached by the service worker and must work offline on its own. */
+        :root { --primary: #047857; --primary-content: #fff; --base-100: #fff; --base-200: #f5f5f4; --base-content: #1c1917; --neutral: #44403c; }
+        body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: var(--base-200); color: var(--base-content); margin: 0; display: grid; place-items: center; min-height: 100vh; text-align: center; padding: 1.5rem; box-sizing: border-box; }
+        main { background: var(--base-100); border-radius: 1rem; padding: 1.75rem 1.5rem; box-shadow: 0 1px 2px rgba(0,0,0,.08); max-width: 24rem; width: 100%; box-sizing: border-box; }
+        img { border-radius: 1rem; }
+        h1 { font-size: 1.6rem; margin: .75rem 0 .5rem; }
+        p { font-size: 1.15rem; margin: 0 0 1.5rem; color: var(--neutral); }
+        button { font: inherit; font-size: 1.2rem; font-weight: 700; background: var(--primary); color: var(--primary-content); border: 0; border-radius: .75rem; min-height: 3.5rem; padding: 0 2rem; width: 100%; cursor: pointer; }
+        button:active { filter: brightness(.9); }
     </style>
 </head>
 <body>
