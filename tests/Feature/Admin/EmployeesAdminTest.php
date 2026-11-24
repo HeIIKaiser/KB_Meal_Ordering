@@ -118,7 +118,7 @@ describe('logins and access slips', function () {
 
         Livewire::test(ListEmployees::class)
             ->callTableBulkAction('printSlips', [$a, $b])
-            ->assertRedirect(route('admin.slips', ['zamestnanci' => $b->id.','.$a->id])); // table order: Adamová, Novák
+            ->assertRedirect(route('admin.slips', ['zamestnanci' => $b->id.','.$a->id, 'zoradit' => 'meno', 'skupiny' => 'nie', 'strana' => 1, 'format' => 'a4'])); // table order: Adamová, Novák
 
         $this->get(route('admin.slips', ['zamestnanci' => $a->id.','.$b->id]))
             ->assertOk()
@@ -134,7 +134,7 @@ describe('logins and access slips', function () {
             ->and(DB::table('activity_log')->where('event', 'slips_printed')->count())->toBe(2);
 
         // single slip action links to the same page
-        Livewire::test(ListEmployees::class)->assertTableActionHasUrl('printSlip', route('admin.slips', ['zamestnanci' => $a->id]), $a);
+        Livewire::test(ListEmployees::class)->assertTableActionHasUrl('printSlip', route('admin.slips', ['zamestnanci' => $a->id, 'zoradit' => 'meno', 'skupiny' => 'nie', 'strana' => 1, 'format' => 'a4']), $a);
     });
 
     it('does not print a PIN the employee chose themselves', function () {
@@ -181,7 +181,7 @@ describe('logins and access slips', function () {
 
         Livewire::test(EditEmployee::class, ['record' => $b->getRouteKey()])
             ->callAction('resetPin')
-            ->assertRedirect(route('admin.slips', ['zamestnanci' => $b->id]));
+            ->assertRedirect(route('admin.slips', ['zamestnanci' => $b->id, 'zoradit' => 'meno', 'skupiny' => 'nie', 'strana' => 1, 'format' => 'a4']));
     });
 
     it('offers to print all slips not printed yet', function () {
@@ -194,7 +194,9 @@ describe('logins and access slips', function () {
         Livewire::test(ListEmployees::class)
             ->assertActionVisible('printNew')
             ->assertActionHasLabel('printNew', 'Nevytlačené lístky (2)')
-            ->assertActionHasUrl('printNew', route('admin.slips', ['zamestnanci' => $new1->id.','.$new2->id]))
+            ->callAction('printNew', ['zoradit' => 'cislo', 'skupiny' => 'nie', 'format' => 'male'])
+            ->assertRedirect(route('admin.slips', ['zamestnanci' => $new1->id.','.$new2->id, 'zoradit' => 'cislo', 'skupiny' => 'nie', 'strana' => 1, 'format' => 'male']));
+        Livewire::test(ListEmployees::class)
             ->filterTable('not_printed')
             ->assertCanSeeTableRecords([$new1, $new2])
             ->assertCanNotSeeTableRecords([$printed]);

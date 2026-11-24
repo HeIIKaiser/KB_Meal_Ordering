@@ -87,7 +87,7 @@ it('prints one A4 login sheet per employee with live cutoffs and prices', functi
         ->and($html)->toContain('PIN si zmenil(a) sám/sama');
 
     $this->get(route('admin.slips', ['zamestnanci' => $a->id, 'format' => 'male']))
-        ->assertOk()->assertSee('A4 pre každého')->assertDontSee('class="page"', false);
+        ->assertOk()->assertSee('Malé lístky (8 na A4)')->assertDontSee('class="page"', false);
 });
 
 it('renamed the price types (Zamestnanecká strava / Dokupovaná strava)', function () {

@@ -352,6 +352,28 @@ ignored). Everything that worked before still works; the new columns are **alias
 - **Template / samples**: the template download is now the master-sheet format (made-up people);
   `docs/samples/zamestnanci_hlavny_zoznam.xlsx|csv` shows every check.
 
+## Design decisions — access-slip print options (2026-11-25)
+
+- Every print (bulk *Tlačiť prístupové lístky*, *Nové PINy + prístupové lístky*, *Nevytlačené lístky (N)*) asks for
+  sort order, grouping, new page per section and format; the single *Lístok* prints straight away with the remembered
+  format (sorting/grouping make no sense for one person). The links after an import / a new employee use the
+  remembered choice. The last choice is stored per staff user in `users.preferences.slips`; the print page has the same
+  options (*Použiť*, also remembered).
+- Options are query parameters validated against a whitelist (`App\Domain\Employees\Slips\SlipOptions`):
+  `zoradit=meno|cislo|stredisko|skupina`, `skupiny=nie|stredisko|skupina|forma`, `strana=1|0`, `format=a4|male`;
+  anything else → default. Old bookmarks (`?zamestnanci=…` only) keep working with the defaults.
+- *Skupina stravníkov* and *Forma stravy* are both offered (Roman): the same sections (group valid today), headed by
+  the group name or by its first *Názov v importe* (the HR sheet value). Without a group → „Bez skupiny“, last;
+  without stredisko → „Bez strediska“, last. Sections and sort orders use the natural number order and Slovak
+  alphabetical order (`SlipLayout`).
+- New page per section: CSS `break-before: page` on the small-slip sheets (checked in Chromium print: 3 sections →
+  3 pages vs. 2 without). A4 is one page per person anyway, so grouping adds a cover page per section and the section
+  name in each page's footer; the option does not apply there.
+- Up to 200 people stay in the URL (bookmarkable); more (up to 1000) go into a random 40-character token in the cache
+  for 2 hours, bound to the staff user (`?vyber=…`), so the URL stays short. After the modal the print page opens in
+  the same tab (a new tab after a dialog is blocked by browsers).
+- Printing changes no PIN; only `slip_printed_at` (as before).
+
 ## Decisions by Roman
 
 - **2026-11-09 — Staff 2FA is optional.** Users can enable TOTP in their Filament profile; it is not enforced on first login and there are no prompts. (Brief §5 said "email + password + 2FA" — relaxed because most staff can't handle authenticator apps.)
@@ -405,3 +427,5 @@ ignored). Everything that worked before still works; the new columns are **alias
   a first group applies from today, a change of group from the 1st of next month, with one override date in the preview.
   Recommended setup: „Povinná - len obed“ → mandatory 1/day, „Povinná - obed+večera“ → mandatory 2/day, „Objednáva si“ →
   tickets estimated from the shift plan (8 h and 12 h share it). See "Design decisions — master-sheet employee import".
+- **2026-11-25 — Access-slip print options** (Roman, plan approved; both *Skupina stravníkov* and *Forma stravy*
+  grouping kept). See "Design decisions — access-slip print options".

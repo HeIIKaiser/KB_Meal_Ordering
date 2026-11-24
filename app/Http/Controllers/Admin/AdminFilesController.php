@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Domain\Backup\DatabaseBackup;
 use App\Domain\Employees\EmployeeImport;
 use App\Domain\Employees\PinIssuer;
+use App\Domain\Employees\Slips\SlipLayout;
+use App\Domain\Employees\Slips\SlipOptions;
+use App\Domain\Employees\Slips\SlipSelection;
 use App\Domain\Menus\MenuImport;
 use App\Domain\Ordering\PriceResolver;
 use App\Domain\Tickets\FinalTicketImport;
@@ -28,16 +31,29 @@ use Symfony\Component\HttpFoundation\Response;
 class AdminFilesController extends Controller
 {
     /**
-     * A4 sheet of access slips with each employee's CURRENT PIN (nothing is changed).
-     *   /admin/listky?zamestnanci=12,15,18
+     * Access slips with each employee's CURRENT PIN (nothing is changed except slip_printed_at).
+     *   /admin/listky?zamestnanci=12,15,18&zoradit=cislo&skupiny=stredisko&strana=1&format=male
+     *   /admin/listky?vyber=<token>&…   (long selections, see SlipSelection)
+     * Options: see SlipOptions (invalid → defaults). &zapamatat=1 stores them for this user.
      */
-    public function slips(Request $request, PinIssuer $issuer): Response
+    public function slips(Request $request, PinIssuer $issuer, SlipLayout $layout): Response
     {
-        $ids = collect(explode(',', (string) $request->query('zamestnanci')))
-            ->map(fn ($id) => (int) trim($id))->filter()->unique()->take(1000)->values();
+        /** @var User $user */
+        $user = Auth::guard('web')->user();
+        $options = SlipOptions::fromArray($request->query());
+        if ($request->boolean('zapamatat')) {
+            $options->remember($user);
+        }
+        $ids = SlipSelection::resolve($request, $user);
 
-        $employees = Employee::query()->whereIn('id', $ids)->alphabetical()->get();
-        $slips = $employees->isEmpty() ? [] : $issuer->slips($employees, Auth::guard('web')->user())->all();
+        $employees = Employee::query()->whereIn('id', $ids)->with('groupMemberships.group')->get();
+        $sections = $layout->sections($employees, $options);
+        $ordered = collect($sections)->flatMap(fn ($s) => $s['employees']);
+        $slips = $ordered->isEmpty() ? collect() : $issuer->slips($ordered, $user)->keyBy('employee_id');
+        $sections = collect($sections)->map(fn ($s) => [
+            'heading' => $s['heading'],
+            'slips' => $s['employees']->map(fn (Employee $e) => [...$slips[$e->id], 'section' => $s['heading']])->all(),
+        ])->filter(fn ($s) => $s['slips'] !== [])->values()->all();
         $url = rtrim(config('app.url'), '/').'/';
 
         $qr = (new QRCode(new QROptions([
@@ -47,17 +63,20 @@ class AdminFilesController extends Controller
             'addQuietzone' => true,
         ])))->render($url);
 
-        $small = $request->query('format') === 'male';
+        $selection = $request->filled('vyber') ? ['vyber' => (string) $request->query('vyber')] : ['zamestnanci' => $ids->implode(',')];
 
         return response()
-            ->view($small ? 'admin.slips-small' : 'admin.slips', [
-                'slips' => $slips,
+            ->view($options->small() ? 'admin.slips-small' : 'admin.slips', [
+                'sections' => $sections,
+                'count' => $slips->count(),
+                'noPin' => $slips->whereNull('pin')->count(),
+                'options' => $options,
+                'selection' => $selection,
                 'url' => $url,
                 // shown in big letters for PC users: full address incl. https://, no trailing slash
                 'displayUrl' => rtrim($url, '/'),
                 'qr' => $qr,
-                'ids' => $ids->implode(','),
-                'info' => $small ? null : $this->orderingInfo(),
+                'info' => $options->small() ? null : $this->orderingInfo(),
                 'company' => app(Settings::class)->companyName(),
                 'appName' => app(Settings::class)->appName(),
             ])

@@ -336,3 +336,16 @@ Spec `docs/CATEGORIES.md`.
 - Tests: `tests/Feature/Admin/NaturalSortTest.php`, `tests/Feature/Deploy/UpdateScriptTest.php` (fake git/composer/
   artisan; nothing real changes).
 
+### Access-slip print options (2026-11-25)
+
+- Modal before printing slips: sort (name, natural osobné číslo, stredisko, group), grouping (none, stredisko, group,
+  meal form; „Bez strediska“ / „Bez skupiny“ last), new page per section, format (A4 / small). Last choice remembered
+  per staff user (`users.preferences`); also adjustable on the print page.
+- Grouped output with section headings („Stredisko 14 – Stravovanie (56)“); small slips break pages per section when
+  chosen; A4 gets a cover page per section.
+- Validated query parameters with defaults; selections over 200 people use a short-lived, user-bound token so 1000
+  people print with a short URL.
+- Stredisko filter shows „14 – Stravovanie“; select-all across pages works with the bulk print.
+- Tests: `tests/Feature/Admin/SlipPrintingTest.php` (20 tests).
+- Deploy: `bash deploy/update.sh` (one migration).
+

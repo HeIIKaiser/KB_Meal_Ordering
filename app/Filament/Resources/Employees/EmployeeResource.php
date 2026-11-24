@@ -4,6 +4,8 @@ namespace App\Filament\Resources\Employees;
 
 use App\Domain\Employees\EmployeeImport;
 use App\Domain\Employees\PinIssuer;
+use App\Domain\Employees\Slips\SlipOptions;
+use App\Domain\Employees\Slips\SlipSelection;
 use App\Domain\Ordering\FixedPriceResolver;
 use App\Domain\Ordering\OrderingException;
 use App\Domain\Tickets\EmployeeCalendar;
@@ -22,6 +24,7 @@ use App\Models\MealSlot;
 use App\Models\User;
 use App\Support\LocalTime;
 use App\Support\Money;
+use App\Support\NaturalSort;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
@@ -211,7 +214,7 @@ class EmployeeResource extends Resource
                     ->query(fn ($query, array $data) => static::filterByGroupToday($query, $data['value'] ?? null)),
                 SelectFilter::make('department')
                     ->label('Stredisko')
-                    ->options(fn () => Employee::query()->whereNotNull('department')->distinct()->orderBy('department')->pluck('department', 'department')->all()),
+                    ->options(fn () => static::departmentOptions()),
                 SelectFilter::make('stredisko_cislo')
                     ->label('Číslo strediska')
                     ->options(fn () => Employee::query()->whereNotNull('stredisko_cislo')->distinct()->pluck('stredisko_cislo')->sortByNatural(fn ($n) => $n)->mapWithKeys(fn ($n) => [$n => $n])->all()),
@@ -227,18 +230,25 @@ class EmployeeResource extends Resource
                     ->label('Tlačiť prístupové lístky')
                     ->icon(Heroicon::OutlinedPrinter)
                     ->authorize(fn () => auth()->user()?->isAdmin())
-                    ->action(fn (Collection $records) => redirect(static::slipsUrl($records->modelKeys())))
+                    ->modalHeading('Tlačiť prístupové lístky')
+                    ->modalDescription('PINy sa nemenia – vytlačia sa súčasné.')
+                    ->modalSubmitActionLabel('Tlačiť')
+                    ->fillForm(fn () => SlipOptions::forUser(auth()->user())->toForm())
+                    ->schema(static::slipOptionsFields())
+                    ->action(fn (Collection $records, array $data) => redirect(static::slipsUrl($records->modelKeys(), static::rememberSlipOptions($data))))
                     ->deselectRecordsAfterCompletion(),
                 BulkAction::make('slips')
                     ->label('Nové PINy + prístupové lístky')
                     ->icon(Heroicon::OutlinedKey)
                     ->color('warning')
-                    ->requiresConfirmation()
+                    ->modalIcon(Heroicon::OutlinedExclamationTriangle)
                     ->modalHeading('Vygenerovať nové PINy a vytlačiť lístky?')
                     ->modalDescription('Vybraným zamestnancom sa vygeneruje nový PIN (starý prestane platiť a budú odhlásení na všetkých zariadeniach). Ak chcete len znova vytlačiť súčasné PINy, použite „Tlačiť prístupové lístky“.')
                     ->modalSubmitActionLabel('Vygenerovať a tlačiť')
                     ->authorize(fn () => auth()->user()?->isAdmin())
-                    ->action(fn (Collection $records) => static::issueAndPrint($records))
+                    ->fillForm(fn () => SlipOptions::forUser(auth()->user())->toForm())
+                    ->schema(static::slipOptionsFields())
+                    ->action(fn (Collection $records, array $data) => static::issueAndPrint($records, static::rememberSlipOptions($data)))
                     ->deselectRecordsAfterCompletion(),
             ]);
     }
@@ -371,6 +381,18 @@ class EmployeeResource extends Resource
             ->deselectRecordsAfterCompletion();
     }
 
+    /** Stredisko filter options „14 – Stravovanie“ (number first, natural order), keyed by department name. */
+    public static function departmentOptions(): array
+    {
+        return Employee::query()->whereNotNull('department')->where('department', '!=', '')
+            ->select('department', 'stredisko_cislo')->distinct()->get()
+            ->groupBy('department')
+            ->map(fn ($rows, string $name) => ['name' => $name, 'number' => $rows->pluck('stredisko_cislo')->filter()->sortByNatural(fn ($n) => $n)->first()])
+            ->sort(fn ($a, $b) => NaturalSort::compare($a['number'], $b['number']) ?: (new \Collator('sk_SK'))->compare($a['name'], $b['name']))
+            ->mapWithKeys(fn ($d) => [$d['name'] => ($d['number'] ? $d['number'].' – ' : '').$d['name']])
+            ->all();
+    }
+
     /** @return int how many employees changed group */
     public static function assignGroup(iterable $employees, int $groupId, ?string $from, User $by): int
     {
@@ -404,7 +426,7 @@ class EmployeeResource extends Resource
             ->modalDescription('Starý PIN prestane platiť a zamestnanec bude odhlásený na všetkých zariadeniach. Potom sa otvorí lístok s novým PINom.')
             ->modalSubmitActionLabel('Vygenerovať a tlačiť lístok')
             ->authorize(fn () => auth()->user()?->isAdmin())
-            ->action(fn (Employee $record) => static::issueAndPrint(collect([$record])));
+            ->action(fn (Employee $record) => static::issueAndPrint(collect([$record]), SlipOptions::forUser(auth()->user())->single()));
     }
 
     /** Print the access slip with the CURRENT PIN (nothing changes). */
@@ -415,19 +437,46 @@ class EmployeeResource extends Resource
             ->icon(Heroicon::OutlinedPrinter)
             ->color('gray')
             ->authorize(fn () => auth()->user()?->isAdmin())
-            ->url(fn (Employee $record) => static::slipsUrl([$record->id]), shouldOpenInNewTab: true);
+            ->url(fn (Employee $record) => static::slipsUrl([$record->id], SlipOptions::forUser(auth()->user())->single()), shouldOpenInNewTab: true);
     }
 
     /** Generates NEW PINs and redirects to the printable slips. */
-    public static function issueAndPrint(iterable $employees)
+    public static function issueAndPrint(iterable $employees, ?SlipOptions $options = null)
     {
-        return redirect(static::slipsUrl(app(PinIssuer::class)->issue($employees, auth()->user())));
+        return redirect(static::slipsUrl(app(PinIssuer::class)->issue($employees, auth()->user()), $options));
     }
 
-    /** @param  array<int>  $ids */
-    public static function slipsUrl(array $ids): string
+    /**
+     * Printable slips for these employees with the given options (default: the user's last choice).
+     * Long selections use a short-lived token instead of ids in the URL (SlipSelection).
+     *
+     * @param  array<int>  $ids
+     */
+    public static function slipsUrl(array $ids, ?SlipOptions $options = null): string
     {
-        return route('admin.slips', ['zamestnanci' => implode(',', $ids)]);
+        $user = auth()->user();
+        $options ??= SlipOptions::forUser($user);
+
+        return route('admin.slips', [...SlipSelection::params($ids, $user), ...$options->toQuery()]);
+    }
+
+    /** The print-options modal (sort, grouping, new page, format). */
+    public static function slipOptionsFields(): array
+    {
+        return [
+            Select::make('zoradit')->label('Zoradiť podľa')->options(SlipOptions::SORTS)->required()->selectablePlaceholder(false),
+            Select::make('skupiny')->label('Zoskupiť')->options(SlipOptions::GROUPS)->required()->selectablePlaceholder(false)->live(),
+            Toggle::make('strana')
+                ->label('Nová strana pre každú skupinu')
+                ->helperText('Pre malé lístky. Pri A4 začína každá skupina titulnou stranou.')
+                ->visible(fn (Get $get) => $get('skupiny') && $get('skupiny') !== 'nie'),
+            Select::make('format')->label('Formát')->options(SlipOptions::FORMATS)->required()->selectablePlaceholder(false),
+        ];
+    }
+
+    public static function rememberSlipOptions(array $data): SlipOptions
+    {
+        return SlipOptions::fromArray([...$data, 'strana' => ($data['strana'] ?? true) ? '1' : '0'])->remember(auth()->user());
     }
 
     public static function getPages(): array

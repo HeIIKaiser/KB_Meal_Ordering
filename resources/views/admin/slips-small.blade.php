@@ -25,6 +25,12 @@
         .how { grid-column: 1; font-size: 7.5pt; line-height: 1.3; align-self: end; margin-top: 2mm; }
         .how ol { margin: 0.5mm 0 0; padding-left: 4mm; }
         .empty { padding: 40px; text-align: center; font-size: 18px; }
+        .opts { flex-basis: 100%; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; font-size: 14px; }
+        .opts select { font: inherit; padding: 4px; border-radius: 6px; border: 0; }
+        .opts label { display: flex; gap: 6px; align-items: center; }
+        .section-head { grid-column: 1 / -1; font-size: 15pt; font-weight: 800; padding: 3mm 2mm 2mm; border-bottom: 2px solid #000; break-after: avoid; page-break-after: avoid; }
+        /* "Nová strana pre každú skupinu" */
+        .section-break { break-before: page; page-break-before: always; }
         @media print {
             body { background: #fff; }
             .toolbar { display: none; }
@@ -33,18 +39,22 @@
     </style>
 </head>
 <body>
-@if ($slips === [])
+@if ($count === 0)
     <div class="toolbar"><a href="/admin/employees">Späť na zamestnancov</a></div>
     <p class="empty">Nie sú vybraní žiadni zamestnanci.<br>V zozname zamestnancov ich označte a zvoľte <em>Tlačiť lístky</em>.</p>
 @else
     <div class="toolbar">
-        <button type="button" onclick="window.print()">Tlačiť ({{ count($slips) }} {{ count($slips) === 1 ? 'lístok' : (count($slips) < 5 ? 'lístky' : 'lístkov') }})</button>
+        <button type="button" onclick="window.print()">Tlačiť ({{ $count }} {{ $count === 1 ? 'lístok' : ($count < 5 ? 'lístky' : 'lístkov') }})</button>
         <a href="/admin/employees">Späť na zamestnancov</a>
-        <a href="{{ route('admin.slips', ['zamestnanci' => $ids]) }}">A4 pre každého</a>
-        <span class="warn">⚠ Lístky obsahujú PIN — odovzdajte ich osobne, nenechávajte ich v tlačiarni.@if (collect($slips)->whereNull('pin')->isNotEmpty()) Pri {{ collect($slips)->whereNull('pin')->count() }} zamestnancoch PIN nie je možné vytlačiť (pozri lístok).@endif</span>
+        @include('admin.partials.slip-options')
+        <span class="warn">⚠ Lístky obsahujú PIN — odovzdajte ich osobne, nenechávajte ich v tlačiarni.@if ($noPin) Pri {{ $noPin }} zamestnancoch PIN nie je možné vytlačiť (pozri lístok).@endif</span>
     </div>
-    <div class="sheet">
-        @foreach ($slips as $s)
+  @foreach ($sections as $section)
+    <div @class(['sheet', 'section-break' => $options->grouped() && $options->newPage && ! $loop->first])>
+        @if ($section['heading'] !== null)
+            <div class="section-head">{{ $section['heading'] }}</div>
+        @endif
+        @foreach ($section['slips'] as $s)
             <div class="slip">
                 <div class="head">{{ $appName }}{{ $company ? ' – '.$company : '' }}</div>
                 <div>
@@ -69,6 +79,7 @@
             </div>
         @endforeach
     </div>
+  @endforeach
 @endif
 </body>
 </html>

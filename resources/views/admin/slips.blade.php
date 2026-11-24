@@ -15,6 +15,14 @@
         .toolbar button, .toolbar a { font: inherit; font-weight: 700; background: #fff; color: #047857; border: 0; border-radius: 8px; padding: 8px 16px; text-decoration: none; cursor: pointer; }
         .warn { flex-basis: 100%; font-size: 14px; }
         .empty { padding: 40px; text-align: center; font-size: 18px; }
+        .opts { flex-basis: 100%; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; font-size: 14px; }
+        .opts select { font: inherit; padding: 4px; border-radius: 6px; border: 0; }
+        .opts label { display: flex; gap: 6px; align-items: center; }
+
+        /* Section cover page (grouped printing): hand out the stack per department / group */
+        .cover { justify-content: center; align-items: center; text-align: center; }
+        .cover .section-title { font-size: 34pt; font-weight: 800; color: #047857; line-height: 1.2; }
+        .cover .section-note { margin-top: 8mm; font-size: 13pt; color: #444; }
 
         .page { width: 210mm; height: 297mm; margin: 12px auto; background: #fff; padding: 10mm 15mm 8mm; overflow: hidden;
                 display: flex; flex-direction: column; break-after: page; page-break-after: always; box-shadow: 0 1px 4px rgba(0,0,0,.2); }
@@ -63,18 +71,26 @@
     </style>
 </head>
 <body>
-@if ($slips === [])
+@if ($count === 0)
     <div class="toolbar"><a href="/admin/employees">Späť na zamestnancov</a></div>
     <p class="empty">Nie sú vybraní žiadni zamestnanci.<br>V zozname zamestnancov ich označte a zvoľte <em>Tlačiť prístupové lístky</em>.</p>
 @else
+    @php $pages = $count + ($options->grouped() ? count($sections) : 0); @endphp
     <div class="toolbar">
-        <button type="button" onclick="window.print()">Tlačiť ({{ count($slips) }} {{ count($slips) === 1 ? 'strana' : (count($slips) < 5 ? 'strany' : 'strán') }} A4)</button>
+        <button type="button" onclick="window.print()">Tlačiť ({{ $pages }} {{ $pages === 1 ? 'strana' : ($pages < 5 ? 'strany' : 'strán') }} A4)</button>
         <a href="/admin/employees">Späť na zamestnancov</a>
-        <a href="{{ route('admin.slips', ['zamestnanci' => $ids, 'format' => 'male']) }}">Malé lístky (8 na A4)</a>
-        <span class="warn">⚠ Každý list obsahuje PIN — odovzdajte ho osobne. Tlačte jednostranne na A4 na výšku, bez okrajov navyše (mierka 100 %).@if (collect($slips)->whereNull('pin')->isNotEmpty()) Pri {{ collect($slips)->whereNull('pin')->count() }} zamestnancoch PIN nie je možné vytlačiť (pozri list).@endif</span>
+        @include('admin.partials.slip-options')
+        <span class="warn">⚠ Každý list obsahuje PIN — odovzdajte ho osobne. Tlačte jednostranne na A4 na výšku, bez okrajov navyše (mierka 100 %).@if ($noPin) Pri {{ $noPin }} zamestnancoch PIN nie je možné vytlačiť (pozri list).@endif @if ($options->grouped()) Každá skupina začína titulnou stranou.@endif</span>
     </div>
 
-    @foreach ($slips as $s)
+  @foreach ($sections as $section)
+    @if ($section['heading'] !== null)
+        <div class="page cover section-cover">
+            <div class="section-title">{{ $section['heading'] }}</div>
+            <div class="section-note">Prístupové údaje – odovzdajte osobne každému zamestnancovi.</div>
+        </div>
+    @endif
+    @foreach ($section['slips'] as $s)
         <div class="page">
             <div class="brand">
                 <div class="app">{{ $appName }}</div>
@@ -178,10 +194,11 @@
 
             <div class="foot">
                 <span>Problém s prihlásením alebo objednávkou? Obráťte sa na vedúceho alebo administrátora aplikácie.</span>
-                <span>{{ \App\Support\LocalTime::now()->format('j. n. Y') }}</span>
+                <span>@if ($s['section']){{ $s['section'] }} · @endif{{ \App\Support\LocalTime::now()->format('j. n. Y') }}</span>
             </div>
         </div>
     @endforeach
+  @endforeach
 @endif
 </body>
 </html>
