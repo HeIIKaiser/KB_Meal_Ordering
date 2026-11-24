@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Employees;
 
+use App\Domain\Employees\EmployeeImport;
 use App\Domain\Employees\PinIssuer;
 use App\Domain\Ordering\FixedPriceResolver;
 use App\Domain\Ordering\OrderingException;
@@ -30,6 +31,7 @@ use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
@@ -42,6 +44,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\HtmlString;
 use UnitEnum;
 
@@ -93,6 +96,12 @@ class EmployeeResource extends Resource
                 ->label('Stredisko')
                 ->maxLength(100)
                 ->datalist(fn () => Employee::query()->whereNotNull('department')->distinct()->orderBy('department')->pluck('department')->all()),
+            TextInput::make('stredisko_cislo')
+                ->label('Číslo strediska')
+                ->helperText('Nákladové stredisko (len číslice). Účtovníctvo podľa neho triedi exporty.')
+                ->regex('/^\d{1,16}$/')
+                ->validationMessages(['regex' => 'Číslo strediska môže obsahovať len číslice.'])
+                ->maxLength(16),
             Select::make('max_meals_per_day')
                 ->label('Max. jedál za deň (dochádzka)')
                 ->options([1 => '1 – len obedy účtovať', 2 => '2'])
@@ -158,7 +167,9 @@ class EmployeeResource extends Resource
                     ->formatStateUsing(fn (Employee $record) => $record->fullNameReversed())
                     ->searchable(['last_name', 'first_name'])
                     ->sortable(['last_name', 'first_name']),
-                TextColumn::make('department')->label('Stredisko')->searchable()->sortable()->toggleable(),
+                TextColumn::make('department')->label('Stredisko')->searchable()->sortable()->toggleable()
+                    ->description(fn (Employee $record) => $record->stredisko_cislo ? 'č. '.$record->stredisko_cislo : null),
+                TextColumn::make('stredisko_cislo')->label('Č. strediska')->searchable()->sortable()->placeholder('–')->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('vema_cislo')->label('Vema č.')->searchable()->placeholder('–')->toggleable(),
                 TextColumn::make('meal_group')
                     ->label('Skupina')
@@ -184,6 +195,9 @@ class EmployeeResource extends Resource
             ])
             ->filters([
                 TernaryFilter::make('is_active')->label('Aktívny')->default(true),
+                Filter::make('without_group')
+                    ->label('Bez skupiny')
+                    ->query(fn ($query) => $query->withoutGroup()),
                 Filter::make('no_vema')
                     ->label('Bez Vema čísla')
                     ->query(fn ($query) => $query->whereNull('vema_cislo')),
@@ -198,6 +212,9 @@ class EmployeeResource extends Resource
                 SelectFilter::make('department')
                     ->label('Stredisko')
                     ->options(fn () => Employee::query()->whereNotNull('department')->distinct()->orderBy('department')->pluck('department', 'department')->all()),
+                SelectFilter::make('stredisko_cislo')
+                    ->label('Číslo strediska')
+                    ->options(fn () => Employee::query()->whereNotNull('stredisko_cislo')->distinct()->orderBy('stredisko_cislo')->pluck('stredisko_cislo', 'stredisko_cislo')->all()),
             ])
             ->recordActions([
                 EditAction::make(),
@@ -205,6 +222,7 @@ class EmployeeResource extends Resource
                 static::resetPinAction(),
             ])
             ->toolbarActions([
+                static::assignGroupBulkAction(),
                 BulkAction::make('printSlips')
                     ->label('Tlačiť prístupové lístky')
                     ->icon(Heroicon::OutlinedPrinter)
@@ -308,6 +326,71 @@ class EmployeeResource extends Resource
         } else {
             $query->whereExists(fn ($q) => $current($q)->where('m.meal_group_id', (int) $value));
         }
+    }
+
+    /**
+     * "Priradiť skupinu" for many employees. Empty date = the import rule: without a group
+     * from today, a change from another group from the 1st of next month.
+     */
+    public static function assignGroupBulkAction(): BulkAction
+    {
+        return BulkAction::make('assignGroup')
+            ->label('Priradiť skupinu')
+            ->icon(Heroicon::OutlinedUserGroup)
+            ->authorize(fn () => auth()->user()?->isAdmin())
+            ->visible(fn () => MealGroup::query()->exists())
+            ->modalHeading('Priradiť skupinu stravníkov')
+            ->modalSubmitActionLabel('Priradiť')
+            ->fillForm(fn (Collection $records) => [
+                'from' => $records->contains(fn (Employee $e) => EmployeeImport::hasGroup($e)) ? null : LocalTime::today()->toDateString(),
+            ])
+            ->schema([
+                Select::make('meal_group_id')
+                    ->label('Skupina')
+                    ->options(fn () => MealGroup::query()->active()->orderBy('name')->pluck('name', 'id'))
+                    ->required(),
+                DatePicker::make('from')
+                    ->label('Platí od')
+                    ->native(false)->displayFormat('j. n. Y')
+                    ->helperText('Prázdne = kto ešte nemá skupinu, od dnes; zmena z inej skupiny od 1. dňa budúceho mesiaca. Už objednané jedlá od tohto dňa sa prepočítajú.')
+                    ->rule(fn () => function (string $attribute, mixed $value, \Closure $fail) {
+                        if (blank($value)) {
+                            return;
+                        }
+                        try {
+                            app(MealGroupService::class)->assertDateOpen($value);
+                        } catch (OrderingException $e) {
+                            $fail($e->getMessage());
+                        }
+                    }),
+            ])
+            ->action(function (Collection $records, array $data) {
+                $changed = static::assignGroup($records, (int) $data['meal_group_id'], $data['from'] ?? null, auth()->user());
+                Notification::make()->title("Skupina priradená: {$changed} z {$records->count()}")->success()->send();
+            })
+            ->deselectRecordsAfterCompletion();
+    }
+
+    /** @return int how many employees changed group */
+    public static function assignGroup(iterable $employees, int $groupId, ?string $from, User $by): int
+    {
+        $today = LocalTime::today();
+        $nextMonth = $today->startOfMonth()->addMonthNoOverflow();
+        $changed = 0;
+
+        DB::transaction(function () use ($employees, $groupId, $from, $by, $today, $nextMonth, &$changed) {
+            foreach ($employees as $employee) {
+                $date = $from ? LocalTime::date($from) : (EmployeeImport::hasGroup($employee) ? $nextMonth : $today);
+                $calendar = EmployeeCalendar::for($employee);
+                if ($calendar->groupOn($date)?->id === $groupId && $calendar->memberships()->every(fn ($m) => $m->effective_from <= $date)) {
+                    continue;
+                }
+                app(MealGroupService::class)->assign($employee, $groupId, $date, $by);
+                $changed++;
+            }
+        });
+
+        return $changed;
     }
 
     public static function resetPinAction(): Action

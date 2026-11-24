@@ -200,7 +200,7 @@ describe('settlement', function () {
 
         $sheets = xlsxSheets(app(BillingXlsxFormat::class)->write($data));
         expect($sheets['Súhrn'][0])->toBe(array_keys(BillingXlsxFormat::summaryColumns()))
-            ->and($sheets['Súhrn'][1])->toMatchArray([0 => '0400', 3 => 'Ján Živnostník – ZJ', 4 => '12345678', 9 => 2, 10 => 1, 12 => '5,00 €', 13 => 15])
+            ->and($sheets['Súhrn'][1])->toMatchArray([0 => '0400', 4 => 'Ján Živnostník – ZJ', 5 => '12345678', 10 => 2, 11 => 1, 13 => '5,00 €', 14 => 15])
             ->and(count($sheets['Detail']))->toBe(4);
 
         $monthly = MonthlyData::for('2026-10');

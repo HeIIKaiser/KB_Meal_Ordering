@@ -41,6 +41,7 @@ final class VemaFormat implements PayrollFormat
             'vema_cislo' => fn (PayrollRow $r) => VemaNumbers::export($r->employee->vema_cislo), // number, no leading zeros
             'priezvisko' => fn (PayrollRow $r) => $r->employee->last_name,
             'meno' => fn (PayrollRow $r) => $r->employee->first_name,
+            'stredisko_cislo' => fn (PayrollRow $r) => (string) $r->employee->stredisko_cislo,
             'zamestnanecka_ks' => fn (PayrollRow $r) => $r->employeeMeals,
             'dokupovana_ks' => fn (PayrollRow $r) => $r->extraMeals,
             'povinna_ks' => fn (PayrollRow $r) => $r->mandatoryMeals,

@@ -76,12 +76,59 @@ Ak tlačíte pred uzávierkou, v hlavičke je upozornenie „Objednávky ešte o
 
 *Zamestnanci → Import z XLSX/CSV*
 
-1. Stiahnite **šablónu** alebo použite vlastný súbor so stĺpcami `osobne_cislo`, `priezvisko`, `meno`,
-   `stredisko` a voliteľne `aktivny` (áno/nie). Na veľkosti písmen a diakritike v názvoch stĺpcov nezáleží.
-2. Vyberte súbor → **Načítať a skontrolovať**. Uvidíte, kto pribudne, čo sa zmení a riadky s chybou.
-3. Ak chcete vypnúť ľudí, ktorí v súbore nie sú (odišli), zaškrtnite **Deaktivovať …** (zoznam mien je pod tým).
-4. **Uložiť zmeny.** Nikto sa nemaže. **Noví zamestnanci dostanú PIN automaticky** — v oznámení kliknite na
-   **Vytlačiť lístky nových** (alebo neskôr tlačidlo *Nevytlačené lístky*).
+**Hlavný zoznam (odporúčané).** Jedna tabuľka (Google Sheets → stiahnuť ako XLSX alebo CSV) so stĺpcami:
+
+| Vema | Name | Workplace no. | Workplace | Dochádzka | Name in attendance | Forma stravy |
+|---|---|---|---|---|---|---|
+| 181 | Kováčiková Mariana | 11 | Administratíva | 181-1 | Kováčiková M. | Povinná - len obed |
+| 285 | Vágner Miroslav | 41 | Plniareň | | | |
+
+- **Vema** = osobné číslo = prihlasovacie číslo zamestnanca (a Vema číslo pre mzdy). Náhľad to napíše: *Osobné číslo = Vema číslo*.
+- **Name** = „Priezvisko Meno“: posledné slovo je meno, všetko pred ním priezvisko (*Filip Hanzen Erika* → Filip Hanzen / Erika).
+  Tituly (Ing., Mgr., Bc., MUDr., PhD. …) sa vynechajú. Mená s 3 a viac slovami náhľad označí na kontrolu.
+- **Workplace no.** = číslo strediska (podľa neho účtovníctvo triedi exporty), **Workplace** = názov strediska.
+- **Dochádzka** = číslo vo WebVisitore, napr. `181-1` (uloží sa 181). Prázdne = bez čísla v dochádzke; pri skupinách s lístkami
+  alebo povinnou stravou náhľad upozorní, že sa použije osobné číslo.
+- **Name in attendance** sa neukladá – len kontrola: ak priezvisko alebo začiatočné písmeno nesedí, náhľad upozorní
+  (pravdepodobne zlé číslo v stĺpci Dochádzka).
+- **Forma stravy** = názov skupiny stravníkov alebo jeden z jej **Názvov v importe**. Neznáma hodnota je chyba v riadku.
+  **Prázdne = ešte nenastavené:** zamestnanec sa uloží, náhľad ho ukáže v zozname *Nenastavená forma stravy* a kým nedostane
+  skupinu, je v dennom režime (môže si objednávať). Existujúcemu zamestnancovi prázdna bunka skupinu nikdy nezmení.
+- Ďalšie stĺpce (napr. `#`) sa ignorujú. Na veľkosti písmen, diakritike, bodkách a medzerách v názvoch stĺpcov nezáleží.
+
+**Ako to používať:** hlavný zoznam udržiavajte na jednom mieste a **nahrajte ho znova kedykoľvek** (nástup, zmena strediska,
+zmena formy stravy). Párovanie je podľa Vema čísla, nikto sa nezdvojí. Prázdna bunka = bez zmeny. **Nikto sa nemaže**
+(odchod: zaškrtnite *Deaktivovať …*). Ľudia nahratí skôr v pôvodnom formáte (osobne_cislo = Vema) sa len aktualizujú; ak mal
+niekto osobné číslo s nulou na začiatku (*0181*), spáruje sa podľa Vema čísla a jeho prihlasovacie číslo sa nemení.
+
+**Odkedy platí skupina:** kto ešte nemá žiadnu skupinu, dostane ju **od dnes**; zmena z jednej skupiny na inú platí
+**od 1. dňa budúceho mesiaca**. V náhľade môžete pole **Skupina platí od** nastaviť pre všetky zmeny naraz (aj pre nových).
+
+**Odporúčané skupiny pri prvom nastavení** (*Ľudia → Skupiny stravníkov*, pole *Názvy v importe* = hodnoty zo stĺpca Forma stravy):
+
+| Forma stravy v zozname | Skupina | Režim |
+|---|---|---|
+| Povinná - len obed | napr. *Povinná – obed* | povinná strava, **1** jedlo za odpracovaný deň |
+| Povinná - obed+večera | napr. *Povinná – obed a večera* | povinná strava, **2** jedlá za odpracovaný deň |
+| Objednáva si | napr. *Lístky* | režim lístkov, odhad **podľa plánu smien** |
+
+8 h aj 12 h môžu byť v jednej skupine *Objednáva si*, lebo odhad lístkov sa počíta zo skutočného plánu smien vo WebVisitore.
+
+**Kto ešte nemá formu stravy:** na nástenke je upozornenie *N aktívnych zamestnancov bez formy stravy* → otvorí zoznam
+s filtrom **Bez skupiny** → označte ľudí → hromadná akcia **Priradiť skupinu** (skupina + *Platí od*; prázdne = rovnaké
+pravidlo ako pri importe).
+
+Postup importu:
+
+1. Vyberte súbor → **Načítať a skontrolovať**. Uvidíte, kto pribudne, čo sa zmení, počty podľa skupín, upozornenia a riadky
+   s chybou (tie sa preskočia).
+2. Ak chcete vypnúť ľudí, ktorí v súbore nie sú (odišli), zaškrtnite **Deaktivovať …** (zoznam mien je pod tým).
+3. **Uložiť zmeny.** **Noví zamestnanci dostanú PIN automaticky** — v oznámení kliknite na **Vytlačiť lístky nových**
+   (alebo neskôr tlačidlo *Nevytlačené lístky*).
+
+**Šablóna** na stránke importu je v tomto formáte (vymyslení ľudia). Funguje aj **pôvodný formát** so stĺpcami
+`osobne_cislo`, `priezvisko`, `meno`, `stredisko`, `stredisko_cislo`, `aktivny`, `skupina`, `vema_cislo`, `cislo_dochadzka` …
+(ak súbor má stĺpec `osobne_cislo`, kľúčom je ono).
 
 ## Jedálny lístok (kuchyňa, administrátor)
 
@@ -164,9 +211,10 @@ a objednávkam sa zmení cena a o koľko eur.
 
 **Zaradenie zamestnanca:** v karte zamestnanca pole **Skupina stravníkov** a **Skupina platí od** – predvolene od 1. dňa
 budúceho mesiaca, aby sa nezmenili už objednané jedlá. Ak zvolíte skorší dátum, pod poľom uvidíte, čo sa prepočíta.
-Hromadne cez **Import zamestnancov** so stĺpcom `skupina` (názov existujúcej skupiny; zmena platí od 1. dňa budúceho mesiaca,
-nový zamestnanec od začiatku tohto mesiaca; neznámy názov je chyba v riadku; prázdne = bez zmeny).
-V zozname zamestnancov je stĺpec *Skupina* a filter podľa skupiny.
+Hromadne cez **Import zamestnancov** so stĺpcom `skupina` / `Forma stravy` (názov skupiny alebo jej *Názvy v importe*; kto
+ešte nemá skupinu, od dnes; zmena z inej skupiny od 1. dňa budúceho mesiaca; neznámy názov je chyba v riadku; prázdne = bez
+zmeny), alebo v zozname zamestnancov hromadnou akciou **Priradiť skupinu**.
+V zozname zamestnancov je stĺpec *Skupina*, filter podľa skupiny a filter **Bez skupiny**.
 
 ### Lístky na mesiac
 

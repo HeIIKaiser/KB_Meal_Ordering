@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Domain\Employees\PinIssuer;
+use App\Support\LocalTime;
 use Illuminate\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\Authenticatable as AuthenticatableContract;
 use Illuminate\Contracts\Encryption\DecryptException;
@@ -23,7 +24,7 @@ class Employee extends Model implements AuthenticatableContract
     use Authenticatable, HasFactory, LogsActivity;
 
     protected $fillable = [
-        'osobne_cislo', 'first_name', 'last_name', 'department', 'is_active', 'user_id',
+        'osobne_cislo', 'first_name', 'last_name', 'department', 'stredisko_cislo', 'is_active', 'user_id',
         'vema_cislo', 'attendance_cislo', 'max_meals_per_day',
         'billing_name', 'ico', 'dic', 'billing_address', 'billing_email', 'billing_note',
     ];
@@ -201,6 +202,23 @@ class Employee extends Model implements AuthenticatableContract
         $query->where('is_active', true);
     }
 
+    /**
+     * "Bez formy stravy": no meal group today and none planned. Such employees are in
+     * daily mode (they can order) until the admin assigns a group.
+     */
+    public function scopeWithoutGroup(Builder $query): void
+    {
+        $today = LocalTime::today()->toDateString();
+        $query->whereNotExists(fn ($q) => $q->from('employee_group_memberships as m')
+            ->whereColumn('m.employee_id', 'employees.id')
+            ->whereNotNull('m.meal_group_id')
+            ->where(fn ($w) => $w->where('m.effective_from', '>', $today)
+                ->orWhereNotExists(fn ($n) => $n->from('employee_group_memberships as n')
+                    ->whereColumn('n.employee_id', 'm.employee_id')
+                    ->whereColumn('n.effective_from', '>', 'm.effective_from')
+                    ->where('n.effective_from', '<=', $today))));
+    }
+
     public function scopeAlphabetical(Builder $query): void
     {
         $query->orderBy('last_name')->orderBy('first_name')->orderBy('osobne_cislo');
@@ -209,7 +227,7 @@ class Employee extends Model implements AuthenticatableContract
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['osobne_cislo', 'first_name', 'last_name', 'department', 'is_active', 'user_id', 'pin_changed_at', 'vema_cislo', 'attendance_cislo', 'max_meals_per_day', 'billing_name', 'ico', 'dic', 'billing_address', 'billing_email', 'billing_note'])
+            ->logOnly(['osobne_cislo', 'first_name', 'last_name', 'department', 'stredisko_cislo', 'is_active', 'user_id', 'pin_changed_at', 'vema_cislo', 'attendance_cislo', 'max_meals_per_day', 'billing_name', 'ico', 'dic', 'billing_address', 'billing_email', 'billing_note'])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->useLogName('employees');

@@ -28,7 +28,7 @@ class OrderListExport
 {
     public const COLUMNS = [
         'datum', 'jedlo', 'osobne_cislo', 'priezvisko', 'meno', 'stredisko', 'menu_cislo', 'menu_nazov',
-        'typ', 'cena', 'stav', 'vytvorene', 'zrusene', 'vytvoril', 'rezim', 'vysporiadanie',
+        'typ', 'cena', 'stav', 'vytvorene', 'zrusene', 'vytvoril', 'rezim', 'vysporiadanie', 'stredisko_cislo',
     ];
 
     public const MAX_DAYS = 366;
@@ -53,7 +53,7 @@ class OrderListExport
         $sheet = $writer->getCurrentSheet();
         $sheet->setName('Objednávky');
         $sheet->setSheetView((new SheetView)->setFreezeRow(2));
-        foreach ([1 => 11, 2 => 9, 3 => 12, 4 => 16, 5 => 14, 6 => 16, 7 => 7, 8 => 36, 9 => 10, 10 => 9, 11 => 9, 12 => 18, 13 => 18, 14 => 16, 15 => 8, 16 => 12] as $col => $w) {
+        foreach ([1 => 11, 2 => 9, 3 => 12, 4 => 16, 5 => 14, 6 => 16, 7 => 7, 8 => 36, 9 => 10, 10 => 9, 11 => 9, 12 => 18, 13 => 18, 14 => 16, 15 => 8, 16 => 12, 17 => 12] as $col => $w) {
             $sheet->setColumnWidth($w, $col);
         }
 
@@ -80,6 +80,7 @@ class OrderListExport
                 Cell::fromValue($r['vytvoril']),
                 Cell::fromValue($r['rezim']),
                 Cell::fromValue($r['vysporiadanie']),
+                Cell::fromValue($r['stredisko_cislo']),
             ]));
         }
 
@@ -99,7 +100,7 @@ class OrderListExport
             fputcsv($fh, [
                 $r['datum']->format('Y-m-d'), $r['jedlo'], $r['osobne_cislo'], $r['priezvisko'], $r['meno'], $r['stredisko'],
                 $r['menu_cislo'], $r['menu_nazov'], $r['typ'], number_format($r['cena_cents'] / 100, 2, ',', ''), $r['stav'],
-                $r['vytvorene']->format('Y-m-d H:i:s'), $r['zrusene']?->format('Y-m-d H:i:s') ?? '', $r['vytvoril'], $r['rezim'], $r['vysporiadanie'],
+                $r['vytvorene']->format('Y-m-d H:i:s'), $r['zrusene']?->format('Y-m-d H:i:s') ?? '', $r['vytvoril'], $r['rezim'], $r['vysporiadanie'], $r['stredisko_cislo'],
             ], ';', '"', '');
         }
 
@@ -136,7 +137,7 @@ class OrderListExport
             ->select([
                 'orders.date', 'orders.unit_price_cents', 'orders.pricing_mode', 'orders.status', 'orders.created_at', 'orders.cancelled_at',
                 'meal_slots.code as slot_code', 'employees.osobne_cislo', 'employees.last_name', 'employees.first_name',
-                'employees.department', 'orders.employee_id', 'menu_items.number', 'menu_items.name as dish', 'price_types.code as type_code',
+                'employees.department', 'employees.stredisko_cislo', 'orders.employee_id', 'menu_items.number', 'menu_items.name as dish', 'price_types.code as type_code',
                 'users.name as created_by',
             ])
             ->cursor();
@@ -161,6 +162,7 @@ class OrderListExport
                 'vytvoril' => $o->created_by ?? 'sám',
                 'rezim' => PricingMode::from($o->pricing_mode)->exportCode(),
                 'vysporiadanie' => $this->settlement((int) $o->employee_id, LocalTime::date($o->date)),
+                'stredisko_cislo' => (string) $o->stredisko_cislo,
             ];
         }
 
@@ -189,6 +191,7 @@ class OrderListExport
                     'vytvoril' => $m->source === MandatoryMeal::SOURCE_FINAL ? 'dochádzka (konečná)' : 'dochádzka (odhad)',
                     'rezim' => 'povinna',
                     'vysporiadanie' => $this->settlement($m->employee_id, $m->date),
+                    'stredisko_cislo' => (string) $m->employee->stredisko_cislo,
                 ];
             }
         }

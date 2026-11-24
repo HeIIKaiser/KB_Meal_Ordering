@@ -8,6 +8,7 @@ use DateTimeInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
@@ -27,11 +28,11 @@ class MealGroup extends Model
 
     public const SETTLEMENT_INVOICE = 'invoice';
 
-    protected $fillable = ['name', 'default_tickets', 'mandatory_per_day', 'estimate_source', 'settlement', 'max_per_slot', 'is_active'];
+    protected $fillable = ['name', 'import_aliases', 'default_tickets', 'mandatory_per_day', 'estimate_source', 'settlement', 'max_per_slot', 'is_active'];
 
     protected function casts(): array
     {
-        return ['default_tickets' => 'integer', 'mandatory_per_day' => 'integer', 'max_per_slot' => 'integer', 'is_active' => 'boolean'];
+        return ['import_aliases' => 'array', 'default_tickets' => 'integer', 'mandatory_per_day' => 'integer', 'max_per_slot' => 'integer', 'is_active' => 'boolean'];
     }
 
     public function estimatesByOrders(): bool
@@ -69,6 +70,24 @@ class MealGroup extends Model
         $query->where('is_active', true);
     }
 
+    /** Name as matched by the employee import: case, diacritics, dashes and spaces ignored. */
+    public static function importKey(string $name): string
+    {
+        $k = Str::ascii(mb_strtolower(trim($name)));
+        $k = preg_replace('/\s*[-\x{2013}\x{2014}]\s*/u', ' - ', $k);
+
+        return trim(preg_replace('/\s+/', ' ', $k));
+    }
+
+    /** @return list<string> import keys: the name plus "Názvy v importe" */
+    public function importKeys(): array
+    {
+        return collect([$this->name, ...($this->import_aliases ?? [])])
+            ->filter(fn ($n) => is_string($n) && trim($n) !== '')
+            ->map(fn (string $n) => self::importKey($n))
+            ->unique()->values()->all();
+    }
+
     /** Mode on a date (no history row yet = daily). Uses the loaded `modes` relation if present. */
     public function modeOn(DateTimeInterface|string $date): PricingMode
     {
@@ -80,6 +99,6 @@ class MealGroup extends Model
 
     public function getActivitylogOptions(): LogOptions
     {
-        return LogOptions::defaults()->logOnly(['name', 'default_tickets', 'mandatory_per_day', 'estimate_source', 'settlement', 'max_per_slot', 'is_active'])->logOnlyDirty()->dontSubmitEmptyLogs()->useLogName('tickets');
+        return LogOptions::defaults()->logOnly(['name', 'import_aliases', 'default_tickets', 'mandatory_per_day', 'estimate_source', 'settlement', 'max_per_slot', 'is_active'])->logOnlyDirty()->dontSubmitEmptyLogs()->useLogName('tickets');
     }
 }

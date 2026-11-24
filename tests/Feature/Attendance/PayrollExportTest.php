@@ -44,9 +44,9 @@ it('builds the provisional Vema file: numbers without leading zeros, totals equa
     $data = PayrollData::for('2026-10');
     $rows = readSheets(app(VemaFormat::class)->write($data))['Vema 2026-10'];
 
-    expect($rows[0])->toBe(['vema_cislo', 'priezvisko', 'meno', 'zamestnanecka_ks', 'dokupovana_ks', 'povinna_ks', 'suma_eur'])
-        ->and($rows[1])->toBe([29, 'Kuchárová', 'Eva', 0, 1, 4, 12])     // 6,00 + 4 × 1,50
-        ->and($rows[2])->toBe([31, 'Denný', 'Ján', 1, 1, 0, 7.5]);
+    expect($rows[0])->toBe(['vema_cislo', 'priezvisko', 'meno', 'stredisko_cislo', 'zamestnanecka_ks', 'dokupovana_ks', 'povinna_ks', 'suma_eur'])
+        ->and($rows[1])->toBe([29, 'Kuchárová', 'Eva', '', 0, 1, 4, 12])     // 6,00 + 4 × 1,50
+        ->and($rows[2])->toBe([31, 'Denný', 'Ján', '', 1, 1, 0, 7.5]);
 
     $summary = readSheets(app(MonthlyMatrixXlsx::class)->write(MonthlyData::for('2026-10')))['Súhrn'];
     $sumIndex = array_search('Suma €', $summary[0], true);

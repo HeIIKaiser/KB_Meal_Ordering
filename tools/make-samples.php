@@ -126,4 +126,23 @@ for ($i = 1; $i <= 20; $i++) {
 xlsx("$out/konecne_listky_2026-11.xlsx", $final, [1 => 14, 2 => 8, 3 => 18, 4 => 14]);
 csv("$out/konecne_listky_2026-11.csv", $final);
 
+// ---------------------------------------------------------------- master sheet (Roman, 2026-11-24)
+// Exactly the format of the HR master sheet (Google Sheets export): "#" is ignored, Vema = osobné číslo,
+// one "Name" column, "181-1" attendance numbers, "Forma stravy" matched to groups via "Názvy v importe".
+$master = [
+    ['#', 'Vema', 'Name', 'Workplace no.', 'Workplace', 'Dochádzka', 'Name in attendance', 'Forma stravy'],
+    ['1', '901', 'Nováková Mária', '11', 'Administratíva', '901-1', 'Nováková M.', 'Povinná - len obed'],
+    ['2', '902', 'Ing. Kováč Peter', '11', 'Administratíva', '917-1', 'Kováč P.', 'Povinná - obed+večera'],
+    ['3', '903', 'Horváthová Zuzana', '11', 'Administratíva', '903-1', 'Horváthová Z.', 'Objednáva si'],
+    ['4', '904', 'Varga Tóth Andrea', '12', 'Beauty', '904-1', 'Varga Tóth A.', ''],
+    ['5', '905', 'Mgr. Baláž Martin', '21', 'Kuchyňa', '905-1', 'Baláž M.', 'Povinná - obed+večera'],
+    ['6', '906', 'Molnárová Eva', '21', 'Kuchyňa', '906-1', 'Molnárová E.', 'Objednáva si'],
+    ['7', '907', 'Šimko Juraj', '31', 'Wellness', '907-1', 'Šimko J.', 'Objednáva si'],
+    ['8', '908', 'Lukáčová Kráľová Ivana', '31', 'Wellness', '908-1', 'Lukáčová Kráľová I.', 'Povinná - len obed'],
+    ['9', '909', 'Hudák Pavol', '41', 'Plniareň', '', '', ''],
+    ['10', '910', 'Poláková Jana', '41', 'Plniareň', '910-1', 'Oravcová J.', 'Objednáva si'], // wrong number → warning
+];
+xlsx("$out/zamestnanci_hlavny_zoznam.xlsx", $master, [1 => 5, 2 => 8, 3 => 26, 4 => 14, 5 => 16, 6 => 12, 7 => 22, 8 => 24]);
+csv("$out/zamestnanci_hlavny_zoznam.csv", $master);
+
 echo "done\n";

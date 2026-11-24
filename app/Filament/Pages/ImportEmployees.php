@@ -3,9 +3,12 @@
 namespace App\Filament\Pages;
 
 use App\Domain\Employees\EmployeeImport;
+use App\Domain\Ordering\OrderingException;
+use App\Domain\Tickets\MealGroupService;
 use App\Enums\NavGroup;
 use App\Enums\Role;
 use App\Filament\Resources\Employees\EmployeeResource;
+use App\Support\LocalTime;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
@@ -44,6 +47,9 @@ class ImportEmployees extends Page
 
     public bool $deactivateMissing = false;
 
+    /** Optional start date for ALL group changes in the file (empty = today / 1st of next month). */
+    public ?string $groupFrom = null;
+
     public static function canAccess(): bool
     {
         return (bool) auth()->user()?->hasRole(Role::Admin);
@@ -65,11 +71,27 @@ class ImportEmployees extends Page
     {
         abort_unless(static::canAccess() && $this->preview, 403);
 
-        $result = $import->apply($this->preview, $this->deactivateMissing, auth()->user());
+        $groupFrom = filled($this->groupFrom) ? $this->groupFrom : null;
+        if ($groupFrom !== null) {
+            try {
+                $groupFrom = LocalTime::date($groupFrom)->toDateString();
+                app(MealGroupService::class)->assertDateOpen($groupFrom);
+            } catch (OrderingException $e) {
+                $this->addError('groupFrom', $e->getMessage());
+
+                return null;
+            } catch (Throwable) {
+                $this->addError('groupFrom', 'Neplatný dátum.');
+
+                return null;
+            }
+        }
+
+        $result = $import->apply($this->preview, $this->deactivateMissing, auth()->user(), $groupFrom);
 
         Notification::make()
             ->title('Import dokončený')
-            ->body("Nových: {$result['created']} (PIN vygenerovaný), upravených: {$result['updated']}, deaktivovaných: {$result['deactivated']}.")
+            ->body("Nových: {$result['created']} (PIN vygenerovaný), upravených: {$result['updated']}, deaktivovaných: {$result['deactivated']}, zmien skupiny: {$result['groups']}.")
             ->success()
             ->persistent()
             ->actions($result['created_ids'] ? [
@@ -83,9 +105,24 @@ class ImportEmployees extends Page
         return redirect(EmployeeResource::getUrl());
     }
 
+    public function clearGroupFrom(): void
+    {
+        $this->groupFrom = null;
+    }
+
+    /** "1. 12. 2026": the override date if valid, else $default. */
+    public function groupFromLabel(string $default): string
+    {
+        try {
+            return LocalTime::date(filled($this->groupFrom) ? $this->groupFrom : $default)->format('j. n. Y');
+        } catch (Throwable) {
+            return LocalTime::date($default)->format('j. n. Y');
+        }
+    }
+
     public function resetImport(): void
     {
-        $this->reset(['file', 'preview', 'deactivateMissing']);
+        $this->reset(['file', 'preview', 'deactivateMissing', 'groupFrom']);
     }
 
     public function getBreadcrumbs(): array

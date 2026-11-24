@@ -236,7 +236,7 @@ describe('import', function () {
         $result = app(EmployeeImport::class)->apply($preview, deactivateMissing: true);
 
         $new = Employee::where('osobne_cislo', '200')->sole();
-        expect($result)->toBe(['created' => 1, 'updated' => 1, 'deactivated' => 1, 'created_ids' => [$new->id]])
+        expect($result)->toBe(['created' => 1, 'updated' => 1, 'deactivated' => 1, 'created_ids' => [$new->id], 'groups' => 0])
             ->and($new->printablePin())->toMatch('/^\d{6}$/') // imported employees get a login right away
             ->and($existing->fresh()->last_name)->toBe('Nová')
             ->and($existing->fresh()->department)->toBe('Wellness')
@@ -284,7 +284,7 @@ describe('import', function () {
 
     it('serves the CSV template', function () {
         $this->actingAs($this->admin)->get('/admin/sablona/zamestnanci')
-            ->assertOk()->assertHeader('Content-Type', 'text/csv; charset=UTF-8')->assertSee('osobne_cislo;priezvisko', false);
+            ->assertOk()->assertHeader('Content-Type', 'text/csv; charset=UTF-8')->assertSee('Vema;Name;Workplace no.;Workplace;Dochádzka;Name in attendance;Forma stravy', false);
     });
 });
 
