@@ -133,6 +133,7 @@ class OrderListExport
             ->orderBy('meal_slots.sort')
             ->orderBy('employees.last_name')
             ->orderBy('employees.first_name')
+            ->orderByNatural('employees.osobne_cislo')
             ->orderBy('orders.id')
             ->select([
                 'orders.date', 'orders.unit_price_cents', 'orders.pricing_mode', 'orders.status', 'orders.created_at', 'orders.cancelled_at',

@@ -124,7 +124,7 @@ class AttendanceStatus extends Page
             'locked' => $rows->where('locked', true)->count(),
             'missing' => $rows->where('has_data', false),
             'unfilled' => $rows->filter(fn ($r) => $r['unfilled']),
-            'unmatched' => $lastData?->unmatched ?? [],
+            'unmatched' => collect($lastData?->unmatched ?? [])->sortByNatural(fn ($n) => $n)->values()->all(),
             'late' => $closed ? SyncLog::query()->where('kind', 'data')->where('month', $this->month)->whereNotNull('late_changes')
                 ->where('received_at', '>=', $closed->closed_at)->latest('received_at')->first() : null,
             'closed' => $closed,

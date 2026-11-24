@@ -221,7 +221,7 @@ class Employee extends Model implements AuthenticatableContract
 
     public function scopeAlphabetical(Builder $query): void
     {
-        $query->orderBy('last_name')->orderBy('first_name')->orderBy('osobne_cislo');
+        $query->orderBy('last_name')->orderBy('first_name')->orderByNatural('osobne_cislo');
     }
 
     public function getActivitylogOptions(): LogOptions

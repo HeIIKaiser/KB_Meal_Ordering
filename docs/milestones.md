@@ -317,3 +317,22 @@ Spec `docs/CATEGORIES.md`.
 - Tests: `tests/Feature/Admin/MasterSheetImportTest.php` (33 tests).
 - Deploy: `bash deploy/update.sh` (one migration).
 
+### Natural number sorting; update script picks the right PHP (2026-11-24)
+
+- Numbers stored as text (osobné číslo, Vema číslo, číslo v dochádzke, číslo strediska) sort numerically: 1, 2, 10,
+  11, 20, 100. One implementation, `App\Support\NaturalSort`: query macro `orderByNatural($column, $direction)`
+  (digits-only first by length without leading zeros, then value; other values like „S001“ after them
+  alphabetically; empty last; no CAST, so no overflow; MariaDB `REGEXP`, SQLite `GLOB`) and the collection macro
+  `sortByNatural()` with the same rule in PHP.
+- Used for the employee table columns (Os. číslo, Vema č., Č. strediska) and the cost-centre filter, the
+  name-then-number tie-break `Employee::alphabetical()` (access slips, monthly tickets, attendance roster, employee
+  selects, monthly matrix/Súhrn, final-tickets preview), the kitchen daily overview, the order list export, the Vema
+  export, the „Nepárované z dochádzky“ list and the Vema-number fill helper. Import previews keep file order (line
+  numbers).
+- `deploy/update.sh`: chooses PHP (env `PHP` → `/usr/bin/$PREFERRED_PHP` → `php`, printed), runs Composer with it,
+  checks `composer.lock` with `check-platform-reqs` **before** backup/maintenance/pull (stops and changes nothing) and
+  again after the pull; on failure brings the site up and names the failed step and the app's state. New `--check`.
+  README → Updating documents it and the manual fallback.
+- Tests: `tests/Feature/Admin/NaturalSortTest.php`, `tests/Feature/Deploy/UpdateScriptTest.php` (fake git/composer/
+  artisan; nothing real changes).
+

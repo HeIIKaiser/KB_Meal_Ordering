@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Http\Middleware\EnsureEmployeeIsActive;
+use App\Support\NaturalSort;
 use App\Support\Settings;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
@@ -24,6 +25,9 @@ class AppServiceProvider extends ServiceProvider
     {
         // Catch lazy loading (N+1), silently discarded attributes etc. outside production.
         Model::shouldBeStrict(! $this->app->isProduction());
+
+        // orderByNatural() / sortByNatural(): numbers stored as text in numeric order.
+        NaturalSort::register();
 
         // Re-applied on every Livewire update request of the employee screen.
         Livewire::addPersistentMiddleware([EnsureEmployeeIsActive::class]);
