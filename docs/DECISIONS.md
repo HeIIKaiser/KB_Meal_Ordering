@@ -306,6 +306,52 @@ Roman approved the plan, with answers 1–2 below.
    use `color-mix()`; their fallbacks are the stronger full colour. A button disabled during a Livewire request
    (a fraction of a second) can look dark there.
 
+## Design decisions — master-sheet employee import (2026-11-24)
+
+Roman keeps one HR master sheet (Google Sheets) and imports it as-is, any time:
+`Vema | Name | Workplace no. | Workplace | Dochádzka | Name in attendance | Forma stravy` (extra columns such as `#` are
+ignored). Everything that worked before still works; the new columns are **aliases**, no field was renamed.
+
+- **Key** (Roman): the Vema number **is** the osobné číslo and the login number. Without an `osobne_cislo` column the
+  Vema column is the key and also fills `vema_cislo`; the preview says *Osobné číslo = Vema číslo*. With an
+  `osobne_cislo` column, behaviour is unchanged (exact match).
+  - People created by the old importer (osobne_cislo = Vema) are matched exactly → updated, never duplicated.
+  - Safety net (approved, a): if no osobné číslo matches but exactly one employee has the same Vema number, or a numeric
+    osobné číslo equal to it without leading zeros („0181“ vs „181“), the row updates that person and **keeps their
+    osobné číslo** (it is their login); the preview warns. Several candidates = row error.
+- **Name**: one column `Name` / `Meno a priezvisko` / `Priezvisko a meno`, split by `App\Domain\Employees\NameSplitter`:
+  academic titles dropped (Ing., Mgr., Bc., MUDr., PhDr., PhD., … with or without the dot; words that can also be a
+  name — doc., prof., Dr., arch. — only with the dot), then the **last word is the first name**, the rest the surname.
+  The preview shows the split; 3+ words → warning. One word → row error. Separate `priezvisko` + `meno` columns win.
+- **Cost centre**: new employee field `stredisko_cislo` (digits, nullable, indexed) from `Workplace no.` /
+  `Číslo strediska` / `stredisko_cislo`; `Workplace` / `Pracovisko` → the existing department name. Shown in the
+  employee form, list (column + filter) and appended to the exports: Súhrn (last column, so existing column positions do
+  not move), Mesiac (in the employee header), flat order list (`stredisko_cislo`, last column), provisional Vema and
+  Fakturácia formats (after the name).
+- **Attendance number**: `Dochádzka` accepts WebVisitor's „osobné číslo-číslo pracovného pomeru“ (`181-1` → 181) and
+  plain digits; empty changes nothing. The warning about a missing number is for people whose group (on the date the
+  group applies) is in **tickets or mandatory** mode — including temps estimated by orders, because their final price
+  also comes from attendance — not daily or fixed. The text says that osobné číslo is used as the fallback, which is
+  how pairing works (`Employee::attendanceKey()`).
+- **Name in attendance** is not stored. Warning if its surname (case/diacritics ignored) differs from the employee's or
+  its initial differs from the first name — this catches a wrong Dochádzka number.
+- **Forma stravy → group**: new group field *Názvy v importe* (`meal_groups.import_aliases`, JSON list). Matching
+  ignores case, diacritics, spaces and the kind of dash (`MealGroup::importKey()`); the group form refuses a name or
+  import name already used by another group. Unknown value = row error naming the value. The preview counts employees
+  per resulting group.
+- **Empty Forma stravy** (Roman) = *not set up yet*: never changes an existing group; the person is saved and listed under
+  *Nenastavená forma stravy (N)* when they have no group now or planned; until then daily mode (they can order).
+- **Group start** (Roman): no group yet (none today, none planned) → **from today**; from one group to another → **1st of
+  next month** (as before). The preview has one optional *Skupina platí od* date for all group changes in the file, new
+  employees included (closed months refused). Meals already ordered from that date are repriced by the existing
+  `MealGroupService::assign()` path.
+- **Employee list**: filter **Bez skupiny** (= no group today and none planned, `Employee::scopeWithoutGroup`) and bulk
+  action **Priradiť skupinu** (group + optional *Platí od*; empty = the import rule per person; pre-filled with today when
+  no selected person has a group).
+- **Dashboard** (admins): *N aktívnych zamestnancov bez formy stravy* → the filtered list; hidden at 0; no polling.
+- **Template / samples**: the template download is now the master-sheet format (made-up people);
+  `docs/samples/zamestnanci_hlavny_zoznam.xlsx|csv` shows every check.
+
 ## Decisions by Roman
 
 - **2026-11-09 — Staff 2FA is optional.** Users can enable TOTP in their Filament profile; it is not enforced on first login and there are no prompts. (Brief §5 said "email + password + 2FA" — relaxed because most staff can't handle authenticator apps.)
@@ -354,4 +400,8 @@ Roman approved the plan, with answers 1–2 below.
   osobné číslo. An attendance number equal to another person's osobné číslo is a conflict (neither is updated).
 - **2026-11-17 — daisyUI for the employee side** (Roman, plan approved with answers 1–2). Admin, kitchen/print and
   access slips unchanged. See "Design decisions — daisyUI on the employee side".
-
+- **2026-11-24 — Master-sheet employee import** (Roman, plan approved with a and b as proposed). The Vema number is the
+  osobné číslo and login; empty *Forma stravy* = not set up yet (saved, listed, daily mode until a group is assigned);
+  a first group applies from today, a change of group from the 1st of next month, with one override date in the preview.
+  Recommended setup: „Povinná - len obed“ → mandatory 1/day, „Povinná - obed+večera“ → mandatory 2/day, „Objednáva si“ →
+  tickets estimated from the shift plan (8 h and 12 h share it). See "Design decisions — master-sheet employee import".

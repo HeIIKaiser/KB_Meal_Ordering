@@ -120,7 +120,7 @@ class MonthlyMatrixXlsx
 
             // employee header row with day-of-week
             $cells = [
-                Cell::fromValue($e->fullNameReversed().' (osobné č. '.$e->osobne_cislo.')'.($entry['group'] ? ' – '.$entry['group'] : '').($entry['settlement'] === 'faktura' ? ' – faktúra' : ''), $bold),
+                Cell::fromValue($e->fullNameReversed().' (osobné č. '.$e->osobne_cislo.($e->stredisko_cislo ? ', stredisko č. '.$e->stredisko_cislo : '').')'.($entry['group'] ? ' – '.$entry['group'] : '').($entry['settlement'] === 'faktura' ? ' – faktúra' : ''), $bold),
                 Cell::fromValue($monthLabel, $bold),
             ];
             for ($d = 1; $d <= $days; $d++) {
@@ -201,7 +201,7 @@ class MonthlyMatrixXlsx
         $titles[] = 'Suma €';
         $numeric = count($titles);
         array_push($titles, 'Skupina', 'Režim', 'Lístky pridelené', 'Lístky použité', 'Lístky prepadnuté',
-            'Povinná strava ks', 'Povinná strava €', 'Zdroj lístkov', 'Vema číslo', 'Pevná cena ks', 'Pevná cena €', 'Vysporiadanie');
+            'Povinná strava ks', 'Povinná strava €', 'Zdroj lístkov', 'Vema číslo', 'Pevná cena ks', 'Pevná cena €', 'Vysporiadanie', 'Číslo strediska');
 
         $sheet->setColumnWidth(13, 1);
         $sheet->setColumnWidth(18, 2, 3, 4);
@@ -253,6 +253,7 @@ class MonthlyMatrixXlsx
                 Cell::fromValue(MonthlyData::fixedCount($entry)),
                 Cell::fromValue(MonthlyData::fixedCents($entry) / 100, $money),
                 Cell::fromValue($entry['settlement']),
+                Cell::fromValue((string) $e->stredisko_cislo), // text, like osobné číslo
             );
             $fixedTotal += MonthlyData::fixedCount($entry);
             $fixedCents += MonthlyData::fixedCents($entry);

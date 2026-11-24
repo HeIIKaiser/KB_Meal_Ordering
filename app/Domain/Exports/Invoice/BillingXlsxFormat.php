@@ -39,6 +39,7 @@ final class BillingXlsxFormat implements InvoiceFormat
             'osobne_cislo' => fn (InvoiceRow $r) => (string) $r->employee->osobne_cislo,
             'priezvisko' => fn (InvoiceRow $r) => $r->employee->last_name,
             'meno' => fn (InvoiceRow $r) => $r->employee->first_name,
+            'stredisko_cislo' => fn (InvoiceRow $r) => (string) $r->employee->stredisko_cislo,
             'fakturacny_nazov' => fn (InvoiceRow $r) => (string) $r->employee->billing_name,
             'ico' => fn (InvoiceRow $r) => (string) $r->employee->ico,
             'dic' => fn (InvoiceRow $r) => (string) $r->employee->dic,
@@ -59,6 +60,7 @@ final class BillingXlsxFormat implements InvoiceFormat
         return [
             'osobne_cislo' => fn (array $l, InvoiceRow $r) => (string) $r->employee->osobne_cislo,
             'meno' => fn (array $l, InvoiceRow $r) => $r->employee->fullNameReversed(),
+            'stredisko_cislo' => fn (array $l, InvoiceRow $r) => (string) $r->employee->stredisko_cislo,
             'datum' => fn (array $l) => $l['date']->format('Y-m-d'),
             'jedlo' => fn (array $l) => $l['meal'],
             'menu' => fn (array $l) => $l['menu'],

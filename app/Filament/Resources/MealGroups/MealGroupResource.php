@@ -15,12 +15,14 @@ use App\Models\MealGroupMode;
 use App\Support\LocalTime;
 use App\Support\Money;
 use BackedEnum;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TagsInput;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
@@ -57,6 +59,16 @@ class MealGroupResource extends Resource
     {
         return $schema->components([
             TextInput::make('name')->label('Názov')->placeholder('napr. 12 h')->required()->maxLength(60)->unique(ignoreRecord: true),
+            TagsInput::make('import_aliases')
+                ->label('Názvy v importe')
+                ->placeholder('napr. Povinná - len obed')
+                ->helperText('Iné názvy tejto skupiny v stĺpci „Forma stravy“ pri importe zamestnancov. Veľké/malé písmená a diakritika sa ignorujú.')
+                ->nestedRecursiveRules(['max:100'])
+                ->rule(fn (Get $get, ?MealGroup $record) => function (string $attribute, mixed $value, Closure $fail) use ($get, $record) {
+                    if ($clash = static::importNameClash($record, [(string) $get('name'), ...(array) $value])) {
+                        $fail($clash);
+                    }
+                }),
             TextInput::make('default_tickets')
                 ->label('Lístkov na mesiac (predvolené)')
                 ->helperText('Použije sa, kým na stránke Lístky na mesiac nenastavíte počet pre konkrétny mesiac. Pri dennom režime sa nepoužíva.')
@@ -90,13 +102,29 @@ class MealGroupResource extends Resource
         ]);
     }
 
+    /** "„X“ už používa skupina Y." when a name/alias of this group matches another group's. */
+    public static function importNameClash(?MealGroup $record, array $names): ?string
+    {
+        $mine = collect($names)->filter(fn ($n) => is_string($n) && trim($n) !== '')->mapWithKeys(fn ($n) => [MealGroup::importKey($n) => $n]);
+        foreach (MealGroup::query()->when($record, fn ($q) => $q->whereKeyNot($record->id))->get() as $other) {
+            foreach ($other->importKeys() as $key) {
+                if (isset($mine[$key])) {
+                    return "Názov „{$mine[$key]}“ už používa skupina {$other->name}.";
+                }
+            }
+        }
+
+        return null;
+    }
+
     public static function table(Table $table): Table
     {
         return $table
             ->modifyQueryUsing(fn ($query) => $query->with('modes'))
             ->defaultSort('name')
             ->columns([
-                TextColumn::make('name')->label('Skupina')->searchable()->sortable(),
+                TextColumn::make('name')->label('Skupina')->searchable()->sortable()
+                    ->description(fn (MealGroup $record) => $record->import_aliases ? 'v importe: '.implode(', ', $record->import_aliases) : null),
                 TextColumn::make('mode')
                     ->label('Režim dnes')
                     ->state(fn (MealGroup $record) => $record->modeOn(LocalTime::today())->label())

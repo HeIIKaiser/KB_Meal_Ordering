@@ -254,7 +254,7 @@ describe('employees', function () {
             ->assertCanNotSeeTableRecords([$in]);
     });
 
-    it('imports the group column: unknown names are errors, changes apply from next month', function () {
+    it('imports the group column: unknown names are errors, a first group applies from today', function () {
         $group = ticketGroup(20);
         $existing = employee(['osobne_cislo' => '500']);
         $csv = "osobne_cislo;priezvisko;meno;skupina\n500;;;12 H\n501;Nová;Eva;12 h\n502;Iný;Ivan;Neexistuje\n";
@@ -262,13 +262,14 @@ describe('employees', function () {
         file_put_contents($path, $csv);
 
         $preview = app(EmployeeImport::class)->preview($path, 'z.csv');
-        expect($preview['errors'][0]['messages'][0])->toContain('Neznáma skupina „Neexistuje“')
-            ->and($preview['rows'][0]['changes']['group']['new'])->toBe('12 h (od 1. 12. 2026)');
+        expect($preview['errors'][0]['messages'][0])->toContain('skupina „Neexistuje“')
+            ->and($preview['rows'][0]['changes']['group']['new'])->toBe('12 h')
+            ->and($preview['rows'][0]['group']['from'])->toBe('2026-11-10'); // had no group yet → from today
 
         app(EmployeeImport::class)->apply($preview, by: $this->admin);
         $new = Employee::query()->where('osobne_cislo', '501')->sole();
-        expect(EmployeeCalendar::for($existing)->groupOn('2026-11-30'))->toBeNull()
-            ->and(EmployeeCalendar::for($existing)->groupOn('2026-12-01')?->id)->toBe($group->id)
+        expect(EmployeeCalendar::for($existing)->groupOn('2026-11-09'))->toBeNull()
+            ->and(EmployeeCalendar::for($existing)->groupOn('2026-11-10')?->id)->toBe($group->id)
             ->and(EmployeeCalendar::for($new)->groupOn('2026-11-10')?->id)->toBe($group->id);
     });
 });

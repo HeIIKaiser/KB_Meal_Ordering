@@ -301,3 +301,19 @@ Spec `docs/CATEGORIES.md`.
 - Before/after screenshots at 360 / 1280 px are attached to the PR conversation.
 - Deploy: `bash deploy/update.sh` (assets only; no migration).
 
+### Master-sheet employee import (2026-11-24)
+
+- The employee import reads Roman's master sheet as-is (Vema, Name, Workplace no., Workplace, Dochádzka, Name in
+  attendance, Forma stravy). Vema = osobné číslo = login; re-import updates the same people, never duplicates (also
+  „0181“-style numbers, matched by Vema number).
+- Name split with academic titles removed; `181-1` attendance numbers; cross-check against *Name in attendance*;
+  warning for tickets/mandatory people without an attendance number.
+- New employee field *Číslo strediska* (form, list, filter, all monthly exports, Vema and Fakturácia).
+- Groups get *Názvy v importe*; empty *Forma stravy* is listed as *Nenastavená forma stravy*; first group from today,
+  change from next month, one override date in the preview.
+- Employee list: filter *Bez skupiny*, bulk action *Priradiť skupinu*; dashboard widget for people without a meal form.
+- Template + `docs/samples/zamestnanci_hlavny_zoznam.xlsx`; `docs/navod.md` *Import zamestnancov* rewritten with the
+  recommended group setup.
+- Tests: `tests/Feature/Admin/MasterSheetImportTest.php` (33 tests).
+- Deploy: `bash deploy/update.sh` (one migration).
+
