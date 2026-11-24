@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Employees\Pages;
 
+use App\Domain\Employees\Slips\SlipOptions;
 use App\Domain\Employees\VemaNumbers;
 use App\Filament\Pages\ImportEmployees;
 use App\Filament\Resources\Employees\EmployeeResource;
@@ -26,7 +27,13 @@ class ListEmployees extends ListRecords
                 ->icon(Heroicon::OutlinedPrinter)
                 ->color('warning')
                 ->visible(fn () => $notPrinted()->exists())
-                ->url(fn () => EmployeeResource::slipsUrl($notPrinted()->pluck('id')->all()), shouldOpenInNewTab: true),
+                ->authorize(fn () => auth()->user()?->isAdmin())
+                ->modalHeading('Tlačiť nevytlačené lístky')
+                ->modalDescription('Aktívni zamestnanci, ktorým lístok ešte nebol vytlačený. PINy sa nemenia.')
+                ->modalSubmitActionLabel('Tlačiť')
+                ->fillForm(fn () => SlipOptions::forUser(auth()->user())->toForm())
+                ->schema(EmployeeResource::slipOptionsFields())
+                ->action(fn (array $data) => redirect(EmployeeResource::slipsUrl($notPrinted()->pluck('id')->all(), EmployeeResource::rememberSlipOptions($data)))),
             Action::make('fillVema')
                 ->label(fn () => 'Doplniť Vema čísla ('.app(VemaNumbers::class)->missingCount().')')
                 ->icon(Heroicon::OutlinedHashtag)

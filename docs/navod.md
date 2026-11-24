@@ -59,11 +59,31 @@ Ak tlačíte pred uzávierkou, v hlavičke je upozornenie „Objednávky ešte o
   **PIN sa vygeneruje automaticky** — v oznámení kliknite na **Vytlačiť lístok**.
 - **Prístupový list** — **jedna strana A4 na zamestnanca**: meno, osobné číslo a **súčasný PIN** veľkým písmom,
   QR kód s adresou a podrobný návod (prvé prihlásenie, ikona na ploche, objednávanie, uzávierky a ceny podľa
-  aktuálnych nastavení, PIN). Ak treba šetriť papier, na stránke tlače je odkaz *Malé lístky (8 na A4)*:
-  - jednému zamestnancovi: v riadku tlačidlo **Lístok** (alebo *Tlačiť lístok* pri úprave),
+  aktuálnych nastavení, PIN). Na šetrenie papiera formát *Malé lístky (8 na A4)*.
+  - jednému zamestnancovi: v riadku tlačidlo **Lístok** (alebo *Tlačiť lístok* pri úprave) – hneď, v naposledy
+    zvolenom formáte,
   - viacerým naraz: zaškrtnite ich → *Hromadné akcie* → **Tlačiť prístupové lístky**,
   - všetkým, ktorým ešte lístok nebol vytlačený (napr. po importe): tlačidlo **Nevytlačené lístky (N)** hore.
 
+  Pred tlačou sa otvorí okno s voľbami (aplikácia si pamätá vašu poslednú voľbu; dajú sa zmeniť aj hore na stránke tlače
+  a tlačidlom *Použiť*):
+  - **Zoradiť podľa:** *Priezvisko a meno* · *Osobné číslo* (1, 2 … 10, 11 – číselne) · *Stredisko* (číslo, potom názov)
+    · *Skupina stravníkov*.
+  - **Zoskupiť:** *Nie* · *Podľa strediska* („Stredisko 14 – Stravovanie (56)“) · *Podľa skupiny stravníkov*
+    („Skupina: Lístky (40)“) · *Podľa formy stravy* – ako skupina, ale s názvom z hlavného zoznamu (prvý z *Názvov
+    v importe*, napr. „Forma stravy: Objednáva si (40)“). Kto nemá stredisko alebo skupinu, je na konci v časti
+    *Bez strediska* / *Bez skupiny*. Skupina = tá, ktorá platí dnes. V každej časti platí zvolené zoradenie.
+  - **Nová strana pre každú skupinu** (malé lístky): každá časť začne na novej strane, aby sa dali odovzdať po
+    oddeleniach. Pri formáte A4 začína každá časť **titulnou stranou** s názvom a počtom a názov časti je aj
+    v päte každého listu.
+  - **Formát:** *A4 s návodom* alebo *Malé lístky*.
+
+  **Príklad – všetci zo Stravovania podľa formy stravy:** filter *Stredisko* = „14 – Stravovanie“ → zaškrtávacie
+  políčko v hlavičke tabuľky → **Označiť všetkých N** (aj na ďalších stranách) → *Tlačiť prístupové lístky* →
+  *Zoskupiť: Podľa formy stravy*. Užitočné filtre: *Stredisko*, *Číslo strediska*, *Skupina stravníkov*,
+  *Bez skupiny*, *Lístok ešte nevytlačený*. Naraz sa dá vytlačiť až 1000 zamestnancov.
+
+  Tlačte v Chrome alebo Edge (*Ctrl+P*), mierka 100 %.
   Tlač lístka PIN **nemení** — dá sa vytlačiť znova kedykoľvek. Stĺpec **PIN** ukazuje, či sa PIN dá vytlačiť:
   *na lístku* = áno; *zmenil zamestnanec* = zamestnanec si PIN zmenil sám, aplikácia ho nepozná (na lístku je
   len poznámka); *neznámy* = zamestnanec bol založený pred touto funkciou — vydajte mu nový PIN (*Reset PIN*).

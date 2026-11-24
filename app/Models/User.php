@@ -25,7 +25,7 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
     /** @use HasFactory<UserFactory> */
     use HasFactory, LogsActivity, Notifiable;
 
-    protected $fillable = ['name', 'email', 'password', 'roles', 'is_active'];
+    protected $fillable = ['name', 'email', 'password', 'roles', 'is_active', 'preferences'];
 
     protected $hidden = ['password', 'remember_token', 'app_authentication_secret', 'app_authentication_recovery_codes'];
 
@@ -35,6 +35,7 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'roles' => 'array',
+            'preferences' => 'array',
             'is_active' => 'boolean',
             'app_authentication_secret' => 'encrypted',
             'app_authentication_recovery_codes' => 'encrypted:array',
