@@ -77,7 +77,7 @@ final class VemaFormat implements PayrollFormat
         $columns = self::columns();
         $writer->addRow(Row::fromValues(array_keys($columns), (new Style)->setFontBold()));
         $money = (new Style)->setFormat('0.00');
-        foreach ($data->rows->sortBy(fn (PayrollRow $r) => VemaNumbers::export($r->employee->vema_cislo)) as $row) {
+        foreach ($data->rows->sortByNatural(fn (PayrollRow $r) => $r->employee->vema_cislo) as $row) {
             $cells = [];
             foreach ($columns as $header => $value) {
                 $v = $value($row);

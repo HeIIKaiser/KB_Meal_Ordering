@@ -161,7 +161,7 @@ class EmployeeResource extends Resource
             ->defaultSort('last_name')
             ->modifyQueryUsing(fn ($query) => $query->with('groupMemberships.group.modes'))
             ->columns([
-                TextColumn::make('osobne_cislo')->label('Os. číslo')->searchable()->sortable(),
+                TextColumn::make('osobne_cislo')->label('Os. číslo')->searchable()->sortable(query: fn ($query, string $direction) => $query->orderByNatural('osobne_cislo', $direction)),
                 TextColumn::make('last_name')
                     ->label('Priezvisko a meno')
                     ->formatStateUsing(fn (Employee $record) => $record->fullNameReversed())
@@ -169,8 +169,8 @@ class EmployeeResource extends Resource
                     ->sortable(['last_name', 'first_name']),
                 TextColumn::make('department')->label('Stredisko')->searchable()->sortable()->toggleable()
                     ->description(fn (Employee $record) => $record->stredisko_cislo ? 'č. '.$record->stredisko_cislo : null),
-                TextColumn::make('stredisko_cislo')->label('Č. strediska')->searchable()->sortable()->placeholder('–')->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('vema_cislo')->label('Vema č.')->searchable()->placeholder('–')->toggleable(),
+                TextColumn::make('stredisko_cislo')->label('Č. strediska')->searchable()->sortable(query: fn ($query, string $direction) => $query->orderByNatural('stredisko_cislo', $direction))->placeholder('–')->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('vema_cislo')->label('Vema č.')->searchable()->sortable(query: fn ($query, string $direction) => $query->orderByNatural('vema_cislo', $direction))->placeholder('–')->toggleable(),
                 TextColumn::make('meal_group')
                     ->label('Skupina')
                     ->state(fn (Employee $record) => EmployeeCalendar::fromMemberships($record, $record->groupMemberships)->today()?->name)
@@ -214,7 +214,7 @@ class EmployeeResource extends Resource
                     ->options(fn () => Employee::query()->whereNotNull('department')->distinct()->orderBy('department')->pluck('department', 'department')->all()),
                 SelectFilter::make('stredisko_cislo')
                     ->label('Číslo strediska')
-                    ->options(fn () => Employee::query()->whereNotNull('stredisko_cislo')->distinct()->orderBy('stredisko_cislo')->pluck('stredisko_cislo', 'stredisko_cislo')->all()),
+                    ->options(fn () => Employee::query()->whereNotNull('stredisko_cislo')->distinct()->pluck('stredisko_cislo')->sortByNatural(fn ($n) => $n)->mapWithKeys(fn ($n) => [$n => $n])->all()),
             ])
             ->recordActions([
                 EditAction::make(),

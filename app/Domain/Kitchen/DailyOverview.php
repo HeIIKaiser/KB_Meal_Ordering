@@ -51,7 +51,7 @@ final class DailyOverview
             ->join('menu_items', 'menu_items.id', '=', 'orders.menu_item_id')
             ->orderBy('employees.last_name')
             ->orderBy('employees.first_name')
-            ->orderBy('employees.osobne_cislo')
+            ->orderByNatural('employees.osobne_cislo')
             ->orderBy('orders.price_type_id')
             ->orderBy('orders.id')
             ->get([

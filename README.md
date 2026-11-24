@@ -235,9 +235,40 @@ the hosting puts a reverse proxy in front of PHP — see `config/jedalen.php`), 
 cd ~/apps/<app> && bash deploy/update.sh
 ```
 
-It backs up the database, shows a maintenance page, fast-forwards to `origin/main`, installs
-dependencies, migrates, refreshes caches and runs `app:hosting-check`. Never run `npm` on the server.
-After changing `.env` run `php artisan optimize` (config is cached).
+It first checks that the chosen PHP satisfies `composer.lock` (if not, it stops and changes nothing), then backs up
+the database, shows a maintenance page, fast-forwards to `origin/main`, checks the new `composer.lock` again, installs
+dependencies, migrates, refreshes caches and runs `app:hosting-check`. If a step fails, the site is brought back up
+and the script says which step failed and what state the app is in (e.g. "new code, database not migrated yet");
+fix the cause and run it again. Never run `npm` on the server. After changing `.env` run `php artisan optimize`
+(config is cached).
+
+**PHP version.** The console's default `php` can differ from the version the site and cron run (Websupport moved the
+console to 8.6 while the site runs 8.5; `composer install` then fails). The script uses, in this order:
+
+1. `PHP` from the environment: `PHP=/usr/bin/php8.5 bash deploy/update.sh`
+2. `/usr/bin/$PREFERRED_PHP` if it exists — `PREFERRED_PHP="php8.5"` is the one line at the top of
+   `deploy/update.sh` to change when the site moves to another PHP version
+3. `php`
+
+It prints which one it uses and runs Composer with it (`$PHP "$(command -v composer)" …`, so Composer's `@php`
+scripts use the same PHP). Check without changing anything:
+
+```bash
+bash deploy/update.sh --check
+```
+
+Manual fallback (same steps by hand, with the site's PHP):
+
+```bash
+P=/usr/bin/php8.5; C="$(command -v composer)"
+$P $C check-platform-reqs --lock --no-dev
+$P artisan app:backup && $P artisan down --retry=60
+git fetch origin main && git merge --ff-only origin/main
+$P $C install --no-dev --optimize-autoloader --no-interaction
+$P artisan migrate --force && $P artisan db:seed --class='Database\Seeders\ReferenceDataSeeder' --force
+$P artisan optimize:clear && $P artisan optimize && $P artisan filament:optimize
+$P artisan up
+```
 
 Without SSH: on a PC run `deploy/build-release.sh` → upload and unzip `build/jedalen-<commit>.zip`.
 

@@ -25,7 +25,7 @@ class VemaNumbers
 
         DB::transaction(function () use (&$filled, &$skipped) {
             $used = Employee::query()->whereNotNull('vema_cislo')->pluck('vema_cislo')->flip();
-            foreach (Employee::query()->whereNull('vema_cislo')->orderBy('osobne_cislo')->get() as $e) {
+            foreach (Employee::query()->whereNull('vema_cislo')->orderByNatural('osobne_cislo')->get() as $e) {
                 $number = trim($e->osobne_cislo);
                 $vema = Employee::attendanceNumber($number);
                 if (! ctype_digit($number) || isset($used[$vema])) {
