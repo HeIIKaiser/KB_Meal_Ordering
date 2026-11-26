@@ -19,6 +19,7 @@ use App\Support\LocalTime;
 use App\Support\Money;
 use App\Support\SlovakDate;
 use BackedEnum;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\DatePicker;
@@ -135,23 +136,28 @@ class OrderResource extends Resource
             ->filtersFormColumns(3)
             ->recordActions([
                 ActionGroup::make([
-                    static::switchAction(),
-                    static::changeTypeAction(),
+                    static::switchAction()->visible(fn (Order $record) => auth()->user()?->can('update', $record)),
+                    static::changeTypeAction()->visible(fn (Order $record) => auth()->user()?->can('update', $record)),
                     static::cancelAction(),
                 ])->label('Opraviť')->button()->color('gray')->size('sm')
-                    ->visible(fn (Order $record) => $record->isActive() && auth()->user()?->can('update', $record)),
+                    ->visible(fn (Order $record) => $record->isActive() && auth()->user()?->can('cancel', $record)),
             ])
             ->headerActions([static::createOnBehalfAction()]);
     }
 
-    public static function createOnBehalfAction(): Action
+    /**
+     * "Objednať za zamestnanca" (admin, kitchen). $prefill: initial form state, e.g. the date and
+     * meal of the kitchen daily overview.
+     */
+    public static function createOnBehalfAction(string $name = 'createOnBehalf', ?Closure $prefill = null): Action
     {
-        return Action::make('createOnBehalf')
+        return Action::make($name)
             ->label('Objednať za zamestnanca')
             ->icon(Heroicon::OutlinedPlus)
             ->authorize(fn () => auth()->user()?->can('create', Order::class))
             ->modalHeading('Objednať za zamestnanca')
-            ->modalDescription('Pre ľudí bez telefónu. Typ ceny sa určí automaticky (prvý obed a prvá večera dňa = zamestnanecká strava, ďalšie = dokupovaná).')
+            ->modalDescription('Pre ľudí bez telefónu alebo keď zabudli objednať. Typ ceny sa určí automaticky (prvý obed a prvá večera dňa = zamestnanecká strava, ďalšie = dokupovaná).')
+            ->fillForm(fn () => ['date' => LocalTime::today()->toDateString(), ...($prefill ? $prefill() : [])])
             ->schema([
                 Select::make('employee_id')
                     ->label('Zamestnanec')
@@ -208,7 +214,8 @@ class OrderResource extends Resource
             ->label('Zrušiť')
             ->icon(Heroicon::OutlinedXMark)
             ->color('danger')
-            ->schema([TextInput::make('reason')->label('Dôvod')->helperText('Povinný po uzávierke.')->maxLength(255)])
+            ->authorize(fn (Order $record) => auth()->user()?->can('cancel', $record))
+            ->schema([TextInput::make('reason')->label('Dôvod')->helperText('Povinný po uzávierke alebo pri uzamknutom jedle.')->maxLength(255)])
             ->modalHeading('Zrušiť objednávku')
             ->action(fn (Order $record, array $data, Action $action) => static::attempt($action, function () use ($record, $data) {
                 app(OrderService::class)->cancel($record, Actor::staff(auth()->user(), $data['reason'] ?? null));
@@ -221,6 +228,7 @@ class OrderResource extends Resource
         return Action::make('switchItem')
             ->label('Zmeniť jedlo')
             ->icon(Heroicon::OutlinedArrowsRightLeft)
+            ->authorize(fn (Order $record) => auth()->user()?->can('update', $record))
             ->schema(fn (Order $record) => [
                 Select::make('menu_item_id')
                     ->label('Nové menu')
@@ -239,6 +247,7 @@ class OrderResource extends Resource
         return Action::make('changeType')
             ->label('Zmeniť typ ceny')
             ->icon(Heroicon::OutlinedCurrencyEuro)
+            ->authorize(fn (Order $record) => auth()->user()?->can('update', $record))
             ->schema(fn (Order $record) => [
                 Select::make('price_type_id')
                     ->label('Typ')
@@ -254,7 +263,7 @@ class OrderResource extends Resource
     }
 
     /** Runs an OrderService call and turns refusals into a red notification. */
-    private static function attempt(Action $action, callable $callback): void
+    public static function attempt(Action $action, callable $callback): void
     {
         try {
             $callback();

@@ -41,8 +41,12 @@ use Illuminate\Support\Facades\DB;
  *  - Daily mode, cancelling re-types: if it frees a cheaper type (e.g. the Zamestnanecká strava
  *    is cancelled while a Dokupovaná one remains), the oldest remaining order of a
  *    later type moves into it at that type's price (Roman 2026-11-10), audited.
- *  - Employees act only while the slot is orderable; staff (admin) may act any
- *    time, but outside the window a reason is mandatory. Everything is audited.
+ *  - Employees act only while the slot is orderable; staff may act any time, but
+ *    outside the window a reason is mandatory. Everything is audited with the staff
+ *    user and the reason. Staff = admin, or kitchen for placing and cancelling
+ *    ("people forget to order", Roman 2026-11-26; optional days-back limit for the
+ *    kitchen, setting kitchen_days_back). Switching an item and changing the price
+ *    type stay admin-only.
  *  - Concurrency: every write runs in a transaction that first locks the
  *    employee row (SELECT … FOR UPDATE), so two quick taps are serialised. A
  *    unique index on orders(employee, date, slot, donated_guard) is the last
@@ -83,10 +87,11 @@ class OrderService
      */
     public function place(Employee $employee, MenuItem $item, Actor $actor, bool $acceptExtra = false, ?string $note = null): Order
     {
-        $this->assertMayActFor($actor, $employee);
+        $this->assertMayActFor($actor, $employee, kitchen: true);
         $item->loadMissing('menu.mealSlot');
         $menu = $item->menu;
         $slot = $menu->mealSlot;
+        $this->assertKitchenDaysBack($actor, $menu->date);
 
         if (! $employee->is_active) {
             throw new OrderingException('Váš účet nie je aktívny. Kontaktujte administrátora.', 'employee_inactive');
@@ -183,7 +188,8 @@ class OrderService
 
     public function cancel(Order $order, Actor $actor): Order
     {
-        $this->assertMayActFor($actor, $order->employee);
+        $this->assertMayActFor($actor, $order->employee, kitchen: true);
+        $this->assertKitchenDaysBack($actor, $order->date);
 
         return $this->transaction(function () use ($order, $actor) {
             $this->lockEmployee($order->employee);
@@ -414,23 +420,42 @@ class OrderService
             throw OrderingException::notOrderable($availability, $slot);
         }
 
-        $this->assertAdmin($actor);
-
         if ($actor->reason === null) {
             throw new OrderingException('Objednávky sú uzavreté ('.$availability->state->label().'). Pri úprave po uzávierke je povinný dôvod.', 'reason_required');
         }
     }
 
-    private function assertMayActFor(Actor $actor, Employee $employee): void
+    /** $kitchen: the kitchen may do this too (placing and cancelling); otherwise admin only. */
+    private function assertMayActFor(Actor $actor, Employee $employee, bool $kitchen = false): void
     {
         if ($actor->isStaff()) {
-            $this->assertAdmin($actor);
+            $kitchen ? $this->assertStaffMayOrder($actor) : $this->assertAdmin($actor);
 
             return;
         }
 
         if ($actor->employee?->id !== $employee->id) {
             throw new AuthorizationException;
+        }
+    }
+
+    /** Admin or kitchen (an active staff account). */
+    private function assertStaffMayOrder(Actor $actor): void
+    {
+        if (! $actor->user->is_active || ! $actor->user->hasRole(Role::Admin, Role::Kitchen)) {
+            throw new AuthorizationException;
+        }
+    }
+
+    /** Kitchen only (admin is never limited): not more than N days back; 0 = no limit. */
+    private function assertKitchenDaysBack(Actor $actor, DateTimeInterface $date): void
+    {
+        $days = $this->settings->kitchenDaysBack();
+        if (! $actor->isStaff() || $days === 0 || $actor->user->hasRole(Role::Admin)) {
+            return;
+        }
+        if (LocalTime::date($date)->lt(LocalTime::today()->subDays($days))) {
+            throw new OrderingException("Kuchyňa môže pridávať a rušiť objednávky najviac $days ".($days === 1 ? 'deň' : ($days < 5 ? 'dni' : 'dní')).' dozadu. Staršie zmeny urobí administrátor.', 'kitchen_days_back');
         }
     }
 

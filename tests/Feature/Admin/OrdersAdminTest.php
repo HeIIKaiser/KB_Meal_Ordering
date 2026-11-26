@@ -30,7 +30,7 @@ it('lists orders for every staff role', function (Role $role) {
         ->get('/admin/orders')->assertOk()->assertSee('Gajdoš Milan');
 })->with([Role::Admin, Role::Kitchen, Role::Payroll]);
 
-it('filters by employee and status and hides corrections from non-admins', function () {
+it('filters by employee and status; kitchen may order/cancel but not correct; payroll sees nothing', function () {
     $o = placeFor($this->emp, $this->items[0]);
     $other = employee();
     $o2 = placeFor($other, $this->items[1]);
@@ -43,6 +43,13 @@ it('filters by employee and status and hides corrections from non-admins', funct
         ->assertCanNotSeeTableRecords([$o2]);
 
     $this->actingAs(User::factory()->kitchen()->create());
+    Livewire::test(ListOrders::class)
+        ->assertTableActionVisible('createOnBehalf')
+        ->assertTableActionVisible('cancelOrder', $o)
+        ->assertTableActionHidden('switchItem', $o)
+        ->assertTableActionHidden('changeType', $o);
+
+    $this->actingAs(User::factory()->withRoles(Role::Payroll)->create());
     Livewire::test(ListOrders::class)
         ->assertTableActionHidden('createOnBehalf')
         ->assertTableActionHidden('cancelOrder', $o);

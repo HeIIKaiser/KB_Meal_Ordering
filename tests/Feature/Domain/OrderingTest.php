@@ -301,11 +301,11 @@ describe('staff actions', function () {
             ->and($log->causer_id)->toBe($admin->id);
     });
 
-    it('does not let kitchen or payroll users change orders', function (Role $role) {
-        $user = User::factory()->withRoles($role)->create();
+    it('does not let payroll users change orders', function () {
+        $user = User::factory()->withRoles(Role::Payroll)->create();
 
         orders()->place($this->emp, $this->lunchItems[0], Actor::staff($user, 'x'));
-    })->with([Role::Kitchen, Role::Payroll])->throws(AuthorizationException::class);
+    })->throws(AuthorizationException::class);
 
     it('lets an admin change the price type with a reason and reprices it', function () {
         $order = orders()->place($this->emp, $this->lunchItems[0], $this->me);

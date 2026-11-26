@@ -75,6 +75,7 @@ final class DailyOverview
             ->values();
 
         $rows = $orders->map(fn ($o) => [
+            'order_id' => (int) $o->id,
             'name' => trim($o->last_name.' '.$o->first_name),
             'last_name' => $o->last_name,
             'first_name' => $o->first_name,

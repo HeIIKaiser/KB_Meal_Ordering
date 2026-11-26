@@ -95,7 +95,7 @@
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm">
                         <thead class="border-b border-gray-200 text-xs uppercase text-gray-500 dark:border-white/10">
-                            <tr><th class="py-2 pe-2">#</th><th class="py-2 pe-4">Priezvisko Meno</th><th class="py-2 pe-4">Os. č.</th><th class="py-2 pe-4">Stredisko</th><th class="py-2 pe-4">Menu</th><th class="py-2">Poznámka</th></tr>
+                            <tr><th class="py-2 pe-2">#</th><th class="py-2 pe-4">Priezvisko Meno</th><th class="py-2 pe-4">Os. č.</th><th class="py-2 pe-4">Stredisko</th><th class="py-2 pe-4">Menu</th><th class="py-2">Poznámka</th>@if ($canOrder)<th class="py-2 print:hidden"><span class="sr-only">Akcie</span></th>@endif</tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100 dark:divide-white/5">
                             @foreach ($o->rows as $i => $r)
@@ -109,6 +109,9 @@
                                         @if ($r['extra']) <x-filament::badge color="warning" class="ms-1 inline-flex">Dokupovaná</x-filament::badge> @endif
                                     </td>
                                     <td class="py-1.5 text-gray-600">{{ $r['note'] }}</td>
+                                    @if ($canOrder)
+                                        <td class="py-1.5 text-end print:hidden">{{ ($this->cancelOrderAction)(['order' => $r['order_id']]) }}</td>
+                                    @endif
                                 </tr>
                             @endforeach
                         </tbody>
