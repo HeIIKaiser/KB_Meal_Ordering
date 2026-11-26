@@ -9,7 +9,7 @@ Zamestnanci objednávajú na hlavnej adrese (bez `/admin`) osobným číslom a P
 
 | Rola | Môže |
 |---|---|
-| **Kuchyňa** | denný prehľad, tlač, uzamknutie/odomknutie, jedálny lístok (týždeň, import), prezerať objednávky a uzavreté dni |
+| **Kuchyňa** | denný prehľad, tlač, uzamknutie/odomknutie, jedálny lístok (týždeň, import), prezerať objednávky a uzavreté dni; **objednať a zrušiť jedlo za zamestnanca** (po uzávierke s dôvodom) |
 | **Mzdy** | prezerať objednávky, denný prehľad, ceny, skupiny stravníkov, lístky na mesiac, dochádzku a stav mesiaca; exporty pre mzdy (aj Vema) |
 | **Administrátor** | všetko: zamestnanci, skupiny a lístky, uzavretie mesiaca, PINy, ceny, uzávierky, nastavenia, opravy objednávok, správcovia, história zmien |
 
@@ -34,6 +34,20 @@ na dnes a zajtra; kliknutím sa otvorí príslušný prehľad.
 - **Zoznam** je zoradený podľa priezviska; políčko *Hľadať meno…* nájde človeka aj bez diakritiky
   (napr. „simko“). Extra jedlá majú značku **Extra**.
 
+### Keď niekto zabudol objednať (kuchyňa, administrátor)
+
+- **Pridať objednávku** (vpravo hore) — otvorí formulár s dátumom a jedlom, ktoré práve prezeráte; vyberte
+  zamestnanca a menu. **Typ ceny sa určí sám** (prvý obed a prvá večera dňa = zamestnanecká strava 1,50 €, ďalšie =
+  dokupovaná 6,00 €) a zobrazí sa pred uložením.
+- **Zrušiť** v riadku zoznamu zruší objednávku daného človeka.
+- **Po uzávierke alebo pri uzamknutom jedle je dôvod povinný** (napr. „Zabudla si objednať, volala o 9:15“).
+  Pred uzávierkou dôvod netreba.
+- Zoznam a počty sa po pridaní alebo zrušení hneď obnovia. Každá zmena sa zapíše do *Histórie zmien* (kto, kedy, dôvod).
+- Kuchyňa **nemôže** meniť typ ceny ani cenu, zamestnancov, ceny, nastavenia či skupiny, ani meniť
+  **uzavretý mesiac** (to nemôže nikto). Administrátor môže v *Nastavenia → Objednávanie* obmedziť, koľko dní
+  dozadu smie kuchyňa pridávať a rušiť (predvolene bez obmedzenia).
+- Mzdy majú denný prehľad len na čítanie.
+
 ### Tlač, PDF, Excel
 
 - **Tlačiť** otvorí stránku na tlač a hneď ponúkne tlač (A4, **jeden riadok na zamestnanca** s celým názvom jedla,
@@ -48,8 +62,8 @@ Ak tlačíte pred uzávierkou, v hlavičke je upozornenie „Objednávky ešte o
 
 - **Uzamknúť** — zamestnanci od tej chvíle nemôžu na tento deň a jedlo objednávať ani rušiť
   (napr. keď kuchyňa začne variť skôr). Zaznamená sa, kto a kedy uzamkol.
-- **Odomknúť** zruší ručné uzamknutie. Po automatickej uzávierke sa tým objednávanie neotvorí —
-  neskoré zmeny robí administrátor v časti *Všetky objednávky* (s dôvodom).
+- **Odomknúť** zruší ručné uzamknutie. Po automatickej uzávierke sa tým objednávanie pre zamestnancov neotvorí —
+  neskoré objednávky a zrušenia zadá kuchyňa alebo administrátor (*Pridať objednávku* / *Zrušiť*, s dôvodom).
 
 ## Zamestnanci (administrátor)
 
@@ -203,6 +217,8 @@ ponechajú cenu, za ktorú boli objednané. Cenu, ktorá už platí, nemožno me
   môže mať zamestnanec na jedno jedlo a deň (okrem zamestnaneckej stravy). Prázdne = bez obmedzenia (predvolené).
   Tu je aj **Názov aplikácie** (napr. *KBZ* — názov pod ikonou na ploche telefónu, v hlavičke a v návode na lístkoch;
   zmestí sa asi 12 znakov) a **Názov firmy** (prístupové listy, prihlasovacia stránka).
+  **Kuchyňa: najviac dní dozadu** — koľko dní dozadu môže kuchyňa pridávať a rušiť objednávky za zamestnancov
+  (0 = bez obmedzenia, predvolené). Administrátor obmedzený nie je.
 
 **Ako sa určuje cena:** každý deň je prvý obed a prvá večera zamestnanca sú **zamestnanecká strava** za 1,50 €, každé ďalšie jedlo
 je **dokupovaná strava** za 6,00 €. Aplikácia nevie, či mal zamestnanec 8- alebo 12-hodinovú smenu (pri 8 h má nárok len na jednu
@@ -381,12 +397,14 @@ pozná stĺpce `vema_cislo` a `max_jedal_za_den` (1, 2 alebo `-` = bez obmedzeni
 
 **Objednávky → Všetky objednávky** — filtre vpravo hore (obdobie, jedlo, typ, stav, zamestnanec), vyhľadávanie podľa mena alebo osobného čísla.
 
-Administrátor navyše:
+Kuchyňa a administrátor:
 
-- **Objednať za zamestnanca** (pre ľudí bez telefónu): zamestnanec, dátum, jedlo, menu. Typ ceny sa určí sám
-  (prvý obed a prvá večera dňa = zamestnanecká strava, ďalšie = dokupovaná) a zobrazí sa pred uložením.
-- Pri objednávke **Opraviť → Zmeniť jedlo / Zmeniť typ ceny / Zrušiť**.
-  Po uzávierke alebo uzamknutí je **dôvod povinný**; pri zmene typu ceny vždy.
+- **Objednať za zamestnanca** (pre ľudí bez telefónu alebo keď zabudli): zamestnanec, dátum, jedlo, menu. Typ ceny
+  sa určí sám (prvý obed a prvá večera dňa = zamestnanecká strava, ďalšie = dokupovaná) a zobrazí sa pred uložením.
+- Pri objednávke **Opraviť → Zrušiť**.
+- Po uzávierke alebo uzamknutí je **dôvod povinný**.
+
+Len administrátor: **Opraviť → Zmeniť jedlo / Zmeniť typ ceny** (dôvod pri zmene typu ceny vždy).
   V režime lístkov sa typ ceny ručne nemení – určuje ho počet lístkov (upravte ho v *Lístky na mesiac*).
 
 ## Exporty pre mzdy (mzdy, administrátor)

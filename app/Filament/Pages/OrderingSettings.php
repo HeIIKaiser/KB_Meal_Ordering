@@ -35,6 +35,9 @@ class OrderingSettings extends Page
 
     public ?string $company = '';
 
+    /** 0 = no limit. */
+    public int|string $kitchenDaysBack = 0;
+
     public ?string $appName = '';
 
     public static function canAccess(): bool
@@ -47,6 +50,7 @@ class OrderingSettings extends Page
         $this->horizon = $settings->orderingHorizonDays();
         $this->maxExtra = $settings->maxExtraPerSlot() ?? '';
         $this->company = $settings->companyName() ?? '';
+        $this->kitchenDaysBack = $settings->kitchenDaysBack();
         $this->appName = $settings->appName();
     }
 
@@ -58,16 +62,19 @@ class OrderingSettings extends Page
             'horizon' => ['required', 'integer', 'min:0', 'max:90'],
             'maxExtra' => ['nullable', 'integer', 'min:0', 'max:50'],
             'company' => ['nullable', 'string', 'max:60'],
+            'kitchenDaysBack' => ['required', 'integer', 'min:0', 'max:365'],
             'appName' => ['required', 'string', 'max:30'],
         ], [
             'horizon.*' => 'Zadajte počet dní 0 – 90.',
             'maxExtra.*' => 'Zadajte číslo 0 – 50 alebo nechajte prázdne (bez obmedzenia).',
             'company.*' => 'Názov firmy môže mať najviac 60 znakov.',
+            'kitchenDaysBack.*' => 'Zadajte počet dní 0 – 365 (0 = bez obmedzenia).',
             'appName.*' => 'Zadajte názov aplikácie (najviac 30 znakov).',
         ]);
 
         $settings->set(Settings::ORDERING_HORIZON_DAYS, (int) $data['horizon']);
         $settings->set(Settings::MAX_EXTRA_PER_SLOT, ($data['maxExtra'] ?? '') === '' ? null : (int) $data['maxExtra']);
+        $settings->set(Settings::KITCHEN_DAYS_BACK, (int) $data['kitchenDaysBack']);
         $settings->set(Settings::COMPANY_NAME, trim((string) ($data['company'] ?? ''))); // '' = deliberately no name
         $settings->set(Settings::APP_NAME, trim($data['appName']));
 

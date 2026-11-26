@@ -21,7 +21,7 @@ isn't spelled out in the brief. Update this file when Roman answers.
 2. **Price typing:** price types are tried in `sort` order; the first one whose per-slot daily limit isn't used up by the employee's *active* orders wins. Default data: Darované (limit 1) → Extra (limit = setting `max_extra_per_slot`). Cancelling the donated order moves the oldest remaining extra in that slot/day to the donated price (changed 2026-11-10, see below).
 3. **Extra confirmation is enforced server-side:** `OrderService::place()` refuses to create an Extra order unless the caller passes `acceptExtra: true`, so a double tap can never silently create a 6 € meal.
 4. **Concurrency:** every order write runs in a transaction that first locks the employee row (`SELECT … FOR UPDATE`). A unique index `(employee_id, date, meal_slot_id, donated_guard)` additionally makes two active donated orders impossible at the DB level. Proven by `tests/Concurrency` (6 parallel processes, MariaDB).
-5. **Manual unlock** only removes a manual lock; it does not reopen a slot whose automatic cutoff has passed. Late orders after the cutoff are entered by an admin (with reason) — **confirmed by Roman 2026-11-09**.
+5. **Manual unlock** only removes a manual lock; it does not reopen a slot whose automatic cutoff has passed. Late orders after the cutoff are entered by staff with a reason — originally admin only (Roman 2026-11-09), **since 2026-11-26 also the kitchen** (see "Kitchen orders on behalf of employees").
 6. **Who may change orders after lock:** only `admin` (brief §4: kitchen = view/print/lock, payroll = read-only). Staff actions outside the ordering window require a reason; all order actions are written to the activity log with the reason.
 7. **Switching an option** ("Zmeniť objednávku") updates the existing order's menu item; type and snapshot price stay.
 8. **Dates** (`orders.date`, `menus.date`, …) are calendar dates stored as `Y-m-d` and read as local-midnight dates in Europe/Bratislava (`App\Casts\LocalDate`). Timestamps are stored in UTC (`app.timezone = UTC`).
@@ -374,6 +374,24 @@ ignored). Everything that worked before still works; the new columns are **alias
   the same tab (a new tab after a dialog is blocked by browsers).
 - Printing changes no PIN; only `slip_printed_at` (as before).
 
+## Design decisions — kitchen orders on behalf of employees (2026-11-26)
+
+Replaces "late orders after the cutoff go through an admin" (2026-11-09): people forget to order and the kitchen is
+the one who notices.
+
+- **Who:** admin and kitchen may *place* and *cancel* an order for an employee (`OrderPolicy::create` / `cancel`;
+  `OrderService` re-checks: active staff account with the admin or kitchen role). Payroll stays read-only.
+- **Same rules as admin, all in `OrderService`:** price type and price decided automatically; after the cutoff or on
+  a locked slot a reason is mandatory; closed months block everyone; every action is in the activity log with the
+  staff user (causer) and the reason.
+- **Admin only:** switching the item (*Zmeniť jedlo*, not requested) and changing the price type/price
+  (`changePriceType` checks for admin in the service itself); employees, prices, settings, groups.
+- **Optional limit:** setting *Kuchyňa: najviac dní dozadu* (`kitchen_days_back`, default 0 = no limit) — kitchen only,
+  past meal dates only; admin unlimited.
+- **UI:** *Denný prehľad* gets *Pridať objednávku* (the shared *Objednať za zamestnanca* form, prefilled with the
+  view's date and meal) and *Zrušiť* per row (reason field); the page re-renders, so list and totals refresh. In
+  *Všetky objednávky* the kitchen sees *Objednať za zamestnanca* and only *Zrušiť* in the row menu.
+
 ## Decisions by Roman
 
 - **2026-11-09 — Staff 2FA is optional.** Users can enable TOTP in their Filament profile; it is not enforced on first login and there are no prompts. (Brief §5 said "email + password + 2FA" — relaxed because most staff can't handle authenticator apps.)
@@ -381,7 +399,7 @@ ignored). Everything that worked before still works; the new columns are **alias
 - **2026-11-09 — Pricing rule confirmed:** per employee and day the first lunch and the first dinner are *Darované* 1,50 €, everything beyond that is *Extra* 6,00 € — exactly what `OrderService` does. Extras are unlimited (`max_extra_per_slot` empty).
 - **2026-11-09 — Shift length is not known to the app:** employees on 12-hour shifts are entitled to 2 donated meals a day, on 8-hour shifts to 1. The app can't know shifts (attendance is not connected), so it always prices the first lunch and first dinner at 1,50 € and payroll corrects it against attendance. Therefore every monthly rundown (employee *Môj mesiac*, monthly export sheets *Mesiac* and *Súhrn*, the export page) shows: **„Cena stravy je odhadom a po porovnaní s dochádzkou sa môže zmeniť.“** (`App\Support\Money::ESTIMATE_DISCLAIMER`).
 - **2026-11-09 — Cutoff defaults kept** (Obed 09:00, Večera 14:00, same day); Roman tunes them in the admin.
-- **2026-11-09 — Late orders after the cutoff go through an admin** (*Všetky objednávky → Objednať za zamestnanca*); no "reopen" button for the kitchen.
+- ~~**2026-11-09 — Late orders after the cutoff go through an admin**~~ — **replaced 2026-11-26**: the kitchen may also order and cancel on behalf of employees (below). Still no "reopen" button for employees.
 - **2026-11-09 — Menu shape:** lunch = **soup of the day** (served to everyone, not ordered, not priced) + **2 main courses**; dinner = **1 main course**. Implemented as `menus.soup_name/soup_allergens` on slots with `has_soup` (Obed); the soup is shown on the employee's lunch card, the kitchen screen, print, PDF and Excel. The weekly grid offers soup + 2 rows for lunch and 1 row for dinner (more can still be added).
 - **2026-11-09 — Kitchen Excel = one row per day** with 4 entries: `datum | polievka | obed_1 | obed_2 | vecera`. Allergens either in brackets after the dish (`Guláš, knedľa (1,3,7)`, also `A: 1,3,7` or a bare trailing `1,3,7`) or in optional `<column>_alergeny` columns. Empty cells change nothing. The old long format (`datum, jedlo, cislo_menu, nazov, alergeny`) is still accepted and detected automatically.
 - **2026-11-10 — Employee logins: easy creation, import, reprintable slips.** Every new employee (form, import, CLI) gets a PIN automatically; access slips print the **current** PIN individually, in batch and "all not yet printed" without changing it. To allow reprinting, app-generated PINs are stored **encrypted** (`APP_KEY`) besides the hash. A PIN the employee changes themselves is **not** stored readable; their slip shows a note instead. Staff accounts (`/admin`) are unchanged: email + password, no import/slips.
@@ -429,3 +447,5 @@ ignored). Everything that worked before still works; the new columns are **alias
   tickets estimated from the shift plan (8 h and 12 h share it). See "Design decisions — master-sheet employee import".
 - **2026-11-25 — Access-slip print options** (Roman, plan approved; both *Skupina stravníkov* and *Forma stravy*
   grouping kept). See "Design decisions — access-slip print options".
+- **2026-11-26 — Kitchen orders and cancels on behalf of employees** (Roman, plan approved). Replaces the 2026-11-09
+  "late orders go through an admin". See "Design decisions — kitchen orders on behalf of employees".

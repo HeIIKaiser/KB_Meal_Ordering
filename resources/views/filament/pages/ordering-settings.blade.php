@@ -37,6 +37,15 @@
                 @error('maxExtra') <span class="text-sm text-danger-600">{{ $message }}</span> @enderror
             </label>
 
+            <label class="grid gap-1">
+                <span class="text-sm font-semibold">Kuchyňa: pridávať a rušiť objednávky najviac dní dozadu</span>
+                <x-filament::input.wrapper :valid="! $errors->has('kitchenDaysBack')">
+                    <x-filament::input type="number" min="0" max="365" wire:model="kitchenDaysBack" />
+                </x-filament::input.wrapper>
+                <span class="text-sm text-gray-500">Kuchyňa môže objednať alebo zrušiť jedlo za zamestnanca (po uzávierke s dôvodom). 0 = bez obmedzenia (predvolené). Administrátor nie je obmedzený; uzavreté mesiace sa nedajú meniť nikdy.</span>
+                @error('kitchenDaysBack') <span class="text-sm text-danger-600">{{ $message }}</span> @enderror
+            </label>
+
             <p class="text-sm text-gray-500">
                 Čas uzávierky pre obed a večeru nastavíte v časti
                 <a class="font-semibold text-primary-600 underline" href="{{ \App\Filament\Resources\MealSlots\MealSlotResource::getUrl() }}">Jedlá a uzávierky</a>,

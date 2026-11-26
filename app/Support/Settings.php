@@ -35,10 +35,14 @@ class Settings
     /** Name of the installed app (home screen icon, header, login sheets); null = APP_NAME. */
     public const APP_NAME = 'app_name';
 
+    /** How many days back the kitchen may add/cancel orders for employees; 0 = no limit (admin is never limited). */
+    public const KITCHEN_DAYS_BACK = 'kitchen_days_back';
+
     public const DEFAULTS = [
         self::ORDERING_HORIZON_DAYS => 14,
         self::MAX_EXTRA_PER_SLOT => null, // null = unlimited (Roman 2026-11-09: extras are unlimited at 6 € each)
         self::COMPANY_NAME => null,
+        self::KITCHEN_DAYS_BACK => 0,
         self::ATTENDANCE_ONE_MEAL_SECONDS => 4 * 3600,
         self::ATTENDANCE_TWO_MEALS_SECONDS => 10 * 3600,
     ];
@@ -96,6 +100,11 @@ class Settings
     }
 
     /** Max. extra (full-price) orders per employee, slot and day; null = unlimited. */
+    public function kitchenDaysBack(): int
+    {
+        return max(0, (int) $this->get(self::KITCHEN_DAYS_BACK));
+    }
+
     public function maxExtraPerSlot(): ?int
     {
         $value = $this->get(self::MAX_EXTRA_PER_SLOT);

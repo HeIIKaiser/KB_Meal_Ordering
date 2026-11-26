@@ -7,8 +7,9 @@ use App\Models\Order;
 use App\Models\User;
 
 /**
- * Orders: everyone on staff can read; only admin creates/corrects (always via
- * OrderService, which re-checks the role). Orders are never deleted.
+ * Orders: everyone on staff can read. Admin and kitchen may order on behalf of an
+ * employee and cancel (Roman 2026-11-26); only admin corrects (switch item, price
+ * type). Always via OrderService, which re-checks the role. Orders are never deleted.
  */
 class OrderPolicy
 {
@@ -24,7 +25,12 @@ class OrderPolicy
 
     public function create(User $user): bool
     {
-        return $user->hasRole(Role::Admin);
+        return $user->hasRole(Role::Admin, Role::Kitchen);
+    }
+
+    public function cancel(User $user, Order $order): bool
+    {
+        return $user->hasRole(Role::Admin, Role::Kitchen);
     }
 
     public function update(User $user, Order $order): bool

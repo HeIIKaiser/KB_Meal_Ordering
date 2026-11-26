@@ -349,3 +349,14 @@ Spec `docs/CATEGORIES.md`.
 - Tests: `tests/Feature/Admin/SlipPrintingTest.php` (20 tests).
 - Deploy: `bash deploy/update.sh` (one migration).
 
+### Kitchen orders on behalf of employees (2026-11-26)
+
+- Kitchen may place and cancel orders for employees with the admin rules (OrderService: automatic price type, reason
+  after the cutoff / when locked, closed months blocked, audited with staff user and reason). Switching the item and
+  changing the price type stay admin-only; payroll read-only.
+- *Denný prehľad*: *Pridať objednávku* (prefilled date and meal) and *Zrušiť* per row; *Všetky objednávky*: kitchen
+  sees *Objednať za zamestnanca* and *Zrušiť*.
+- Setting *Kuchyňa: najviac dní dozadu* (default 0 = no limit).
+- Tests: `tests/Feature/Kitchen/KitchenOrdersTest.php` (11 tests); two older tests updated to the new rule.
+- Deploy: `bash deploy/update.sh` (no migration).
+
